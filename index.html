@@ -1,0 +1,995 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- ── SECURITY HEADERS ── -->
+<!-- Strict CSP. 'unsafe-inline' is required only because all CSS/JS is inline by design.
+     For maximum hardening, extract styles/scripts to external files with nonces or hashes.
+     frame-ancestors must be set as an HTTP header at the server (cannot be set via meta). -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; script-src 'self' 'unsafe-inline'; connect-src 'self'; base-uri 'self'; form-action 'self'; object-src 'none';">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta http-equiv="X-Content-Type-Options" content="nosniff">
+<meta name="robots" content="noindex, nofollow">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#003A67">
+
+<title>IT Toolbox</title>
+
+<!-- Performance: preconnect to font origins so first paint is faster.
+     For fully air-gapped deployment, self-host these fonts and drop the CDN. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&family=Barlow+Condensed:wght@400;600;700&display=swap" rel="stylesheet">
+
+<style>
+/* ────────────────────────────────────────────────────────────────
+   GG IT TOOLS  ·  Civic terminal launcher
+   Palette aligned to City of Garden Grove brand navy (#003A67).
+   Aesthetic: Half-Life HUD + Papers Please stamp + retro DOS desktop.
+   ──────────────────────────────────────────────────────────────── */
+
+:root {
+  /* Civic navy, derived from official GG brand color #003A67 */
+  --navy:        #003A67;
+  --navy-deep:   #001628;
+  --navy-darker: #00253F;
+  --navy-mid:    #0A5089;
+  --navy-rim:    #1B6BAE;
+
+  /* Warm civic gold */
+  --gold:        #D4B254;
+  --gold-bright: #F0D078;
+  --gold-dim:    #8A7128;
+  --gold-glow:   rgba(212, 178, 84, 0.22);
+
+  /* Surface ink + paper */
+  --ink:         #00091A;
+  --chalk:       #E4EDF7;
+  --ice:         #F0F5FB;
+
+  /* Signals */
+  --warn:        #B8421C;
+  --ok:          #2ECC71;
+
+  /* Texture */
+  --scanline:    rgba(0, 0, 0, 0.14);
+
+  --app-size:    140px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body { width: 100%; height: 100%; }
+
+body {
+  font-family: 'Barlow Condensed', sans-serif;
+  background:
+    radial-gradient(ellipse at 50% 0%, var(--navy-darker) 0%, var(--navy-deep) 60%, var(--ink) 100%);
+  color: var(--chalk);
+  min-height: 100vh;
+  overflow-x: hidden;
+  position: relative;
+}
+
+/* CRT scanlines */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 3px,
+    var(--scanline) 3px,
+    var(--scanline) 4px
+  );
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* Pixel noise grain */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
+  background-size: 200px 200px;
+  pointer-events: none;
+  z-index: 9998;
+  opacity: 0.55;
+  mix-blend-mode: overlay;
+}
+
+/* All inline SVG renders crisp */
+svg { image-rendering: pixelated; image-rendering: crisp-edges; shape-rendering: crispEdges; }
+
+/* ── SKIP LINK (visible on focus, like real accessibility, not always hidden) ── */
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 8px;
+  background: var(--gold);
+  color: var(--ink);
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  padding: 8px 14px;
+  letter-spacing: 1px;
+  text-decoration: none;
+  z-index: 10000;
+  box-shadow: 3px 3px 0 var(--gold-dim);
+  transition: top 0.12s ease-out;
+}
+.skip-link:focus { top: 8px; outline: 2px solid var(--chalk); outline-offset: 2px; }
+
+/* ── HEADER ── */
+.header {
+  background:
+    linear-gradient(180deg, #010615 0%, var(--ink) 100%);
+  border-bottom: 2px solid var(--gold);
+  padding: 0 24px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow:
+    0 2px 0 var(--gold-dim),
+    0 4px 20px rgba(0, 0, 0, 0.6);
+}
+
+/* HL2-style corner accents along the gold separator */
+.header::before,
+.header::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  width: 14px;
+  height: 6px;
+  background: var(--gold);
+  z-index: 1;
+}
+.header::before { left: 0; clip-path: polygon(0 0, 100% 0, 0 100%); }
+.header::after  { right: 0; clip-path: polygon(0 0, 100% 0, 100% 100%); }
+
+.header-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+
+.header-title {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 9px;
+  color: var(--gold);
+  letter-spacing: 1.5px;
+  text-shadow: 1px 1px 0 var(--gold-dim);
+  line-height: 1.4;
+}
+
+.header-clock {
+  font-family: 'VT323', monospace;
+  font-size: 22px;
+  color: var(--gold);
+  letter-spacing: 2px;
+  text-shadow: 0 0 8px rgba(212, 178, 84, 0.45);
+  opacity: 0.9;
+}
+
+/* ── DESKTOP AREA ── */
+.desktop {
+  min-height: calc(100vh - 56px);
+  padding: 56px 32px 80px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+/* ── APP GRID ── */
+.app-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  align-items: flex-start;
+}
+
+/* ── APP ICON ── */
+.app-icon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+  width: var(--app-size);
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+  position: relative;
+}
+
+.app-box {
+  width: var(--app-size);
+  height: var(--app-size);
+  background:
+    linear-gradient(160deg, #001F38 0%, var(--ink) 100%);
+  border: 1px solid rgba(27, 107, 174, 0.55);
+  display: grid;
+  place-items: center;
+  position: relative;
+  transition:
+    border-color 0.18s ease,
+    transform 0.12s ease,
+    box-shadow 0.18s ease,
+    background 0.18s ease;
+  box-shadow:
+    0 4px 14px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.4);
+  border-radius: 2px;
+}
+
+/* HL2-style corner brackets on the app box — base state subtle */
+.app-box::before,
+.app-box::after {
+  content: '';
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border: 1px solid rgba(212, 178, 84, 0.35);
+  transition: border-color 0.18s ease, width 0.18s ease, height 0.18s ease;
+  pointer-events: none;
+}
+.app-box::before {
+  top: 3px;
+  left: 3px;
+  border-right: none;
+  border-bottom: none;
+}
+.app-box::after {
+  bottom: 3px;
+  right: 3px;
+  border-left: none;
+  border-top: none;
+}
+
+/* Hover / focus: corners brighten + lift */
+.app-icon:hover .app-box,
+.app-icon:focus-visible .app-box {
+  border-color: var(--gold);
+  transform: translateY(-3px);
+  box-shadow:
+    0 10px 24px rgba(0, 0, 0, 0.55),
+    0 0 0 1px var(--gold-dim),
+    inset 0 0 18px var(--gold-glow);
+}
+.app-icon:hover .app-box::before,
+.app-icon:focus-visible .app-box::before,
+.app-icon:hover .app-box::after,
+.app-icon:focus-visible .app-box::after {
+  border-color: var(--gold-bright);
+  width: 14px;
+  height: 14px;
+}
+
+.app-icon:active .app-box {
+  transform: translateY(1px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+/* Selected state */
+.app-icon.selected .app-box {
+  border-color: var(--gold);
+  background:
+    linear-gradient(160deg, #00264A 0%, #001028 100%);
+  box-shadow:
+    0 6px 18px rgba(0, 0, 0, 0.55),
+    0 0 0 1px var(--gold-dim),
+    inset 0 0 22px var(--gold-glow);
+}
+.app-icon.selected .app-box::before,
+.app-icon.selected .app-box::after { border-color: var(--gold-bright); }
+.app-icon.selected .app-label {
+  background: var(--gold);
+  color: var(--ink);
+}
+
+.app-label {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: var(--chalk);
+  text-align: center;
+  line-height: 1.6;
+  letter-spacing: 0.5px;
+  padding: 4px 6px;
+  max-width: var(--app-size);
+  word-break: break-word;
+  transition: background 0.1s, color 0.1s;
+}
+
+/* ── "NEW" STAMP BADGE (top-right of app box) ── */
+.new-badge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background: var(--gold);
+  color: var(--ink);
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  padding: 5px 7px 4px;
+  letter-spacing: 1.5px;
+  box-shadow:
+    2px 2px 0 var(--gold-dim),
+    0 0 0 1px var(--ink);
+  z-index: 3;
+  pointer-events: none;
+  transform: rotate(4deg);
+  animation: new-flicker 3.4s steps(1) infinite;
+}
+
+@keyframes new-flicker {
+  0%, 88%, 100% { opacity: 1; }
+  90%           { opacity: 0.35; }
+  92%           { opacity: 1; }
+  94%           { opacity: 0.65; }
+  96%           { opacity: 1; }
+}
+
+/* ── IMAGE COMPRESSOR HOVER ANIMATION (FIXED) ──
+   Bug in the old version: the dark navy screen background lived inside
+   .icon-img, so it shrank with the picture, exposing the app-box behind
+   and breaking the "compression" metaphor. Also, transform-origin
+   "center bottom" pulled everything downward.
+   Fix: screen background is now static (outside the animated group),
+   only the picture content (mountains + sun) compresses around its
+   center, and the corner arrows physically translate INWARD to sell
+   the squeeze. Selector is also scoped to this tool only so it
+   cannot fire on future unrelated icons. */
+@keyframes ic-compress-content {
+  0%   { transform: scale(1); }
+  35%  { transform: scale(0.5); }
+  60%  { transform: scale(0.5); }
+  78%  { transform: scale(1.06); }
+  100% { transform: scale(1); }
+}
+
+@keyframes ic-arrow-tl {
+  0%   { transform: translate(0, 0); }
+  35%  { transform: translate(2px, 2px); }
+  60%  { transform: translate(2px, 2px); }
+  78%  { transform: translate(-0.4px, -0.4px); }
+  100% { transform: translate(0, 0); }
+}
+
+@keyframes ic-arrow-br {
+  0%   { transform: translate(0, 0); }
+  35%  { transform: translate(-2px, -2px); }
+  60%  { transform: translate(-2px, -2px); }
+  78%  { transform: translate(0.4px, 0.4px); }
+  100% { transform: translate(0, 0); }
+}
+
+.app-icon[data-app="image-compressor"]:hover .ic-content,
+.app-icon[data-app="image-compressor"]:focus-visible .ic-content {
+  transform-origin: 50% 50%;
+  transform-box: fill-box;
+  animation: ic-compress-content 1.2s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+
+.app-icon[data-app="image-compressor"]:hover .ic-arrow-tl,
+.app-icon[data-app="image-compressor"]:focus-visible .ic-arrow-tl {
+  animation: ic-arrow-tl 1.2s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+
+.app-icon[data-app="image-compressor"]:hover .ic-arrow-br,
+.app-icon[data-app="image-compressor"]:focus-visible .ic-arrow-br {
+  animation: ic-arrow-br 1.2s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+
+/* ── PLACEHOLDER BOX ── */
+.app-icon.placeholder .app-box,
+.app-icon.placeholder:hover .app-box,
+.app-icon.placeholder:focus-visible .app-box,
+.app-icon.placeholder:active .app-box {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.app-icon.placeholder .app-box {
+  border: 2px dashed rgba(212, 178, 84, 0.35);
+  cursor: pointer;
+  border-radius: 2px;
+}
+
+.app-icon.placeholder .app-box::before,
+.app-icon.placeholder .app-box::after { display: none; }
+
+.app-icon.placeholder:hover .app-box,
+.app-icon.placeholder:focus-visible .app-box {
+  border-color: rgba(212, 178, 84, 0.8);
+  transform: translateY(-3px);
+}
+
+.app-icon.placeholder:active .app-box {
+  transform: translateY(1px);
+}
+
+/* ── PIXEL PLUS ── */
+.pixel-plus {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-rows: 1fr 1fr 1fr;
+  gap: 4px;
+  width: 30px;
+  height: 30px;
+}
+
+.app-icon.placeholder:hover .pixel-plus,
+.app-icon.placeholder:focus-visible .pixel-plus {
+  animation: plus-pulse 0.55s steps(1) infinite;
+}
+
+@keyframes plus-pulse {
+  0%   { opacity: 1; }
+  50%  { opacity: 0.35; }
+  100% { opacity: 1; }
+}
+
+.pixel-plus .px {
+  background: rgba(212, 178, 84, 0.45);
+  transition: background 0.15s;
+}
+
+.app-icon.placeholder:hover .pixel-plus .px,
+.app-icon.placeholder:focus-visible .pixel-plus .px {
+  background: rgba(212, 178, 84, 0.9);
+}
+
+.px-c { background: transparent !important; }
+
+/* ── MODAL OVERLAY ── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 11, 26, 0.9);
+  backdrop-filter: blur(2px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.14s ease;
+}
+
+.modal-overlay.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.modal {
+  background: var(--ink);
+  border: 3px solid var(--gold);
+  box-shadow:
+    6px 6px 0 var(--gold-dim),
+    inset 0 0 0 1px rgba(212, 178, 84, 0.12),
+    0 0 40px rgba(0, 0, 0, 0.6);
+  max-width: 400px;
+  width: 100%;
+  position: relative;
+  transform: translate(4px, 4px) scale(0.97);
+  transition: transform 0.14s ease;
+}
+
+.modal-overlay.open .modal {
+  transform: translate(0, 0) scale(1);
+}
+
+/* Modal title-bar corner brackets, Papers Please feel */
+.modal::before,
+.modal::after {
+  content: '';
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--ink);
+  pointer-events: none;
+  z-index: 1;
+}
+.modal::before { top: 6px; left: 6px;     border-right: none; border-bottom: none; }
+.modal::after  { top: 6px; right: 6px;    border-left: none;  border-bottom: none; }
+
+.modal-header {
+  background: var(--gold);
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.modal-title {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: var(--ink);
+  letter-spacing: 1px;
+}
+
+.modal-close {
+  background: var(--ink);
+  border: 2px solid var(--ink);
+  color: var(--gold);
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  cursor: pointer;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  transition: background 0.08s, border-color 0.08s;
+  padding: 0;
+  line-height: 1;
+}
+.modal-close:hover { background: rgba(184, 66, 28, 0.85); border-color: var(--warn); }
+.modal-close:focus-visible { outline: 2px solid var(--chalk); outline-offset: 2px; }
+
+.modal-body {
+  padding: 28px 24px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  align-items: center;
+  text-align: center;
+}
+
+.modal-icon {
+  width: 48px;
+  height: 48px;
+}
+
+.modal-msg {
+  font-family: 'VT323', monospace;
+  font-size: 22px;
+  color: var(--chalk);
+  line-height: 1.4;
+  letter-spacing: 0.5px;
+}
+
+.modal-email {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: var(--gold);
+  text-decoration: none;
+  border: 2px solid var(--gold);
+  padding: 10px 16px;
+  display: inline-block;
+  letter-spacing: 1px;
+  transition: background 0.08s, color 0.08s, transform 0.08s, box-shadow 0.08s;
+  box-shadow: 3px 3px 0 var(--gold-dim);
+}
+
+.modal-email:hover {
+  background: var(--gold);
+  color: var(--ink);
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0 var(--gold-dim);
+}
+
+.modal-email:focus-visible {
+  outline: 2px solid var(--chalk);
+  outline-offset: 4px;
+}
+
+.modal-dismiss {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  background: transparent;
+  border: 2px solid rgba(212, 178, 84, 0.3);
+  color: rgba(212, 178, 84, 0.55);
+  cursor: pointer;
+  padding: 8px 14px;
+  letter-spacing: 1px;
+  transition: border-color 0.1s, color 0.1s;
+}
+
+.modal-dismiss:hover {
+  border-color: rgba(212, 178, 84, 0.75);
+  color: rgba(212, 178, 84, 0.95);
+}
+
+.modal-dismiss:focus-visible {
+  outline: 2px solid var(--chalk);
+  outline-offset: 2px;
+}
+
+/* ── STATUSBAR / CONSOLE ── */
+.statusbar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 32px;
+  background: var(--ink);
+  border-top: 1px solid var(--gold-dim);
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  gap: 12px;
+  z-index: 100;
+  overflow: hidden;
+  box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.5);
+}
+
+.status-dot {
+  width: 7px;
+  height: 7px;
+  background: var(--ok);
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 0 6px rgba(46, 204, 113, 0.7);
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+.status-divider {
+  width: 1px;
+  height: 14px;
+  background: rgba(212, 178, 84, 0.25);
+  flex-shrink: 0;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; box-shadow: 0 0 6px rgba(46, 204, 113, 0.7); }
+  50%      { opacity: 0.5; box-shadow: 0 0 2px rgba(46, 204, 113, 0.3); }
+}
+
+.console-ticker {
+  font-family: 'VT323', monospace;
+  font-size: 16px;
+  color: rgba(46, 204, 113, 0.78);
+  letter-spacing: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  flex: 1;
+  position: relative;
+}
+
+.console-text {
+  display: inline-block;
+  position: relative;
+}
+
+.console-cursor {
+  display: inline-block;
+  width: 8px;
+  height: 14px;
+  background: rgba(46, 204, 113, 0.7);
+  vertical-align: middle;
+  margin-left: 2px;
+  animation: cursor-blink 1s steps(1) infinite;
+}
+
+@keyframes cursor-blink {
+  0%, 49%  { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+/* ── MOBILE ── */
+@media (max-width: 600px) {
+  :root { --app-size: 120px; }
+
+  .desktop {
+    padding: 40px 20px 60px;
+    align-items: center;
+  }
+
+  .app-grid {
+    justify-content: center;
+    gap: 18px;
+  }
+
+  .header-clock { font-size: 18px; }
+  .header-title { font-size: 8px; }
+}
+
+@media (max-width: 360px) {
+  :root { --app-size: 108px; }
+  .app-grid { gap: 14px; }
+  .new-badge { font-size: 7px; padding: 4px 5px 3px; }
+}
+
+/* ── REDUCED MOTION ── */
+@media (prefers-reduced-motion: reduce) {
+  .app-icon.placeholder:hover .pixel-plus,
+  .app-icon.placeholder:focus-visible .pixel-plus { animation: none; }
+  .status-dot { animation: none; opacity: 1; }
+  .modal, .modal-overlay { transition: none; }
+  .app-box, .app-box::before, .app-box::after { transition: none; }
+  .new-badge { animation: none; }
+  .app-icon[data-app="image-compressor"]:hover .ic-content,
+  .app-icon[data-app="image-compressor"]:focus-visible .ic-content,
+  .app-icon[data-app="image-compressor"]:hover .ic-arrow-tl,
+  .app-icon[data-app="image-compressor"]:focus-visible .ic-arrow-tl,
+  .app-icon[data-app="image-compressor"]:hover .ic-arrow-br,
+  .app-icon[data-app="image-compressor"]:focus-visible .ic-arrow-br { animation: none; }
+}
+
+/* ── SR-ONLY ── */
+.sr-only {
+  position: absolute; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+}
+</style>
+</head>
+<body>
+
+<!-- Skip link, hidden until keyboard focus -->
+<a href="#main" class="skip-link">Skip to content</a>
+
+<!-- Live region for screen readers -->
+<div id="liveRegion" aria-live="polite" aria-atomic="true" class="sr-only"></div>
+
+<!-- HEADER -->
+<header class="header" role="banner">
+  <div class="header-brand">
+    <!-- Toolbox + hammer icon. Body and lid are TRANSPARENT (fill="none") so the
+         desktop background shows through, per request. -->
+    <div class="header-title" aria-label="Garden Grove IT Tools">
+      GG IT TOOLS
+    </div>
+  </div>
+  <div class="header-clock" id="clock" aria-label="Current time" role="timer"></div>
+</header>
+
+<!-- MAIN -->
+<main class="desktop" id="main" role="main">
+
+  <div class="app-grid" role="list" aria-label="Available tools">
+
+    <!-- APP: IMAGE COMPRESSOR (with NEW badge + fixed compression animation) -->
+    <a
+      class="app-icon"
+      data-app="image-compressor"
+      href="IMAGGE COMPRESSOR/index.html"
+      role="listitem"
+      aria-label="Image Compressor, new tool. Open."
+    >
+      <div class="app-box" aria-hidden="true">
+        <!-- NEW stamp -->
+        <span class="new-badge" aria-hidden="true">NEW</span>
+
+        <svg width="68" height="68" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <!-- STATIC screen background (does NOT animate) -->
+          <rect x="2" y="4" width="16" height="10" fill="#001A33"/>
+
+          <!-- STATIC monitor frame -->
+          <rect x="1" y="3" width="18" height="12" rx="1" fill="none" stroke="#D4B254" stroke-width="1"/>
+          <rect x="16" y="15" width="1" height="2" fill="#D4B254"/>
+          <rect x="3"  y="15" width="1" height="2" fill="#D4B254"/>
+          <rect x="2"  y="17" width="16" height="1" fill="#D4B254"/>
+
+          <!-- ANIMATED picture content: this is the image getting compressed -->
+          <g class="ic-content">
+            <polygon points="3,13 7,8 10,10 13,6 17,13" fill="#0A5089"/>
+            <rect x="13" y="6" width="2" height="2" fill="#D4B254"/>
+          </g>
+
+          <!-- ANIMATED corner arrows that close inward -->
+          <g class="ic-arrow-tl">
+            <rect x="2" y="4" width="3" height="1" fill="#F0D078"/>
+            <rect x="2" y="4" width="1" height="3" fill="#F0D078"/>
+          </g>
+          <g class="ic-arrow-br">
+            <rect x="15" y="13" width="3" height="1" fill="#F0D078"/>
+            <rect x="17" y="11" width="1" height="3" fill="#F0D078"/>
+          </g>
+        </svg>
+      </div>
+      <span class="app-label">IMAGGE<br>COMPRESSOR</span>
+    </a>
+
+    <!-- PLACEHOLDER -->
+    <button
+      class="app-icon placeholder"
+      id="placeholderBtn"
+      role="listitem"
+      aria-label="Suggest a new tool"
+      aria-haspopup="dialog"
+    >
+      <div class="app-box" aria-hidden="true">
+        <div class="pixel-plus" aria-hidden="true">
+          <div class="px px-c"></div>
+          <div class="px px-v"></div>
+          <div class="px px-c"></div>
+          <div class="px px-h"></div>
+          <div class="px px-v"></div>
+          <div class="px px-h"></div>
+          <div class="px px-c"></div>
+          <div class="px px-v"></div>
+          <div class="px px-c"></div>
+        </div>
+      </div>
+    </button>
+
+  </div>
+</main>
+
+<!-- STATUS BAR / CONSOLE -->
+<footer class="statusbar" role="contentinfo" aria-label="System console">
+  <div class="status-dot" aria-hidden="true"></div>
+  <div class="status-divider" aria-hidden="true"></div>
+  <div class="console-ticker" aria-live="polite" aria-label="System messages">
+    <span class="console-text" id="consoleLine"></span><span class="console-cursor" aria-hidden="true"></span>
+  </div>
+</footer>
+
+<!-- MODAL -->
+<div
+  class="modal-overlay"
+  id="modalOverlay"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="modalTitle"
+  aria-describedby="modalDesc"
+>
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="modalTitle">SUGGEST A TOOL</span>
+      <button class="modal-close" id="modalClose" aria-label="Close dialog">X</button>
+    </div>
+    <div class="modal-body">
+      <svg class="modal-icon" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <rect x="1" y="3" width="14" height="10" fill="none" stroke="#D4B254" stroke-width="1"/>
+        <rect x="2" y="4" width="12" height="8" fill="#003A67"/>
+        <polygon points="1,3 8,9 15,3" fill="none" stroke="#D4B254" stroke-width="1"/>
+        <rect x="2" y="4" width="5" height="1" fill="#0A5089"/>
+        <rect x="9" y="4" width="5" height="1" fill="#0A5089"/>
+        <rect x="3" y="5" width="4" height="1" fill="#0A5089"/>
+        <rect x="9" y="5" width="4" height="1" fill="#0A5089"/>
+        <rect x="4" y="6" width="2" height="1" fill="#D4B254" opacity="0.6"/>
+        <rect x="10" y="6" width="2" height="1" fill="#D4B254" opacity="0.6"/>
+        <rect x="6" y="7" width="2" height="1" fill="#D4B254" opacity="0.6"/>
+        <rect x="8" y="8" width="1" height="1" fill="#D4B254" opacity="0.6"/>
+      </svg>
+
+      <p class="modal-msg" id="modalDesc">
+        Have an idea for a tool?<br>Reach out and let us know!
+      </p>
+
+      <a
+        class="modal-email"
+        href="mailto:nikitas@ggcity.org"
+        aria-label="Send email to nikitas@ggcity.org"
+      >
+        nikitas@ggcity.org
+      </a>
+
+      <button class="modal-dismiss" id="modalDismiss">CLOSE</button>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+/* ── CLOCK ── */
+function updateClock() {
+  const now = new Date();
+  let h = now.getHours();
+  const m = String(now.getMinutes()).padStart(2, '0');
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  h = h % 12 || 12;
+  document.getElementById('clock').textContent = h + ':' + m + ' ' + ampm;
+}
+updateClock();
+setInterval(updateClock, 1000);
+
+/* ── MODAL ── */
+const overlay     = document.getElementById('modalOverlay');
+const closeBtn    = document.getElementById('modalClose');
+const dismissBtn  = document.getElementById('modalDismiss');
+const placeholder = document.getElementById('placeholderBtn');
+const liveRegion  = document.getElementById('liveRegion');
+
+let lastFocused = null;
+
+function openModal() {
+  lastFocused = document.activeElement;
+  overlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+  setTimeout(() => closeBtn.focus(), 80);
+  liveRegion.textContent = 'Dialog opened: Suggest a tool. Contact nikitas@ggcity.org';
+}
+
+function closeModal() {
+  overlay.classList.remove('open');
+  document.body.style.overflow = '';
+  liveRegion.textContent = 'Dialog closed.';
+  if (lastFocused) lastFocused.focus();
+}
+
+placeholder.addEventListener('click', openModal);
+closeBtn.addEventListener('click', closeModal);
+dismissBtn.addEventListener('click', closeModal);
+
+overlay.addEventListener('click', (e) => {
+  if (e.target === overlay) closeModal();
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && overlay.classList.contains('open')) {
+    closeModal();
+  }
+});
+
+/* Focus trap inside modal */
+overlay.addEventListener('keydown', (e) => {
+  if (e.key !== 'Tab') return;
+  const focusable = overlay.querySelectorAll(
+    'button, a[href], input, [tabindex]:not([tabindex="-1"])'
+  );
+  const first = focusable[0];
+  const last  = focusable[focusable.length - 1];
+  if (e.shiftKey) {
+    if (document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    }
+  } else {
+    if (document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  }
+});
+
+/* ── CONSOLE TICKER ── */
+const CONSOLE_MESSAGES = [
+  'GGing...',
+  'Calling Moo...',
+  'Snacking on strawberries...',
+  'Gems Gems',
+  'Evaluating new building',
+];
+
+const consoleLine = document.getElementById('consoleLine');
+let msgIndex = 0;
+let charIndex = 0;
+
+function typeNextChar() {
+  const msg = CONSOLE_MESSAGES[msgIndex];
+  if (charIndex < msg.length) {
+    consoleLine.textContent = '> ' + msg.slice(0, charIndex + 1);
+    charIndex++;
+    setTimeout(typeNextChar, 38 + Math.random() * 28);
+  } else {
+    setTimeout(() => {
+      charIndex = 0;
+      msgIndex = (msgIndex + 1) % CONSOLE_MESSAGES.length;
+      consoleLine.textContent = '';
+      setTimeout(typeNextChar, 200);
+    }, 3200);
+  }
+}
+
+if (CONSOLE_MESSAGES.length > 0) {
+  setTimeout(typeNextChar, 800);
+}
+
+/* Selected state on click */
+document.querySelectorAll('.app-icon:not(.placeholder)').forEach(icon => {
+  icon.addEventListener('click', function() {
+    document.querySelectorAll('.app-icon').forEach(i => i.classList.remove('selected'));
+    this.classList.add('selected');
+  });
+});
+</script>
+</body>
+</html>
