@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Official QR code generator for City of Garden Grove employees">
+<title>QR Code Generator | City of Garden Grove</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/qr-code-styling@1.6.0-rc.1/lib/qr-code-styling.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --navy: #1a3a5c;
+    --navy-dark: #0e2440;
+    --gold: #b8893a;
+    --cream: #faf7f0;
+    --paper: #ffffff;
+    --ink: #1a1a1a;
+    --ink-soft: #2c2c2c;
+    --muted: #5a5a5a;
+    --muted-light: #8a8a8a;
+    --surface: #f4f1e8;
+    --surface-2: #ebe7da;
+    --border: rgba(26,26,26,0.12);
+    --border-strong: rgba(26,26,26,0.28);
+    --radius: 6px;
+    --radius-lg: 10px;
+    --sans: 'DM Sans', system-ui, -apple-system, sans-serif;
+    --serif: 'Fraunces', Georgia, serif;
+    --mono: 'DM Mono', ui-monospace, monospace;
+    --focus-ring: 0 0 0 3px rgba(26,58,92,0.3);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  }
+
+  html { font-size: 16px; }
+  body {
+    font-family: var(--sans);
+    background: var(--cream);
+    color: var(--ink);
+    line-height: 1.5;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .skip-link {
+    position: absolute; top: -40px; left: 0;
+    background: var(--navy); color: var(--paper);
+    padding: 0.75rem 1rem; z-index: 1000; text-decoration: none; font-weight: 500;
+  }
+  .skip-link:focus { top: 0; }
+
+  /* HEADER */
+  header.site-header {
+    background: var(--navy);
+    color: var(--cream);
+    padding: 1rem 1.5rem;
+    border-bottom: 3px solid var(--gold);
+  }
+  .header-inner {
+    max-width: 1280px; margin: 0 auto;
+    display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
+  }
+  .header-text { flex: 1; min-width: 0; }
+  .header-text .org {
+    font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.14em;
+    text-transform: uppercase; color: rgba(250,247,240,0.7); margin-bottom: 0.15rem;
+  }
+  .header-text h1 {
+    font-family: var(--serif); font-weight: 500; font-size: 1.5rem;
+    line-height: 1.2; letter-spacing: -0.01em;
+  }
+
+  /* LAYOUT */
+  main {
+    max-width: 1280px; margin: 0 auto;
+    padding: 2rem 1.5rem;
+  }
+  .workspace {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 360px;
+    gap: 2.5rem;
+    align-items: start;
+  }
+
+  /* CONTENT FIELD */
+  .content-field { margin-bottom: 1.25rem; }
+
+  /* MODE TOGGLE */
+  .mode-toggle {
+    display: flex;
+    background: var(--surface-2);
+    border-radius: 8px;
+    padding: 3px;
+    gap: 2px;
+    margin-bottom: 1.5rem;
+  }
+  .mode-btn {
+    flex: 1;
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 5px;
+    background: none;
+    font-family: var(--sans);
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--muted);
+    cursor: pointer;
+    min-height: 38px;
+    transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+  }
+  .mode-btn:hover { color: var(--ink); }
+  .mode-btn[aria-selected="true"] {
+    background: var(--paper);
+    color: var(--ink);
+    font-weight: 600;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  }
+  .mode-btn:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+  /* TAB PANELS */
+  .tab-panel { display: none; }
+  .tab-panel[data-active="true"] { display: block; }
+
+  /* SECTION */
+  .section { margin-bottom: 1.5rem; }
+  .section-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--muted);
+    margin-bottom: 0.625rem;
+  }
+
+  /* PRESET LIST */
+  .preset-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    margin-bottom: 0.75rem;
+  }
+  .preset-item {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+    padding: 0.75rem 1rem;
+    background: var(--paper);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    cursor: pointer;
+    text-align: left;
+    width: 100%;
+    font-family: var(--sans);
+    transition: border-color 0.15s;
+  }
+  .preset-item:hover { border-color: var(--navy); }
+  .preset-item:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+  .preset-item:active { opacity: 0.88; }
+  .preset-item[aria-pressed="true"] {
+    border-color: var(--navy);
+    border-width: 2px;
+    background: var(--surface);
+  }
+  .preset-dot {
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    border: 1.5px solid rgba(0,0,0,0.08);
+  }
+  .preset-item-body { flex: 1; min-width: 0; }
+  .preset-item-name { font-size: 0.9rem; font-weight: 600; color: var(--ink); line-height: 1.3; }
+  .preset-item-desc { font-size: 0.775rem; color: var(--muted); margin-top: 0.1rem; }
+  .preset-check {
+    flex-shrink: 0;
+    color: var(--navy);
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+  .preset-item[aria-pressed="true"] .preset-check { opacity: 1; }
+  .preset-hint { font-size: 0.775rem; color: var(--muted-light); margin-top: 0.5rem; }
+
+  /* FORM ELEMENTS */
+  .field { display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 1rem; }
+
+  label, .label { font-size: 0.85rem; font-weight: 500; color: var(--ink-soft); }
+  .label-hint { font-size: 0.775rem; color: var(--muted); font-weight: 400; margin-left: 0.2rem; }
+
+  input[type="text"],
+  input[type="url"],
+  input[type="number"],
+  textarea,
+  select {
+    font-family: var(--sans);
+    font-size: 0.95rem;
+    background: var(--paper);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0.7rem 0.85rem;
+    color: var(--ink);
+    width: 100%;
+    min-height: 44px;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  textarea { min-height: 76px; resize: vertical; line-height: 1.5; }
+  input:focus, textarea:focus, select:focus {
+    outline: none;
+    border-color: var(--navy);
+    box-shadow: 0 0 0 3px rgba(26,58,92,0.15);
+  }
+
+  input[type="color"] {
+    width: 44px; height: 44px;
+    border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 3px; background: var(--paper); cursor: pointer; flex-shrink: 0;
+  }
+  input[type="color"]:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+  input[type="range"] { flex: 1; accent-color: var(--navy); min-height: 24px; }
+  input[type="range"]:focus-visible { outline: none; box-shadow: var(--focus-ring); border-radius: 4px; }
+
+  .color-row { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.625rem; }
+  .color-row .label-block { flex: 1; }
+  .color-row .color-name { font-size: 0.9rem; font-weight: 500; }
+  .color-row .color-hex { font-family: var(--mono); font-size: 0.775rem; color: var(--muted); }
+
+  .slider-row { display: flex; align-items: center; gap: 0.75rem; }
+  .slider-val { font-family: var(--mono); font-size: 0.85rem; min-width: 52px; text-align: right; color: var(--muted); }
+
+  /* SHAPE CHIPS */
+  .chip-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: 0.4rem; }
+  .chip {
+    background: var(--paper); border: 1.5px solid var(--border); border-radius: var(--radius);
+    padding: 0.6rem 0.4rem; cursor: pointer; font-family: var(--sans); font-size: 0.75rem;
+    color: var(--ink-soft); display: flex; flex-direction: column; align-items: center;
+    gap: 0.35rem; min-height: 72px; transition: border-color 0.15s, background 0.15s;
+  }
+  .chip:hover { border-color: var(--navy); }
+  .chip:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+  .chip[aria-pressed="true"] {
+    border-color: var(--navy); background: var(--surface); color: var(--navy); font-weight: 600;
+  }
+  .chip-preview { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; }
+
+  /* LOGO PICKER */
+  .logo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 0.4rem; }
+  .logo-option {
+    background: var(--paper); border: 1.5px solid var(--border); border-radius: var(--radius);
+    padding: 0.6rem 0.4rem; cursor: pointer; font-family: var(--sans); font-size: 0.75rem;
+    color: var(--ink-soft); display: flex; flex-direction: column; align-items: center;
+    gap: 0.4rem; min-height: 82px; transition: border-color 0.15s, background 0.15s;
+  }
+  .logo-option:hover { border-color: var(--navy); }
+  .logo-option:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+  .logo-option[aria-pressed="true"] { border-color: var(--navy); background: var(--surface); }
+  .logo-thumb {
+    width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
+    background: var(--surface); border-radius: 4px; flex-shrink: 0;
+  }
+  .logo-thumb svg { width: 26px; height: 26px; }
+  .logo-option-name { font-size: 0.72rem; line-height: 1.2; text-align: center; }
+
+  /* DIVIDER */
+  hr.divider { border: none; border-top: 1px solid var(--border); margin: 1.25rem 0; }
+
+  /* BUTTONS */
+  .btn {
+    font-family: var(--sans); font-size: 0.95rem; font-weight: 500;
+    border: none; border-radius: var(--radius); padding: 0.85rem 1.5rem;
+    cursor: pointer; min-height: 48px;
+    display: inline-flex; align-items: center; justify-content: center;
+    gap: 0.5rem; transition: background 0.15s, transform 0.1s, opacity 0.15s;
+  }
+  .btn-secondary { background: var(--paper); color: var(--ink); border: 1px solid var(--border-strong); }
+  .btn-secondary:hover { background: var(--surface); }
+  .btn-secondary:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+  .btn-block { width: 100%; }
+
+  /* PREVIEW PANEL */
+  .preview-panel {
+    position: sticky; top: 1rem;
+    background: var(--paper);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1.75rem 1.5rem;
+    display: flex; flex-direction: column; align-items: center; gap: 1.25rem;
+  }
+  .preview-panel h2 {
+    font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--muted); font-weight: 500;
+    align-self: flex-start;
+  }
+  .qr-display {
+    background: var(--surface); border-radius: var(--radius);
+    padding: 1rem; min-height: 260px; width: 100%;
+    display: flex; align-items: center; justify-content: center;
+  }
+  #qr-canvas { display: flex; align-items: center; justify-content: center; }
+  #qr-canvas canvas, #qr-canvas svg { display: block; max-width: 100%; height: auto; }
+  .empty-preview {
+    text-align: center; color: var(--muted); font-size: 0.875rem;
+    line-height: 1.6; padding: 2rem 1rem;
+  }
+  .empty-preview-icon { width: 44px; height: 44px; margin: 0 auto 0.75rem; opacity: 0.3; }
+  .preview-actions { display: flex; flex-direction: column; gap: 0.5rem; width: 100%; }
+  .preview-meta {
+    font-family: var(--mono); font-size: 0.72rem; color: var(--muted);
+    text-align: center; line-height: 1.6;
+    padding-top: 0.5rem; border-top: 1px solid var(--border); width: 100%;
+  }
+
+  /* TOAST / SR */
+  .sr-only {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+  }
+  .toast {
+    position: fixed; bottom: 1.5rem; left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: var(--ink); color: var(--paper);
+    padding: 0.85rem 1.25rem; border-radius: var(--radius);
+    font-size: 0.9rem; font-weight: 500;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    opacity: 0; transition: transform 0.25s, opacity 0.25s;
+    z-index: 1000; pointer-events: none;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* MOBILE */
+  @media (max-width: 900px) {
+    .workspace { grid-template-columns: 1fr; gap: 1.5rem; }
+    .preview-panel { position: static; order: -1; }
+    main { padding: 1.25rem 1rem 2rem; }
+    .header-text h1 { font-size: 1.25rem; }
+  }
+  @media (max-width: 560px) {
+    .header-inner { gap: 0.75rem; }
+    .header-text h1 { font-size: 1.1rem; }
+  }
+</style>
+</head>
+<body>
+
+<a href="#main-content" class="skip-link">Skip to main content</a>
+
+<header class="site-header" role="banner">
+  <div class="header-inner">
+    <div class="header-text">
+      <div class="org">City of Garden Grove</div>
+      <h1>QR Code Generator</h1>
+    </div>
+  </div>
+</header>
+
+<main id="main-content">
+  <div class="workspace">
+
+    <div class="controls-area">
+
+      <div class="field content-field">
+        <label for="content-input">Content</label>
+        <textarea id="content-input" placeholder="https://ggcity.org/..." rows="2"></textarea>
+      </div>
+
+      <div class="mode-toggle" role="tablist" aria-label="Style mode">
+        <button class="mode-btn" role="tab" id="tab-presets" aria-selected="true" aria-controls="panel-presets" tabindex="0">Presets</button>
+        <button class="mode-btn" role="tab" id="tab-custom" aria-selected="false" aria-controls="panel-custom" tabindex="-1">Custom</button>
+      </div>
+
+      <section class="tab-panel" role="tabpanel" aria-labelledby="tab-presets" id="panel-presets" data-active="true">
+        <div class="preset-list" role="group" aria-label="Preset templates">
+          <!-- injected by JS -->
+        </div>
+        <p class="preset-hint">Locked styles ensure citywide brand consistency.</p>
+      </section>
+
+      <section class="tab-panel" role="tabpanel" aria-labelledby="tab-custom" id="panel-custom" data-active="false" hidden>
+
+        <div class="section">
+          <div class="section-label">Module shape <span class="label-hint">small dots</span></div>
+          <div class="chip-grid" role="group" aria-label="Module shape" id="module-shapes"></div>
+        </div>
+
+        <div class="section">
+          <div class="section-label">Corner frame <span class="label-hint">three large squares</span></div>
+          <div class="chip-grid" role="group" aria-label="Corner frame shape" id="corner-shapes"></div>
+        </div>
+
+        <div class="section">
+          <div class="section-label">Corner dot <span class="label-hint">inside corner frames</span></div>
+          <div class="chip-grid" role="group" aria-label="Corner dot shape" id="cornerdot-shapes"></div>
+        </div>
+
+        <hr class="divider">
+
+        <div class="section">
+          <div class="section-label">Colors</div>
+          <div class="color-row">
+            <input type="color" id="color-fg" value="#1a3a5c" aria-labelledby="label-fg">
+            <div class="label-block">
+              <div class="color-name" id="label-fg"><label for="color-fg">Modules</label></div>
+              <div class="color-hex" id="hex-fg">#1a3a5c</div>
+            </div>
+          </div>
+          <div class="color-row">
+            <input type="color" id="color-corner" value="#1a3a5c" aria-labelledby="label-corner">
+            <div class="label-block">
+              <div class="color-name" id="label-corner"><label for="color-corner">Corners</label></div>
+              <div class="color-hex" id="hex-corner">#1a3a5c</div>
+            </div>
+          </div>
+          <div class="color-row">
+            <input type="color" id="color-bg" value="#ffffff" aria-labelledby="label-bg">
+            <div class="label-block">
+              <div class="color-name" id="label-bg"><label for="color-bg">Background</label></div>
+              <div class="color-hex" id="hex-bg">#ffffff</div>
+            </div>
+          </div>
+        </div>
+
+        <hr class="divider">
+
+        <div class="section">
+          <div class="section-label">Logo <span class="label-hint">approved logos only</span></div>
+          <div class="logo-grid" role="radiogroup" aria-label="Center logo" id="logo-options"></div>
+        </div>
+
+        <div class="field" id="logo-size-field" style="display:none;">
+          <label for="logo-size-input">Logo size</label>
+          <div class="slider-row">
+            <input type="range" id="logo-size-input" min="15" max="35" step="1" value="25" aria-valuemin="15" aria-valuemax="35" aria-valuenow="25">
+            <span class="slider-val" id="logo-size-val">25%</span>
+          </div>
+        </div>
+
+        <hr class="divider">
+
+        <div class="section">
+          <div class="section-label">Output</div>
+          <div class="field">
+            <label for="ec-level">Error correction <span class="label-hint">higher = more damage-resistant</span></label>
+            <select id="ec-level">
+              <option value="L">Low (7%) — densest</option>
+              <option value="M">Medium (15%) — general</option>
+              <option value="Q" selected>Quartile (25%) — print</option>
+              <option value="H">High (30%) — with logo / outdoor</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="size-input">Size</label>
+            <div class="slider-row">
+              <input type="range" id="size-input" min="200" max="800" step="20" value="400" aria-valuemin="200" aria-valuemax="800" aria-valuenow="400">
+              <span class="slider-val" id="size-val">400px</span>
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+      <div id="generate-status" class="sr-only" aria-live="polite"></div>
+
+    </div>
+
+    <aside class="preview-panel" aria-label="QR code preview">
+      <h2>Preview</h2>
+      <div class="qr-display">
+        <div id="qr-canvas"></div>
+        <div class="empty-preview" id="empty-preview">
+          <svg class="empty-preview-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.5"/>
+            <rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.5"/>
+            <rect x="3" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.5"/>
+            <path d="M14 14h3M20 14v3M14 17v4M17 17h3M20 20v1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+          <p>Enter content above to preview.</p>
+        </div>
+      </div>
+      <div class="preview-actions" id="preview-actions" style="display:none;">
+        <button class="btn btn-secondary btn-block" id="dl-png" type="button">Download PNG</button>
+        <button class="btn btn-secondary btn-block" id="dl-svg" type="button">Download SVG</button>
+      </div>
+      <div class="preview-meta" id="preview-meta" style="display:none;"></div>
+    </aside>
+
+  </div>
+</main>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+const LOGOS = {
+  'none': { name: 'No logo', svg: null },
+  'city-seal': {
+    name: 'City Seal',
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" fill="#fff" stroke="#1a3a5c" stroke-width="4"/><circle cx="50" cy="50" r="38" fill="none" stroke="#1a3a5c" stroke-width="1.5"/><text x="50" y="56" text-anchor="middle" font-family="serif" font-weight="700" font-size="22" fill="#1a3a5c">GG</text><text x="50" y="74" text-anchor="middle" font-family="sans-serif" font-size="6" fill="#1a3a5c" letter-spacing="1">GARDEN GROVE</text></svg>`
+  },
+  'parks': {
+    name: 'Parks & Rec',
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" fill="#fff" stroke="#2d6b3d" stroke-width="4"/><path d="M50 22 L32 52 L42 52 L36 70 L50 70 L50 80 L50 70 L64 70 L58 52 L68 52 Z" fill="#2d6b3d"/></svg>`
+  },
+  'public-safety': {
+    name: 'Public Safety',
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" fill="#fff" stroke="#a32d2d" stroke-width="4"/><path d="M50 20 L72 28 L72 50 Q72 68 50 80 Q28 68 28 50 L28 28 Z" fill="#a32d2d"/><path d="M42 50 L48 56 L60 42" stroke="#fff" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`
+  },
+  'library': {
+    name: 'Library',
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" fill="#fff" stroke="#6b2c4a" stroke-width="4"/><path d="M22 35 Q50 28 78 35 L78 70 Q50 63 22 70 Z" fill="none" stroke="#6b2c4a" stroke-width="3"/><path d="M50 30 L50 67" stroke="#6b2c4a" stroke-width="2.5"/><path d="M28 40 Q38 36 48 38 M52 38 Q62 36 72 40 M28 50 Q38 46 48 48 M52 48 Q62 46 72 50" stroke="#6b2c4a" stroke-width="1.5" fill="none"/></svg>`
+  },
+  'public-works': {
+    name: 'Public Works',
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" fill="#fff" stroke="#3a4a5c" stroke-width="4"/><path d="M50 28 L52 36 L60 34 L58 42 L66 46 L58 50 L60 58 L52 56 L50 64 L48 56 L40 58 L42 50 L34 46 L42 42 L40 34 L48 36 Z" fill="#3a4a5c"/><circle cx="50" cy="46" r="6" fill="#fff"/></svg>`
+  },
+  'community': {
+    name: 'Community',
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" fill="#fff" stroke="#b8893a" stroke-width="4"/><circle cx="36" cy="42" r="8" fill="#b8893a"/><circle cx="64" cy="42" r="8" fill="#b8893a"/><circle cx="50" cy="38" r="9" fill="#b8893a"/><path d="M22 70 Q22 58 36 58 Q42 58 44 62 Q44 58 50 56 Q56 58 56 62 Q58 58 64 58 Q78 58 78 70 Z" fill="#b8893a"/></svg>`
+  }
+};
+
+function logoToDataURI(key) {
+  const logo = LOGOS[key];
+  if (!logo || !logo.svg) return null;
+  return 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(logo.svg)));
+}
+
+const PRESETS = {
+  'official': {
+    name: 'Official Notice',
+    desc: 'Standard navy on white. For formal city communications.',
+    dotsType: 'square', cornersSquareType: 'square', cornersDotType: 'square',
+    color: '#1a3a5c', bgColor: '#ffffff', logo: 'city-seal', ec: 'H', size: 480
+  },
+  'parks': {
+    name: 'Parks & Recreation',
+    desc: 'Rounded modules in park green. Friendly and approachable.',
+    dotsType: 'rounded', cornersSquareType: 'extra-rounded', cornersDotType: 'dot',
+    color: '#2d6b3d', bgColor: '#ffffff', logo: 'parks', ec: 'H', size: 480
+  },
+  'safety': {
+    name: 'Public Safety',
+    desc: 'High-contrast squares for maximum scan reliability.',
+    dotsType: 'square', cornersSquareType: 'square', cornersDotType: 'square',
+    color: '#a32d2d', bgColor: '#ffffff', logo: 'public-safety', ec: 'H', size: 480
+  },
+  'events': {
+    name: 'Events & Community',
+    desc: 'Warm gold tones with rounded shapes. For invites and flyers.',
+    dotsType: 'classy-rounded', cornersSquareType: 'extra-rounded', cornersDotType: 'dot',
+    color: '#b8893a', bgColor: '#faf7f0', logo: 'community', ec: 'H', size: 480
+  },
+  'library': {
+    name: 'Library',
+    desc: 'Editorial burgundy with refined extra-rounded modules.',
+    dotsType: 'extra-rounded', cornersSquareType: 'extra-rounded', cornersDotType: 'dot',
+    color: '#6b2c4a', bgColor: '#ffffff', logo: 'library', ec: 'H', size: 480
+  },
+  'works': {
+    name: 'Public Works',
+    desc: 'Industrial slate for utilities, signage, and facilities.',
+    dotsType: 'square', cornersSquareType: 'square', cornersDotType: 'square',
+    color: '#3a4a5c', bgColor: '#ffffff', logo: 'public-works', ec: 'H', size: 480
+  }
+};
+
+const state = {
+  mode: 'presets',
+  preset: 'official',
+  custom: {
+    dotsType: 'square', cornersSquareType: 'square', cornersDotType: 'square',
+    fg: '#1a3a5c', cornerColor: '#1a3a5c', bg: '#ffffff',
+    logo: 'none', logoSize: 25, ec: 'Q', size: 400
+  },
+  qrCode: null
+};
+
+/* RENDER: PRESET LIST */
+function renderPresetItems() {
+  const list = document.querySelector('.preset-list');
+  list.innerHTML = '';
+  Object.entries(PRESETS).forEach(([key, p]) => {
+    const item = document.createElement('button');
+    item.type = 'button';
+    item.className = 'preset-item';
+    item.setAttribute('aria-pressed', key === state.preset ? 'true' : 'false');
+    item.dataset.key = key;
+    item.innerHTML = `
+      <div class="preset-dot" style="background:${p.color};"></div>
+      <div class="preset-item-body">
+        <div class="preset-item-name">${p.name}</div>
+        <div class="preset-item-desc">${p.desc}</div>
+      </div>
+      <svg class="preset-check" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M5 12l4 4L19 6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    `;
+    item.addEventListener('click', () => {
+      state.preset = key;
+      document.querySelectorAll('.preset-item').forEach(c => {
+        c.setAttribute('aria-pressed', c.dataset.key === key ? 'true' : 'false');
+      });
+      generate();
+    });
+    list.appendChild(item);
+  });
+}
+
+/* RENDER: SHAPE CHIPS */
+const MODULE_SHAPES = [
+  { key: 'square',        label: 'Square',    preview: dotPreview('square') },
+  { key: 'rounded',       label: 'Rounded',   preview: dotPreview('rounded') },
+  { key: 'dots',          label: 'Dots',      preview: dotPreview('dots') },
+  { key: 'classy',        label: 'Classy',    preview: dotPreview('classy') },
+  { key: 'classy-rounded',label: 'Classy R.', preview: dotPreview('classy-rounded') },
+  { key: 'extra-rounded', label: 'Extra R.',  preview: dotPreview('extra-rounded') }
+];
+
+const CORNER_SHAPES = [
+  { key: 'square',        label: 'Square' },
+  { key: 'extra-rounded', label: 'Rounded' },
+  { key: 'dot',           label: 'Dot' }
+];
+
+const CORNERDOT_SHAPES = [
+  { key: 'square', label: 'Square' },
+  { key: 'dot',    label: 'Dot' }
+];
+
+function dotPreview(type) {
+  const c = '#1a3a5c';
+  switch (type) {
+    case 'square':        return `<svg viewBox="0 0 32 32"><rect x="4" y="4" width="10" height="10" fill="${c}"/><rect x="18" y="4" width="10" height="10" fill="${c}"/><rect x="4" y="18" width="10" height="10" fill="${c}"/><rect x="18" y="18" width="10" height="10" fill="${c}"/></svg>`;
+    case 'rounded':       return `<svg viewBox="0 0 32 32"><rect x="4" y="4" width="10" height="10" rx="3" fill="${c}"/><rect x="18" y="4" width="10" height="10" rx="3" fill="${c}"/><rect x="4" y="18" width="10" height="10" rx="3" fill="${c}"/><rect x="18" y="18" width="10" height="10" rx="3" fill="${c}"/></svg>`;
+    case 'dots':          return `<svg viewBox="0 0 32 32"><circle cx="9" cy="9" r="5" fill="${c}"/><circle cx="23" cy="9" r="5" fill="${c}"/><circle cx="9" cy="23" r="5" fill="${c}"/><circle cx="23" cy="23" r="5" fill="${c}"/></svg>`;
+    case 'classy':        return `<svg viewBox="0 0 32 32"><path d="M4 4h10v10H8a4 4 0 0 1-4-4z" fill="${c}"/><path d="M18 4h10v6a4 4 0 0 1-4 4h-6z" fill="${c}"/><path d="M4 18h6a4 4 0 0 1 4 4v6H4z" fill="${c}"/><path d="M18 18h10v10h-6a4 4 0 0 1-4-4z" fill="${c}"/></svg>`;
+    case 'classy-rounded':return `<svg viewBox="0 0 32 32"><path d="M4 8a4 4 0 0 1 4-4h6v10H8a4 4 0 0 1-4-4z" fill="${c}"/><path d="M18 4h6a4 4 0 0 1 4 4v6H18z" fill="${c}"/><path d="M4 18h10v10H8a4 4 0 0 1-4-4z" fill="${c}"/><path d="M18 18h10v6a4 4 0 0 1-4 4h-6z" fill="${c}"/></svg>`;
+    case 'extra-rounded': return `<svg viewBox="0 0 32 32"><rect x="4" y="4" width="10" height="10" rx="5" fill="${c}"/><rect x="18" y="4" width="10" height="10" rx="5" fill="${c}"/><rect x="4" y="18" width="10" height="10" rx="5" fill="${c}"/><rect x="18" y="18" width="10" height="10" rx="5" fill="${c}"/></svg>`;
+    default: return '';
+  }
+}
+
+function cornerPreview(type) {
+  const c = '#1a3a5c';
+  switch (type) {
+    case 'square':        return `<svg viewBox="0 0 32 32"><rect x="4" y="4" width="24" height="24" fill="none" stroke="${c}" stroke-width="4"/></svg>`;
+    case 'extra-rounded': return `<svg viewBox="0 0 32 32"><rect x="4" y="4" width="24" height="24" rx="8" fill="none" stroke="${c}" stroke-width="4"/></svg>`;
+    case 'dot':           return `<svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="12" fill="none" stroke="${c}" stroke-width="4"/></svg>`;
+    default: return '';
+  }
+}
+
+function cornerDotPreview(type) {
+  const c = '#1a3a5c';
+  switch (type) {
+    case 'square': return `<svg viewBox="0 0 32 32"><rect x="8" y="8" width="16" height="16" fill="${c}"/></svg>`;
+    case 'dot':    return `<svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="8" fill="${c}"/></svg>`;
+    default: return '';
+  }
+}
+
+function renderChips(containerId, options, stateKey, previewFn) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = '';
+  options.forEach(opt => {
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = 'chip';
+    chip.setAttribute('aria-pressed', state.custom[stateKey] === opt.key ? 'true' : 'false');
+    chip.innerHTML = `
+      <div class="chip-preview">${opt.preview || previewFn(opt.key)}</div>
+      <span>${opt.label}</span>
+    `;
+    chip.addEventListener('click', () => {
+      state.custom[stateKey] = opt.key;
+      container.querySelectorAll('.chip').forEach((c, i) => {
+        c.setAttribute('aria-pressed', options[i].key === opt.key ? 'true' : 'false');
+      });
+      generate();
+    });
+    container.appendChild(chip);
+  });
+}
+
+/* RENDER: LOGO OPTIONS */
+function renderLogoOptions() {
+  const container = document.getElementById('logo-options');
+  container.innerHTML = '';
+  Object.entries(LOGOS).forEach(([key, logo]) => {
+    const opt = document.createElement('button');
+    opt.type = 'button';
+    opt.className = 'logo-option';
+    opt.setAttribute('role', 'radio');
+    opt.setAttribute('aria-pressed', state.custom.logo === key ? 'true' : 'false');
+    opt.setAttribute('aria-checked', state.custom.logo === key ? 'true' : 'false');
+    const thumb = logo.svg
+      ? logo.svg
+      : `<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`;
+    opt.innerHTML = `
+      <div class="logo-thumb">${thumb}</div>
+      <span class="logo-option-name">${logo.name}</span>
+    `;
+    opt.addEventListener('click', () => {
+      state.custom.logo = key;
+      container.querySelectorAll('.logo-option').forEach((o, i) => {
+        const k = Object.keys(LOGOS)[i];
+        o.setAttribute('aria-pressed', k === key ? 'true' : 'false');
+        o.setAttribute('aria-checked', k === key ? 'true' : 'false');
+      });
+      document.getElementById('logo-size-field').style.display = key === 'none' ? 'none' : 'flex';
+      generate();
+    });
+    container.appendChild(opt);
+  });
+}
+
+/* MODE SWITCHING */
+const tabs = document.querySelectorAll('[role="tab"]');
+const panels = {
+  'tab-presets': document.getElementById('panel-presets'),
+  'tab-custom':  document.getElementById('panel-custom')
+};
+
+function switchTab(targetTab) {
+  tabs.forEach(t => {
+    const active = t === targetTab;
+    t.setAttribute('aria-selected', active ? 'true' : 'false');
+    t.setAttribute('tabindex', active ? '0' : '-1');
+  });
+  Object.values(panels).forEach(p => { p.setAttribute('data-active', 'false'); p.hidden = true; });
+  const panel = panels[targetTab.id];
+  panel.setAttribute('data-active', 'true');
+  panel.hidden = false;
+  state.mode = targetTab.id === 'tab-presets' ? 'presets' : 'custom';
+  generate();
+}
+
+tabs.forEach((tab, idx) => {
+  tab.addEventListener('click', () => switchTab(tab));
+  tab.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+      e.preventDefault();
+      const next = tabs[(idx + (e.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length];
+      switchTab(next); next.focus();
+    } else if (e.key === 'Home') { e.preventDefault(); switchTab(tabs[0]); tabs[0].focus(); }
+      else if (e.key === 'End')  { e.preventDefault(); switchTab(tabs[tabs.length - 1]); tabs[tabs.length - 1].focus(); }
+  });
+});
+
+/* COLOR INPUTS */
+function bindColor(inputId, hexId, stateKey) {
+  const input = document.getElementById(inputId);
+  const display = document.getElementById(hexId);
+  input.addEventListener('input', () => {
+    state.custom[stateKey] = input.value;
+    display.textContent = input.value;
+    generate();
+  });
+}
+bindColor('color-fg',     'hex-fg',     'fg');
+bindColor('color-corner', 'hex-corner', 'cornerColor');
+bindColor('color-bg',     'hex-bg',     'bg');
+
+/* SLIDERS */
+document.getElementById('size-input').addEventListener('input', (e) => {
+  state.custom.size = parseInt(e.target.value);
+  document.getElementById('size-val').textContent = e.target.value + 'px';
+  e.target.setAttribute('aria-valuenow', e.target.value);
+  generate();
+});
+
+document.getElementById('logo-size-input').addEventListener('input', (e) => {
+  state.custom.logoSize = parseInt(e.target.value);
+  document.getElementById('logo-size-val').textContent = e.target.value + '%';
+  e.target.setAttribute('aria-valuenow', e.target.value);
+  generate();
+});
+
+document.getElementById('ec-level').addEventListener('change', (e) => {
+  state.custom.ec = e.target.value;
+  generate();
+});
+
+/* GENERATE */
+function debounce(fn, ms) {
+  let timer;
+  return (...args) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), ms); };
+}
+
+function getQROptions() {
+  const content = document.getElementById('content-input').value.trim();
+  if (state.mode === 'presets') {
+    const p = PRESETS[state.preset];
+    return {
+      content, data: content, type: 'canvas',
+      width: p.size, height: p.size,
+      dotsOptions:          { color: p.color,   type: p.dotsType },
+      backgroundOptions:    { color: p.bgColor },
+      cornersSquareOptions: { color: p.color,   type: p.cornersSquareType },
+      cornersDotOptions:    { color: p.color,   type: p.cornersDotType },
+      image: logoToDataURI(p.logo),
+      imageOptions: { crossOrigin: 'anonymous', margin: 6, imageSize: 0.28, hideBackgroundDots: true },
+      qrOptions: { errorCorrectionLevel: p.ec }
+    };
+  } else {
+    const c = state.custom;
+    return {
+      content, data: content, type: 'canvas',
+      width: c.size, height: c.size,
+      dotsOptions:          { color: c.fg,          type: c.dotsType },
+      backgroundOptions:    { color: c.bg },
+      cornersSquareOptions: { color: c.cornerColor, type: c.cornersSquareType },
+      cornersDotOptions:    { color: c.cornerColor, type: c.cornersDotType },
+      image: logoToDataURI(c.logo),
+      imageOptions: { crossOrigin: 'anonymous', margin: 6, imageSize: c.logoSize / 100, hideBackgroundDots: true },
+      qrOptions: { errorCorrectionLevel: c.ec }
+    };
+  }
+}
+
+function generate() {
+  const opts = getQROptions();
+
+  if (!opts.content) {
+    document.getElementById('empty-preview').style.display = '';
+    document.getElementById('qr-canvas').innerHTML = '';
+    document.getElementById('preview-actions').style.display = 'none';
+    document.getElementById('preview-meta').style.display = 'none';
+    state.qrCode = null;
+    return;
+  }
+
+  document.getElementById('empty-preview').style.display = 'none';
+  const canvas = document.getElementById('qr-canvas');
+  canvas.innerHTML = '';
+
+  state.qrCode = new QRCodeStyling(opts);
+  state.qrCode.append(canvas);
+
+  document.getElementById('preview-actions').style.display = 'flex';
+  const meta = document.getElementById('preview-meta');
+  meta.style.display = 'block';
+  meta.textContent = `${opts.width}×${opts.height}px · EC: ${opts.qrOptions.errorCorrectionLevel} · ${state.mode === 'presets' ? PRESETS[state.preset].name : 'Custom'}`;
+
+  document.getElementById('generate-status').textContent = 'QR code preview updated.';
+}
+
+const debouncedGenerate = debounce(generate, 420);
+document.getElementById('content-input').addEventListener('input', debouncedGenerate);
+
+/* DOWNLOADS */
+document.getElementById('dl-png').addEventListener('click', () => {
+  if (!state.qrCode) return;
+  state.qrCode.download({ name: `gg-qr-${Date.now()}`, extension: 'png' });
+  showToast('PNG downloaded');
+});
+
+document.getElementById('dl-svg').addEventListener('click', () => {
+  if (!state.qrCode) return;
+  state.qrCode.download({ name: `gg-qr-${Date.now()}`, extension: 'svg' });
+  showToast('SVG downloaded');
+});
+
+/* HELPERS */
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2400);
+}
+
+/* INIT */
+renderPresetItems();
+renderChips('module-shapes',    MODULE_SHAPES,    'dotsType');
+renderChips('corner-shapes',    CORNER_SHAPES.map(s => ({ ...s, preview: cornerPreview(s.key) })),    'cornersSquareType');
+renderChips('cornerdot-shapes', CORNERDOT_SHAPES.map(s => ({ ...s, preview: cornerDotPreview(s.key) })), 'cornersDotType');
+renderLogoOptions();
+</script>
+
+</body>
+</html>
