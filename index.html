@@ -404,6 +404,7 @@ svg { image-rendering: pixelated; image-rendering: crisp-edges; shape-rendering:
   border: 2px dashed rgba(212, 178, 84, 0.35);
   cursor: pointer;
   border-radius: 2px;
+  transition: border-color 0.18s ease, transform 0.15s ease;
 }
 
 .app-icon.placeholder .app-box::before,
@@ -412,21 +413,21 @@ svg { image-rendering: pixelated; image-rendering: crisp-edges; shape-rendering:
 .app-icon.placeholder:hover .app-box,
 .app-icon.placeholder:focus-visible .app-box {
   border-color: rgba(212, 178, 84, 0.8);
-  transform: translateY(-3px);
+  transform: scale(0.92);
 }
 
 .app-icon.placeholder:active .app-box {
-  transform: translateY(1px);
+  transform: scale(0.87);
 }
 
 /* ── PIXEL PLUS ── */
 .pixel-plus {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  grid-template-rows: 1fr 1fr 1fr;
-  gap: 4px;
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
+}
+
+.pixel-plus rect {
+  transition: fill 0.15s;
 }
 
 .app-icon.placeholder:hover .pixel-plus,
@@ -440,17 +441,10 @@ svg { image-rendering: pixelated; image-rendering: crisp-edges; shape-rendering:
   100% { opacity: 1; }
 }
 
-.pixel-plus .px {
-  background: rgba(212, 178, 84, 0.45);
-  transition: background 0.15s;
+.app-icon.placeholder:hover .pixel-plus rect,
+.app-icon.placeholder:focus-visible .pixel-plus rect {
+  fill: rgba(212, 178, 84, 0.9);
 }
-
-.app-icon.placeholder:hover .pixel-plus .px,
-.app-icon.placeholder:focus-visible .pixel-plus .px {
-  background: rgba(212, 178, 84, 0.9);
-}
-
-.px-c { background: transparent !important; }
 
 /* ── MODAL OVERLAY ── */
 .modal-overlay {
@@ -795,6 +789,37 @@ svg { image-rendering: pixelated; image-rendering: crisp-edges; shape-rendering:
       <span class="app-label">IMAGGE<br>COMPRESSOR</span>
     </a>
 
+    <!-- APP: QR GGENERATOR -->
+    <a
+      class="app-icon"
+      data-app="qr-generator"
+      href="QR GGENERATOR/gg-qr-generator.html"
+      role="listitem"
+      aria-label="QR Code Generator, new tool. Open."
+    >
+      <div class="app-box" aria-hidden="true">
+        <span class="new-badge" aria-hidden="true">NEW</span>
+        <svg width="68" height="68" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <!-- Top-left finder square -->
+          <rect x="2" y="2" width="7" height="7" fill="none" stroke="#D4B254" stroke-width="1"/>
+          <rect x="4" y="4" width="3" height="3" fill="#D4B254"/>
+          <!-- Top-right finder square -->
+          <rect x="11" y="2" width="7" height="7" fill="none" stroke="#D4B254" stroke-width="1"/>
+          <rect x="13" y="4" width="3" height="3" fill="#D4B254"/>
+          <!-- Bottom-left finder square -->
+          <rect x="2" y="11" width="7" height="7" fill="none" stroke="#D4B254" stroke-width="1"/>
+          <rect x="4" y="13" width="3" height="3" fill="#D4B254"/>
+          <!-- Data modules (bottom-right quadrant) -->
+          <rect x="11" y="11" width="2" height="2" fill="#D4B254"/>
+          <rect x="14" y="11" width="2" height="2" fill="#D4B254"/>
+          <rect x="11" y="14" width="2" height="2" fill="#D4B254"/>
+          <rect x="14" y="14" width="2" height="2" fill="#D4B254"/>
+          <rect x="16" y="16" width="2" height="2" fill="#D4B254"/>
+        </svg>
+      </div>
+      <span class="app-label">QR<br>GGENERATOR</span>
+    </a>
+
     <!-- PLACEHOLDER -->
     <button
       class="app-icon placeholder"
@@ -804,17 +829,10 @@ svg { image-rendering: pixelated; image-rendering: crisp-edges; shape-rendering:
       aria-haspopup="dialog"
     >
       <div class="app-box" aria-hidden="true">
-        <div class="pixel-plus" aria-hidden="true">
-          <div class="px px-c"></div>
-          <div class="px px-v"></div>
-          <div class="px px-c"></div>
-          <div class="px px-h"></div>
-          <div class="px px-v"></div>
-          <div class="px px-h"></div>
-          <div class="px px-c"></div>
-          <div class="px px-v"></div>
-          <div class="px px-c"></div>
-        </div>
+        <svg class="pixel-plus" width="32" height="32" viewBox="0 0 9 9" aria-hidden="true">
+          <rect x="3" y="0" width="3" height="9" fill="rgba(212,178,84,0.45)"/>
+          <rect x="0" y="3" width="9" height="3" fill="rgba(212,178,84,0.45)"/>
+        </svg>
       </div>
     </button>
 
