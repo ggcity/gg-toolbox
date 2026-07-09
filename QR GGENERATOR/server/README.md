@@ -33,7 +33,7 @@ The generator also remembers every code created **in that browser** under
 ## Deploy (5 minutes)
 
 1. Copy `q.php` onto the web server — easiest is the **same folder** as
-   `gg-qr-generator.html` (the generator auto-detects it there).
+   `index.html` (the generator auto-detects it there).
 2. Edit `q.php` and change `ADMIN_KEY` (the admin directory refuses to open
    while the key is still the placeholder).
 3. Make sure PHP can **write to that directory** (it creates `qr-links.json`).

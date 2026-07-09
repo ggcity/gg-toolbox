@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<!-- KIOSK: 2D -- use flags: --disable-gpu --disable-software-rasterizer --disable-gpu-compositing -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Daily Haiku</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    height: 100vh; overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    transition: background 1s ease; position: relative;
+  }
+  canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
+  .container {
+    text-align: center; max-width: 90vw; z-index: 2; position: relative;
+    animation: fadeIn 3s ease;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .haiku {
+    font-size: clamp(2rem, 6vw, 4.5rem); font-weight: 300;
+    line-height: 1.5; letter-spacing: 0.02em; font-style: italic; padding: 0 1rem;
+  }
+</style>
+</head>
+<body>
+<canvas id="wind"></canvas>
+<div class="container">
+  <div class="haiku" id="haiku"></div>
+</div>
+
+<script>
+// --- Seeded RNG ---
+function dayKey(offsetDays) {
+  offsetDays = offsetDays || 0;
+  const d = new Date();
+  d.setDate(d.getDate() + offsetDays);
+  return d.getFullYear() + '-' + d.getMonth() + '-' + d.getDate();
+}
+
+function hashStr(s) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+  return Math.abs(h);
+}
+
+function seededRng(seed) {
+  let s = seed;
+  return function() { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; };
+}
+
+// --- Phrase pools (strict 5-7-5) ---
+// Every line below has been syllable-checked. Pronunciations follow common American English.
+
+// LINE 1: 5 syllables
+const line1_options = [
+  "silence holds the dawn","mist dissolves to light","roots drink from the dark",
+  "the river forgets","stones remember rain","fog cradles the pines",
+  "dusk unravels slow","the moon owes no one","wind carries no weight",
+  "ice learns to let go","dust settles like prayer","the well holds its tongue",
+  "petals trust the fall","snow erases paths","the sky folds inward",
+  "the seed knows the dark","old walls hold warm light","the shore forgives waves",
+  "clouds carry lost names","the flame bows to wind","moss writes on the stone",
+  "the bell fades but stays","salt remembers sea","the mirror drinks light",
+  "the wound outlived him","the clock forgot noon","a hand through cold smoke",
+  "the lake keeps its vows","the ghost knows the lock","before the match struck",
+  "a word left unsaid","the photograph lies","a bone holds the cold",
+  "the candle learned grief","the stone holds no grudge","the compass spins free",
+  "rain forgets the road","old smoke finds the door","small bells in the dark",
+  "the field holds its breath","the kettle still sings","moths circle the lamp",
+  "rust dreams of the rain","the page turns itself","wind knocks at the glass",
+  "old keys forget locks","shadows learn to wait","the floor remembers",
+  "still water keeps time","frost writes on the pane","the ash holds its shape",
+  "the chair stays empty","the well drinks the moon","deep roots taste the ash",
+  "noon shrinks to a point","the lamp burns alone","the silence stays warm",
+  "the lake remembers","still rooms hold the dusk","the cup forgets tea"
+];
+
+// LINE 2: 7 syllables
+const line2_options = [
+  "between the breath and the bone","what the mountain holds in stone","where the deepest current sleeps",
+  "beneath what is left unsaid","the weight of the softest things","stillness after autumn rain",
+  "where the longest shadows root","the hush before the bloom comes","through cracks where the light arrives",
+  "where every ending begins","in the space between the waves","what the dark soil keeps inside",
+  "the slow pause before the flight","a thin thread through all the dark","where the old echoes dissolve",
+  "what the open hands release","the quiet beneath all things","the exact shape of return",
+  "what the slow tide will conceal","the deep hum of older roots","where the water meets the stone",
+  "what an absence will reveal","the strange grammar of cold rain","where old longing takes its form",
+  "a name the slow wind still holds","the worn color of pure trust","the thin edge before the grace",
+  "a corridor with no end","where the dreaming starts to stop","the thing the dark cellar held",
+  "below the long frozen pond","the patient language of smoke","a clean mirror facing in",
+  "what only the dog could smell","the lost time without a clock","the room behind the still room",
+  "what the embers had rehearsed","a voice deep in the woodwork","the season that softly stayed",
+  "where the bent needle finds rest","between each soft struck-out note","below the bird's final turn",
+  "what the scar still asks of us","the sentence no one finished","a sharp tooth inside the ash",
+  "the year that moved very slow","where small prayers go to thin out","what the high ceiling once heard",
+  "the fold in the familiar","a feather from nowhere falls","the stair that always still creaks",
+  "below what is gently named","the color of secondhand","what the still blood remembered",
+  "the hallway at three a.m.","between a word and its use","what the slow ruin still guards",
+  "a small gap in the treeline","the logic of old deep grief","what the wide window withholds"
+];
+
+// LINE 3: 5 syllables
+const line3_options = [
+  "you were always here","nothing was missing","the answer dissolves",
+  "begin where you are","this too is the path","the whole sky fits here",
+  "enough was enough","open hands receive","let the water speak",
+  "you already know","stillness is the door","soften into this",
+  "the center holds still","grace needs no reason","all of it was rain",
+  "home was never lost","the light finds a way","rest is not retreat",
+  "even stone can sing","what remains is true","it was always now",
+  "the whole earth exhales","fall into the hush","carry only light",
+  "the knot comes undone","be the clearing sky","what stays needs no name",
+  "the door is still there","you were the stranger","the dark felt like home",
+  "the door closed gently","the clocks never matched","something kept circling",
+  "ask the oldest tree","no one came back changed","the exit unmarked",
+  "something else was true","the bottom holds still","the house knew your name",
+  "let the dog lead home","the question was key","the bone knows your name",
+  "you left the light on","the map was inside","the last note still hangs",
+  "the door stays shut tight","it happened backwards","the seed had reasons",
+  "the cold was teaching","you cannot unbreathe","the lock knew your hand",
+  "that was not echo","the far side holds still","trust the slow dissolve",
+  "the held note lets go","the marrow speaks last","the wound has its roots",
+  "the tide does not mourn","step through the silence","the dust knows its way"
+];
+
+function pickNoRepeat(arr, lineIndex) {
+  const recentPicks = new Set();
+  for (let d = -7; d < 0; d++) {
+    const pastRng = seededRng(hashStr(dayKey(d) + '-L' + lineIndex));
+    recentPicks.add(arr[Math.floor(pastRng() * arr.length)]);
+  }
+  const pool = arr.filter(function(x) { return !recentPicks.has(x); });
+  const candidates = pool.length > 5 ? pool : arr;
+  const poolFingerprint = candidates.map(function(_, i) { return i; }).join('');
+  const todayRng = seededRng(hashStr(dayKey(0) + '-L' + lineIndex + '-' + poolFingerprint));
+  return candidates[Math.floor(todayRng() * candidates.length)];
+}
+
+const l1 = pickNoRepeat(line1_options, 1);
+const l2 = pickNoRepeat(line2_options, 2);
+const l3 = pickNoRepeat(line3_options, 3);
+
+document.getElementById('haiku').innerHTML = '\u201C' + l1 + '<br>' + l2 + '<br>' + l3 + '\u201D';
+
+// --- Color theme ---
+const themeRng = seededRng(hashStr(dayKey(0) + '-theme'));
+const isDark = themeRng() > 0.45;
+
+const palettes = isDark ? [
+  { bg: '#1a1a2e', fg: '#f0e0cc', accent: '#c0a888' },
+  { bg: '#0d1b2a', fg: '#d8f0ff', accent: '#90c8e8' },
+  { bg: '#1b1b1b', fg: '#f4e4c4', accent: '#d4a45a' },
+  { bg: '#192734', fg: '#c8e8ff', accent: '#88c0e0' },
+  { bg: '#1a1a1a', fg: '#ede0d0', accent: '#baa888' },
+  { bg: '#1c2331', fg: '#d0e4f8', accent: '#98b8d8' },
+  { bg: '#201a23', fg: '#f4d8e8', accent: '#d0a0c0' },
+  { bg: '#1a2420', fg: '#d0ecdc', accent: '#88c8a0' },
+  { bg: '#231c1a', fg: '#f4d8c8', accent: '#d0a080' },
+  { bg: '#1a1c28', fg: '#d8e0f8', accent: '#98a0d8' },
+] : [
+  { bg: '#f5f0eb', fg: '#2a2018', accent: '#705040' },
+  { bg: '#eef3f0', fg: '#182820', accent: '#406860' },
+  { bg: '#f3f0f5', fg: '#281830', accent: '#704080' },
+  { bg: '#f0f3f5', fg: '#182430', accent: '#406070' },
+  { bg: '#f5f2ee', fg: '#2a2218', accent: '#806050' },
+  { bg: '#f0f5f2', fg: '#142820', accent: '#507060' },
+  { bg: '#f5f0f0', fg: '#2a1818', accent: '#804040' },
+  { bg: '#f2f4f0', fg: '#1e2818', accent: '#607050' },
+  { bg: '#f4f0f5', fg: '#241828', accent: '#706080' },
+  { bg: '#f0f2f5', fg: '#182028', accent: '#506080' },
+];
+
+const paletteRng = seededRng(hashStr(dayKey(0) + '-palette'));
+const palette = palettes[Math.floor(paletteRng() * palettes.length)];
+
+document.body.style.background = palette.bg;
+document.querySelector('.haiku').style.color = palette.fg;
+
+// --- Inverse selection highlight (fg <-> bg) ---
+(function() {
+  const sel = document.createElement('style');
+  sel.textContent =
+    '::selection { background-color: ' + palette.fg + '; color: ' + palette.bg + '; }' +
+    '::-moz-selection { background-color: ' + palette.fg + '; color: ' + palette.bg + '; }';
+  document.head.appendChild(sel);
+})();
+
+// --- Wind particles ---
+const canvas = document.getElementById('wind');
+const ctx = canvas.getContext('2d');
+let W, H;
+function resize() { W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; }
+resize();
+window.addEventListener('resize', resize);
+
+class Particle {
+  constructor() { this.reset(true); }
+  reset(init) {
+    this.x = init ? Math.random() * W : -10;
+    this.y = Math.random() * H;
+    this.size = Math.random() * 2 + 0.5;
+    this.speedX = Math.random() * 0.8 + 0.2;
+    this.speedY = (Math.random() - 0.5) * 0.3;
+    this.opacity = Math.random() * 0.35 + 0.1;
+    this.drift = Math.random() * Math.PI * 2;
+    this.driftSpeed = Math.random() * 0.003 + 0.001;
+    this.life = 0;
+    this.maxLife = Math.random() * 600 + 300;
+  }
+  update() {
+    this.drift += this.driftSpeed;
+    this.x += this.speedX;
+    this.y += this.speedY + Math.sin(this.drift) * 0.3;
+    this.life++;
+    let fade = 1;
+    if (this.life < 60) fade = this.life / 60;
+    else if (this.life > this.maxLife - 60) fade = (this.maxLife - this.life) / 60;
+    this.currentOpacity = this.opacity * Math.max(0, fade);
+    if (this.x > W + 10 || this.life > this.maxLife) this.reset(false);
+  }
+  draw() {
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+    ctx.fillStyle = palette.fg;
+    ctx.globalAlpha = this.currentOpacity;
+    ctx.fill();
+  }
+}
+
+class WindLine {
+  constructor() { this.reset(true); }
+  reset(init) {
+    this.x = init ? Math.random() * W : -50;
+    this.y = Math.random() * H;
+    this.length = Math.random() * 80 + 40;
+    this.speed = Math.random() * 1.2 + 0.4;
+    this.opacity = Math.random() * 0.09 + 0.03;
+    this.curve = Math.random() * Math.PI * 2;
+    this.curveSpeed = Math.random() * 0.008 + 0.002;
+    this.thickness = Math.random() * 1 + 0.3;
+  }
+  update() {
+    this.x += this.speed;
+    this.curve += this.curveSpeed;
+    if (this.x > W + 100) this.reset(false);
+  }
+  draw() {
+    ctx.beginPath();
+    ctx.moveTo(this.x, this.y);
+    const cp1y = this.y + Math.sin(this.curve) * 20;
+    const cp2y = this.y + Math.cos(this.curve * 1.3) * 15;
+    ctx.bezierCurveTo(
+      this.x + this.length * 0.33, cp1y,
+      this.x + this.length * 0.66, cp2y,
+      this.x + this.length, this.y + Math.sin(this.curve * 0.7) * 10
+    );
+    ctx.strokeStyle = palette.fg;
+    ctx.globalAlpha = this.opacity;
+    ctx.lineWidth = this.thickness;
+    ctx.stroke();
+  }
+}
+
+const particles = Array.from({ length: 30 }, function() { return new Particle(); });
+const windLines = Array.from({ length: 6 }, function() { return new WindLine(); });
+
+let last = 0;
+function animate(ts) {
+  requestAnimationFrame(animate);
+  if (ts - last < 50) return; // cap at 20fps
+  last = ts;
+  ctx.clearRect(0, 0, W, H);
+  for (let i = 0; i < windLines.length; i++) { windLines[i].update(); windLines[i].draw(); }
+  for (let i = 0; i < particles.length; i++) { particles[i].update(); particles[i].draw(); }
+  ctx.globalAlpha = 1;
+}
+requestAnimationFrame(animate);
+</script>
+</body>
+</html>

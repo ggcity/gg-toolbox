@@ -311,6 +311,126 @@ svg { image-rendering: pixelated; shape-rendering: crispEdges; }
   100% { opacity: 1; }
 }
 
+/* ── SNACK SHACK — a little desk drawer that rises out of the footer ── */
+.toybox {
+  position: fixed;
+  right: 18px;
+  bottom: 32px;               /* seated on top of the footer bar */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  z-index: 90;                /* below the footer (100): it emerges from it */
+  /* closed: sunk into the footer, only the handle poking up */
+  transform: translateY(calc(100% - 26px));
+  transition: transform 0.28s cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+.toybox.open { transform: translateY(0); }
+.toybox.dragging { transition: none; }
+
+.toybox-handle {
+  width: 76px;
+  height: 26px;
+  background: var(--navy-deep);
+  border: 1px solid var(--gold);
+  border-bottom: none;
+  border-radius: var(--radius) var(--radius) 0 0;
+  cursor: grab;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  flex-shrink: 0;
+  touch-action: none;
+  box-shadow: -2px -2px 0 rgba(9, 30, 74, 0.15);
+}
+.toybox-handle:active { cursor: grabbing; }
+.toybox-handle:focus-visible { outline: 2px solid var(--navy-mid); outline-offset: 2px; }
+.toybox-handle svg {
+  width: 40px;
+  height: 12px;
+  pointer-events: none;
+}
+/* "pull me" wiggle while closed */
+.toybox:not(.open):not(.dragging) .toybox-handle:hover { animation: toy-pull 0.8s ease-in-out infinite; }
+@keyframes toy-pull {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-4px); }
+}
+
+.toybox-tray {
+  position: relative;
+  min-width: 150px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-bottom: none;
+  box-shadow: -4px -4px 0 rgba(9, 30, 74, 0.10);
+}
+/* fully hide the tucked-away tray so nothing peeks while closed */
+.toybox:not(.open):not(.dragging) .toybox-tray {
+  visibility: hidden;
+  transition: visibility 0s linear 0.3s;   /* after the slide-shut finishes */
+}
+
+.toybox-tiles {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 16px 20px 26px;
+}
+
+/* the drawer's floor print, under the loose toys */
+.toybox-floor {
+  position: absolute;
+  left: 0; right: 0; bottom: 6px;
+  z-index: 0;
+  text-align: center;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: var(--chalk-dark);
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Toy objects — unnamed icons, rattling around loose in the drawer.
+   Their resting spot is randomised (--dx/--dy/--rot) every time it opens. */
+.toy-tile {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  text-decoration: none;
+  background: linear-gradient(160deg, #0B2554 0%, var(--navy-deep) 100%);
+  border: 1px solid var(--navy-deep);
+  border-radius: var(--radius);
+  transform: translate(var(--dx, 0px), var(--dy, 0px)) rotate(var(--rot, 0deg));
+  transition: border-color 0.12s, box-shadow 0.12s;
+}
+.toy-tile:hover,
+.toy-tile:focus-visible {
+  border-color: var(--gold);
+  box-shadow: 3px 3px 0 var(--gold);
+}
+.toy-tile:focus-visible { outline: 2px solid var(--navy-mid); outline-offset: 2px; }
+.toy-tile svg { width: 26px; height: 26px; pointer-events: none; }
+
+/* tossed-in bounce as the drawer slides open */
+.toy-tile.settle {
+  animation: toy-settle 0.55s cubic-bezier(0.3, 1.2, 0.4, 1) backwards;
+  animation-delay: var(--delay, 0s);
+}
+@keyframes toy-settle {
+  0%   { transform: translate(var(--dx, 0px), calc(var(--dy, 0px) - 14px)) rotate(var(--rot, 0deg)); }
+  55%  { transform: translate(var(--dx, 0px), calc(var(--dy, 0px) + 3px))  rotate(var(--rot, 0deg)); }
+  75%  { transform: translate(var(--dx, 0px), calc(var(--dy, 0px) - 2px))  rotate(var(--rot, 0deg)); }
+  100% { transform: translate(var(--dx, 0px), var(--dy, 0px)) rotate(var(--rot, 0deg)); }
+}
+
 /* ── MODAL ── */
 .modal-overlay {
   position: fixed;
@@ -579,7 +699,7 @@ svg { image-rendering: pixelated; shape-rendering: crispEdges; }
     <a
       class="app-icon"
       data-app="qr-generator"
-      href="QR GGENERATOR/gg-qr-generator.html"
+      href="QR GGENERATOR/index.html"
       role="listitem"
       aria-label="QR Code Generator, new tool. Open."
     >
@@ -624,6 +744,46 @@ svg { image-rendering: pixelated; shape-rendering: crispEdges; }
 
   </div>
 </main>
+
+<!-- SNACK SHACK — pull the drawer up out of the footer -->
+<div class="toybox" id="toybox">
+  <button
+    class="toybox-handle"
+    id="toyboxHandle"
+    aria-expanded="false"
+    aria-controls="toyboxTray"
+    aria-label="Snack Shack drawer"
+  >
+    <svg viewBox="0 0 40 12" aria-hidden="true">
+      <!-- mounting stems -->
+      <rect x="1"  y="4" width="5" height="4" fill="#8A7128"/>
+      <rect x="34" y="4" width="5" height="4" fill="#8A7128"/>
+      <!-- pull bar, raised off the plate -->
+      <rect x="6" y="2" width="28" height="8" fill="#D4B254"/>
+      <rect x="6" y="2" width="28" height="3" fill="#F0D078"/>
+      <rect x="6" y="2" width="2"  height="8" fill="#F0D078"/>
+      <rect x="6" y="8" width="28" height="2" fill="#8A7128"/>
+      <rect x="32" y="2" width="2" height="8" fill="#8A7128"/>
+    </svg>
+  </button>
+  <div class="toybox-tray" id="toyboxTray" role="region" aria-label="Snack Shack">
+    <div class="toybox-tiles">
+      <a class="toy-tile" href="daily haiku/index.html" aria-label="Daily Haiku" title="Daily Haiku">
+        <!-- three bars in 5·7·5 — the haiku meter — plus a blossom -->
+        <svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <rect x="2" y="5"  width="5" height="2" fill="#D4B254"/>
+          <rect x="2" y="9"  width="7" height="2" fill="#D4B254"/>
+          <rect x="2" y="13" width="5" height="2" fill="#D4B254"/>
+          <rect x="11" y="2" width="2" height="2" fill="#F0D078"/>
+          <rect x="10" y="3" width="1" height="1" fill="#F0D078"/>
+          <rect x="13" y="3" width="1" height="1" fill="#F0D078"/>
+          <rect x="11" y="4" width="2" height="1" fill="#B8863B"/>
+        </svg>
+      </a>
+    </div>
+    <span class="toybox-floor" aria-hidden="true">Snack Shack</span>
+  </div>
+</div>
 
 <!-- STATUS BAR / CONSOLE -->
 <footer class="statusbar" role="contentinfo" aria-label="System console">
@@ -786,6 +946,63 @@ function typeNextChar() {
 if (CONSOLE_MESSAGES.length > 0) {
   setTimeout(typeNextChar, 800);
 }
+
+/* ── SNACK SHACK drawer: click toggles, or genuinely pull it up ── */
+const toybox = document.getElementById('toybox');
+const toyHandle = document.getElementById('toyboxHandle');
+
+function toyScatter() {
+  document.querySelectorAll('.toy-tile').forEach((t, i) => {
+    t.style.setProperty('--dx', (Math.random() * 12 - 6).toFixed(1) + 'px');
+    t.style.setProperty('--dy', (Math.random() * 8 - 4).toFixed(1) + 'px');
+    t.style.setProperty('--rot', (Math.random() * 12 - 6).toFixed(1) + 'deg');
+    t.style.setProperty('--delay', (0.08 + i * 0.07).toFixed(2) + 's');
+    t.classList.remove('settle');
+    void t.offsetWidth;                       // restart the bounce
+    t.classList.add('settle');
+  });
+}
+
+function toySetOpen(o) {
+  toybox.classList.toggle('open', o);
+  toybox.style.transform = '';
+  toyHandle.setAttribute('aria-expanded', String(o));
+  if (o) toyScatter();                        // toys rattle into new spots
+}
+
+let toyDrag = null;
+toyHandle.addEventListener('pointerdown', (e) => {
+  toyDrag = { startY: e.clientY, moved: false, wasOpen: toybox.classList.contains('open') };
+  try { toyHandle.setPointerCapture(e.pointerId); } catch (err) { /* synthetic pointers */ }
+});
+toyHandle.addEventListener('pointermove', (e) => {
+  if (!toyDrag) return;
+  const dy = toyDrag.startY - e.clientY;                     // pulling up = positive
+  if (Math.abs(dy) > 5) toyDrag.moved = true;
+  if (!toyDrag.moved) return;
+  const closedOffset = toybox.offsetHeight - 26;             // tray height hidden when closed
+  const base = toyDrag.wasOpen ? 0 : closedOffset;
+  const current = Math.min(closedOffset, Math.max(0, base - dy));
+  toybox.classList.add('dragging');
+  toybox.style.transform = 'translateY(' + current + 'px)';
+  toyDrag.current = current;
+  toyDrag.closedOffset = closedOffset;
+});
+function toyRelease() {
+  if (!toyDrag) return;
+  toybox.classList.remove('dragging');
+  if (toyDrag.moved) toySetOpen(toyDrag.current < toyDrag.closedOffset / 2);
+  else toySetOpen(!toyDrag.wasOpen);                         // plain click toggles
+  toyDrag = null;
+}
+toyHandle.addEventListener('pointerup', toyRelease);
+toyHandle.addEventListener('pointercancel', toyRelease);
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && toybox.classList.contains('open') && !overlay.classList.contains('open')) {
+    toySetOpen(false);
+  }
+});
 
 /* Selected state on click */
 document.querySelectorAll('.app-icon:not(.placeholder)').forEach(icon => {

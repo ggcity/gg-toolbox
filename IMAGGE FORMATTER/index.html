@@ -1,0 +1,994 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bulk Image Formatter</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:        #0e0e0e;
+  --surface:   #161616;
+  --surface-2: #1a1a1a;
+  --border:    #2a2a2a;
+  --border-hi: #3a3a3a;
+  --text:      #c8c8b4;
+  --text-dim:  #6a6a58;
+  --text-hi:   #e8e8d0;
+  --accent:    #8aaa6a;
+  --accent-lo: #4a6a3a;
+  --accent-hi: #a8c888;
+  --warn:      #aa6a4a;
+  --blue:      #6a8aaa;
+  --canvas-bg: #080808;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body { height: 100%; }
+
+body {
+  font-family: 'VT323', monospace;
+  font-size: 20px;
+  background: var(--bg);
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+  user-select: none;
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 3px,
+    rgba(0,0,0,0.18) 3px,
+    rgba(0,0,0,0.18) 4px
+  );
+}
+
+/* =========================
+   UPLOAD VIEW
+   ========================= */
+#upload {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  padding: 20px;
+}
+#upload .frame {
+  width: 100%;
+  max-width: 520px;
+}
+#upload h1 {
+  font-size: 30px;
+  letter-spacing: 4px;
+  color: var(--text-hi);
+  margin-bottom: 2px;
+  font-weight: 400;
+  text-align: center;
+}
+#upload .subtitle {
+  font-size: 18px;
+  color: var(--text-dim);
+  letter-spacing: 1px;
+  text-align: center;
+  margin-bottom: 22px;
+}
+#dz {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  padding: 40px 24px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.1s, background 0.1s;
+  position: relative;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.03);
+}
+#dz:hover { border-color: var(--border-hi); }
+#dz.over {
+  border-color: var(--accent-lo);
+  background: #161a12;
+}
+#dz .icon { font-size: 28px; color: var(--text-dim); display: block; margin-bottom: 8px; }
+#dz h2 {
+  font-size: 22px;
+  font-weight: 400;
+  color: var(--text-hi);
+  letter-spacing: 1.5px;
+  margin-bottom: 4px;
+}
+#dz p {
+  font-size: 16px;
+  color: var(--text-dim);
+  letter-spacing: 1px;
+}
+#dz p.tag {
+  margin-top: 10px;
+  font-size: 14px;
+  color: var(--accent-lo);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+#file-input { display: none; }
+
+/* =========================
+   EDITOR VIEW
+   ========================= */
+#editor {
+  display: none;
+  flex-direction: column;
+  height: 100vh;
+}
+
+/* HEADER STRIP */
+#header {
+  display: flex;
+  align-items: center;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 6px 14px;
+  flex-shrink: 0;
+  gap: 14px;
+}
+#header .brand {
+  font-size: 20px;
+  letter-spacing: 3px;
+  color: var(--text-hi);
+  text-transform: uppercase;
+}
+#header .stamp {
+  font-size: 14px;
+  color: var(--accent-lo);
+  letter-spacing: 1.5px;
+  border: 1px solid var(--accent-lo);
+  padding: 1px 8px;
+  text-transform: uppercase;
+}
+#fname {
+  font-size: 18px;
+  color: var(--text);
+  letter-spacing: 1px;
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+#pinfo {
+  font-size: 16px;
+  color: var(--text-dim);
+  letter-spacing: 1px;
+  margin-left: auto;
+}
+
+/* CONTROLS BAR (frame + mode) */
+#topbar {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.4fr) auto auto auto auto;
+  gap: 1px;
+  background: var(--border);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.cell {
+  background: var(--surface);
+  padding: 6px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 50px;
+  justify-content: center;
+}
+.cell-label {
+  font-size: 13px;
+  color: var(--text-dim);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+.cell-row { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; }
+
+select {
+  font-family: 'VT323', monospace;
+  font-size: 18px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 2px 6px;
+  cursor: pointer;
+  outline: none;
+  letter-spacing: 1px;
+  flex: 1;
+  min-width: 0;
+}
+select:focus, select:hover { border-color: var(--border-hi); }
+
+input[type=number] {
+  font-family: 'VT323', monospace;
+  font-size: 18px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 2px 6px;
+  outline: none;
+  letter-spacing: 1px;
+  width: 70px;
+  -moz-appearance: textfield;
+}
+input[type=number]::-webkit-outer-spin-button,
+input[type=number]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type=number]:focus, input[type=number]:hover { border-color: var(--border-hi); }
+.x-sep { color: var(--text-dim); font-size: 18px; }
+
+#custom-dims { display: none; align-items: center; gap: 6px; }
+#custom-dims.on { display: flex; }
+
+/* mode pills */
+.pill {
+  font-family: 'VT323', monospace;
+  font-size: 16px;
+  letter-spacing: 1.5px;
+  padding: 3px 12px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-dim);
+  cursor: pointer;
+  text-transform: uppercase;
+  transition: border-color 0.1s, color 0.1s;
+}
+.pill:hover { border-color: var(--border-hi); color: var(--text); }
+.pill.on {
+  border-color: var(--accent-lo);
+  color: var(--accent);
+  background: #111a0e;
+}
+.pill-row { display: flex; gap: 4px; }
+
+/* WORKSPACE */
+#workspace {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* SIDEBAR */
+#sidebar {
+  width: 168px;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  flex-shrink: 0;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-hi) var(--bg);
+}
+#sidebar::-webkit-scrollbar { width: 6px; }
+#sidebar::-webkit-scrollbar-track { background: transparent; }
+#sidebar::-webkit-scrollbar-thumb { background: var(--border-hi); }
+
+.th {
+  border: 1px solid var(--border);
+  background: var(--bg);
+  cursor: pointer;
+  position: relative;
+  transition: border-color 0.1s;
+}
+.th img {
+  width: 100%;
+  display: block;
+  aspect-ratio: 16/9;
+  object-fit: cover;
+  opacity: 0.55;
+  transition: opacity 0.1s;
+  image-rendering: pixelated;
+}
+.th:hover img { opacity: 0.85; }
+.th.active img { opacity: 1; }
+.th.active { border-color: var(--blue); }
+.th.done { border-color: var(--accent-lo); }
+.th.done.active { border-color: var(--accent); }
+.th .tl {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(transparent, rgba(0,0,0,0.85));
+  font-size: 14px;
+  letter-spacing: 0.5px;
+  padding: 14px 5px 3px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+}
+.th .ck {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  background: var(--accent);
+  color: var(--bg);
+  width: 16px;
+  height: 16px;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'VT323', monospace;
+}
+.th .idx {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  background: rgba(0,0,0,0.7);
+  color: var(--text-dim);
+  font-size: 12px;
+  letter-spacing: 1px;
+  padding: 0 4px;
+}
+
+/* CANVAS */
+#canvasWrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--canvas-bg);
+  position: relative;
+  overflow: hidden;
+  min-width: 0;
+  border-left: none;
+}
+#cvs { position: absolute; touch-action: none; image-rendering: pixelated; }
+
+#cropinfo {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.85);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 16px;
+  letter-spacing: 1px;
+  padding: 3px 12px;
+  pointer-events: none;
+  white-space: nowrap;
+}
+#cropinfo .k { color: var(--text-dim); }
+#cropinfo .v { color: var(--accent); }
+
+/* BOTTOM BAR */
+#bottombar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.btn {
+  font-family: 'VT323', monospace;
+  font-size: 18px;
+  letter-spacing: 2px;
+  padding: 5px 14px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  cursor: pointer;
+  transition: border-color 0.1s, color 0.1s, background 0.1s;
+  white-space: nowrap;
+}
+.btn:hover:not(:disabled) {
+  border-color: var(--border-hi);
+  color: var(--text-hi);
+}
+.btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+.btn-primary {
+  color: var(--accent);
+  border-color: var(--accent-lo);
+  background: #111a0e;
+}
+.btn-primary:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent-hi);
+}
+
+.btn-warn {
+  color: var(--warn);
+  border-color: #6a3a20;
+  background: #1a120e;
+}
+.btn-warn:hover:not(:disabled) {
+  border-color: var(--warn);
+}
+
+#done-lbl {
+  font-size: 16px;
+  color: var(--text-dim);
+  letter-spacing: 1px;
+  padding: 0 8px;
+}
+#done-lbl .v { color: var(--accent); }
+
+#hint {
+  font-size: 14px;
+  color: var(--text-dim);
+  letter-spacing: 1px;
+  margin-left: auto;
+}
+#hint kbd {
+  font-family: 'VT323', monospace;
+  font-size: 14px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  padding: 0 4px;
+  color: var(--text);
+}
+
+@media (max-width: 760px) {
+  #topbar { grid-template-columns: 1fr 1fr; }
+  #header .stamp { display: none; }
+  #sidebar { width: 110px; }
+  #hint { display: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- UPLOAD VIEW -->
+<div id="upload">
+  <div class="frame">
+    <h1>BULK IMAGE FORMATTER</h1>
+    <p class="subtitle">crop / frame / batch export</p>
+    <div id="dz" onclick="document.getElementById('file-input').click()">
+      <span class="icon">▤</span>
+      <h2>DROP IMAGES HERE</h2>
+      <p>click or drop files / jpg, png, webp</p>
+      <p class="tag">[ batch crop with resizable frame ]</p>
+    </div>
+    <input type="file" id="file-input" multiple accept="image/*">
+  </div>
+</div>
+
+<!-- EDITOR VIEW -->
+<div id="editor">
+
+  <!-- HEADER -->
+  <div id="header">
+    <span class="brand">IMG.FORMATTER</span>
+    <span class="stamp">processing</span>
+    <span id="fname"></span>
+    <span id="pinfo"></span>
+  </div>
+
+  <!-- TOP CONTROL BAR -->
+  <div id="topbar">
+    <div class="cell">
+      <span class="cell-label">Frame</span>
+      <div class="cell-row">
+        <select id="ratio-sel">
+          <option value="2:1">2:1 / banner (924x462)</option>
+          <option value="16:9">16:9 / widescreen</option>
+          <option value="4:3">4:3 / standard</option>
+          <option value="3:2">3:2 / photo</option>
+          <option value="1:1">1:1 / square</option>
+          <option value="21:9">21:9 / ultrawide</option>
+          <option value="9:16">9:16 / portrait</option>
+          <option value="custom">custom...</option>
+        </select>
+        <div id="custom-dims">
+          <input type="number" id="custom-w" min="1" max="20000" value="1080" title="output width">
+          <span class="x-sep">x</span>
+          <input type="number" id="custom-h" min="1" max="20000" value="1080" title="output height">
+          <span class="x-sep" style="font-size:14px;letter-spacing:1px;">PX</span>
+        </div>
+      </div>
+    </div>
+    <div class="cell">
+      <span class="cell-label">Mode</span>
+      <div class="pill-row">
+        <button class="pill on" id="pill-cover" onclick="setMode('cover')">Cover</button>
+        <button class="pill" id="pill-fit" onclick="setMode('fit')">Fit</button>
+        <button class="pill" id="pill-manual" onclick="setMode('manual')">Manual</button>
+      </div>
+    </div>
+    <div class="cell">
+      <span class="cell-label">Output</span>
+      <span id="outinfo" style="font-size:18px;color:var(--accent);letter-spacing:1px;">924 x 462</span>
+    </div>
+    <div class="cell">
+      <span class="cell-label">Format</span>
+      <select id="fmt-sel" style="width:130px;">
+        <option value="auto">auto / keep ext</option>
+        <option value="image/jpeg">jpeg</option>
+        <option value="image/webp">webp</option>
+        <option value="image/png">png</option>
+      </select>
+    </div>
+    <div class="cell">
+      <span class="cell-label">Quality</span>
+      <div class="cell-row">
+        <input type="range" id="quality" min="50" max="100" value="95" style="width:90px;accent-color:var(--accent);">
+        <span id="qval" style="font-size:18px;color:var(--accent);min-width:40px;">95%</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- WORKSPACE -->
+  <div id="workspace">
+    <div id="sidebar"></div>
+    <div id="canvasWrap">
+      <canvas id="cvs"></canvas>
+      <div id="cropinfo"></div>
+    </div>
+  </div>
+
+  <!-- BOTTOM BAR -->
+  <div id="bottombar">
+    <button class="btn" onclick="nav(-1)">[ &lt; prev ]</button>
+    <button class="btn btn-primary" onclick="commitAndNext()">[ crop &amp; next &gt; ]</button>
+    <button class="btn" onclick="nav(1)">[ skip ]</button>
+    <span id="done-lbl"><span class="v">0</span> / 0 done</span>
+    <span id="hint"><kbd>enter</kbd> crop &amp; next / <kbd>&larr;</kbd> <kbd>&rarr;</kbd> navigate / shift = free resize</span>
+    <button class="btn btn-primary" onclick="buildZip()" style="margin-left:auto">[ download zip ]</button>
+    <button class="btn btn-warn" onclick="resetAll()">[ reset ]</button>
+  </div>
+
+</div>
+
+<script>
+let imgs = [], cur = 0, ratio = 2/1, mode = 'cover';
+let customW = 1080, customH = 1080, useCustom = false;
+let C, X, W, H;
+let iW, iH, scl;
+let dX, dY;
+let cX, cY, cW, cH;
+let drag = null;
+
+const dz = document.getElementById('dz');
+dz.addEventListener('dragover', e=>{e.preventDefault();dz.classList.add('over')});
+dz.addEventListener('dragleave', ()=>dz.classList.remove('over'));
+dz.addEventListener('drop', e=>{e.preventDefault();dz.classList.remove('over');loadFiles(e.dataTransfer.files)});
+document.getElementById('file-input').addEventListener('change', e=>loadFiles(e.target.files));
+
+function loadFiles(files){
+  const arr = [...files].filter(f=>f.type.startsWith('image/'));
+  if(!arr.length) return;
+  imgs=[]; let done=0;
+  arr.forEach(f=>{
+    const img=new Image(), url=URL.createObjectURL(f);
+    img.onload=()=>{
+      imgs.push({f,name:f.name,img,url,
+        cX:0,cY:0,cW:img.width,cH:img.height,done:false,_init:false});
+      if(++done===arr.length){
+        imgs.sort((a,b)=>a.name.localeCompare(b.name));
+        startEditor();
+      }
+    };
+    img.src=url;
+  });
+}
+
+function startEditor(){
+  document.getElementById('upload').style.display='none';
+  document.getElementById('editor').style.display='flex';
+  C=document.getElementById('cvs');
+  X=C.getContext('2d');
+  C.addEventListener('mousedown',onDown);
+  C.addEventListener('mousemove',onMove);
+  C.addEventListener('mouseup',onUp);
+  C.addEventListener('mouseleave',onUp);
+  C.addEventListener('touchstart',e=>{e.preventDefault();onDown(e.touches[0])},{passive:false});
+  C.addEventListener('touchmove',e=>{e.preventDefault();onMove(e.touches[0])},{passive:false});
+  C.addEventListener('touchend',e=>{e.preventDefault();onUp()},{passive:false});
+
+  document.getElementById('ratio-sel').addEventListener('change',e=>{
+    const v=e.target.value;
+    if(v==='custom'){
+      useCustom = true;
+      document.getElementById('custom-dims').classList.add('on');
+      applyCustomRatio();
+    } else {
+      useCustom = false;
+      document.getElementById('custom-dims').classList.remove('on');
+      const p=v.split(':');
+      ratio=parseFloat(p[0])/parseFloat(p[1]);
+    }
+    initCrop(cur); updateOutInfo(); draw();
+  });
+
+  document.getElementById('custom-w').addEventListener('input', applyCustomRatio);
+  document.getElementById('custom-h').addEventListener('input', applyCustomRatio);
+
+  document.getElementById('quality').addEventListener('input',e=>{
+    document.getElementById('qval').textContent = e.target.value + '%';
+  });
+
+  window.addEventListener('keydown',onKey);
+  window.addEventListener('resize',()=>{setupCanvas();draw()});
+
+  buildSidebar();
+  updateOutInfo();
+  goTo(0);
+}
+
+function applyCustomRatio(){
+  const w = parseInt(document.getElementById('custom-w').value)||1;
+  const h = parseInt(document.getElementById('custom-h').value)||1;
+  customW = Math.max(1, w);
+  customH = Math.max(1, h);
+  ratio = customW / customH;
+  if(useCustom){
+    initCrop(cur);
+    updateOutInfo();
+    draw();
+  }
+}
+
+function getOutputDims(){
+  if(useCustom) return { outW: customW, outH: customH };
+  const outW = 924;
+  return { outW, outH: Math.round(outW / ratio) };
+}
+
+function updateOutInfo(){
+  const { outW, outH } = getOutputDims();
+  document.getElementById('outinfo').textContent = outW + ' x ' + outH;
+}
+
+function setupCanvas(){
+  const wrap=document.getElementById('canvasWrap');
+  W=wrap.clientWidth; H=wrap.clientHeight;
+  C.width=W; C.height=H;
+  C.style.left='0'; C.style.top='0';
+  C.style.width=W+'px'; C.style.height=H+'px';
+  const e=imgs[cur];
+  iW=e.img.width; iH=e.img.height;
+  scl=Math.min((W*0.88)/iW,(H*0.86)/iH);
+  dX=(W-iW*scl)/2; dY=(H-iH*scl)/2;
+}
+
+function initCrop(i){
+  const e=imgs[i];
+  iW=e.img.width; iH=e.img.height;
+  if(mode==='fit'){
+    if(iW/iH>ratio){cW=iW;cH=iW/ratio;if(cH>iH){cH=iH;cW=iH*ratio}}
+    else{cH=iH;cW=iH*ratio;if(cW>iW){cW=iW;cH=iW/ratio}}
+  } else {
+    // cover (and manual reset)
+    if(iW/iH>ratio){cH=iH;cW=iH*ratio}
+    else{cW=iW;cH=iW/ratio}
+  }
+  cX=(iW-cW)/2; cY=(iH-cH)/2;
+  clamp();
+}
+
+function clamp(){
+  cW=Math.max(10,Math.min(iW,cW));
+  cH=Math.max(10,Math.min(iH,cH));
+  cX=Math.max(0,Math.min(iW-cW,cX));
+  cY=Math.max(0,Math.min(iH-cH,cY));
+}
+
+function draw(){
+  if(!C||!imgs.length) return;
+  const e=imgs[cur];
+  X.clearRect(0,0,W,H);
+
+  // dim full image
+  X.globalAlpha=0.22;
+  X.drawImage(e.img,dX,dY,iW*scl,iH*scl);
+  X.globalAlpha=1;
+
+  const rx=dX+cX*scl, ry=dY+cY*scl, rw=cW*scl, rh=cH*scl;
+
+  // bright crop region
+  X.save();
+  X.beginPath(); X.rect(rx,ry,rw,rh); X.clip();
+  X.drawImage(e.img,dX,dY,iW*scl,iH*scl);
+  X.restore();
+
+  // mask outside the image (fill canvas darker)
+  X.fillStyle='rgba(0,0,0,0.35)';
+  X.fillRect(dX,dY,iW*scl,cY*scl);
+  X.fillRect(dX,ry+rh,iW*scl,(iH-cY-cH)*scl);
+  X.fillRect(dX,ry,cX*scl,rh);
+  X.fillRect(rx+rw,ry,(iW-cX-cW)*scl,rh);
+
+  // crop border (Papers Please green)
+  X.strokeStyle='#a8c888';
+  X.lineWidth=1;
+  X.strokeRect(rx+0.5,ry+0.5,rw-1,rh-1);
+
+  // thirds grid
+  X.strokeStyle='rgba(168,200,136,0.22)';
+  X.lineWidth=1;
+  for(let i=1;i<3;i++){
+    line(rx+rw*i/3,ry,rx+rw*i/3,ry+rh);
+    line(rx,ry+rh*i/3,rx+rw,ry+rh*i/3);
+  }
+
+  // handles
+  const handles=getHandles(rx,ry,rw,rh);
+  handles.forEach(h=>{
+    if(h.corner){
+      drawCornerHandle(h.x,h.y,h.edge,11,3);
+    } else {
+      X.fillStyle='#8aaa6a';
+      X.fillRect(h.x-3,h.y-3,6,6);
+    }
+  });
+
+  // info readout
+  const { outW, outH } = getOutputDims();
+  const info = document.getElementById('cropinfo');
+  info.innerHTML =
+    '<span class="k">CROP</span> <span class="v">'+Math.round(cW)+' x '+Math.round(cH)+'</span>'+
+    ' <span class="k">/ OUT</span> <span class="v">'+outW+' x '+outH+'</span>'+
+    ' <span class="k">/ RATIO</span> <span class="v">'+(Math.round(ratio*1000)/1000)+'</span>';
+}
+
+function line(x1,y1,x2,y2){X.beginPath();X.moveTo(x1,y1);X.lineTo(x2,y2);X.stroke()}
+
+function drawCornerHandle(x,y,edge,sz,th){
+  const L=edge.includes('w'), R=edge.includes('e');
+  const T=edge.includes('n'), B=edge.includes('s');
+  const ox=R?-sz:0, oy=B?-sz:0;
+  X.fillStyle='#a8c888';
+  X.fillRect(x+ox,y+(B?-th:0)+(T?sz-th:0),sz,th);
+  X.fillRect(x+(R?-th:0)+(L?sz-th:0),y+oy,th,sz);
+}
+
+function getHandles(rx,ry,rw,rh){
+  return [
+    {x:rx,y:ry,edge:'nw',corner:true},{x:rx+rw,y:ry,edge:'ne',corner:true},
+    {x:rx,y:ry+rh,edge:'sw',corner:true},{x:rx+rw,y:ry+rh,edge:'se',corner:true},
+    {x:rx+rw/2,y:ry,edge:'n',corner:false},{x:rx+rw/2,y:ry+rh,edge:'s',corner:false},
+    {x:rx,y:ry+rh/2,edge:'w',corner:false},{x:rx+rw,y:ry+rh/2,edge:'e',corner:false},
+  ];
+}
+
+const HIT=14;
+function hitHandle(px,py){
+  const rx=dX+cX*scl,ry=dY+cY*scl,rw=cW*scl,rh=cH*scl;
+  const handles=getHandles(rx,ry,rw,rh);
+  for(const h of handles){
+    if(Math.abs(px-h.x)<HIT&&Math.abs(py-h.y)<HIT) return h.edge;
+  }
+  return null;
+}
+function insideCrop(px,py){
+  const rx=dX+cX*scl,ry=dY+cY*scl;
+  return px>=rx&&px<=rx+cW*scl&&py>=ry&&py<=ry+cH*scl;
+}
+function cursorFor(edge){
+  if(!edge) return 'default';
+  const map={nw:'nw-resize',ne:'ne-resize',sw:'sw-resize',se:'se-resize',
+             n:'n-resize',s:'s-resize',w:'w-resize',e:'e-resize',move:'move'};
+  return map[edge]||'default';
+}
+
+function pt(e){const r=C.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top}}
+
+function onDown(e){
+  if(mode!=='manual') setMode('manual');
+  const {x,y}=pt(e);
+  const edge=hitHandle(x,y);
+  if(edge){
+    drag={type:'resize',edge,sx:x,sy:y,ocX:cX,ocY:cY,ocW:cW,ocH:cH};
+  } else if(insideCrop(x,y)){
+    drag={type:'move',sx:x,sy:y,ocX:cX,ocY:cY};
+  } else {
+    const ix=(x-dX)/scl, iy=(y-dY)/scl;
+    if(ix>=0&&ix<=iW&&iy>=0&&iy<=iH){
+      cX=ix; cY=iy; cW=1; cH=1;
+      drag={type:'resize',edge:'se',sx:x,sy:y,ocX:cX,ocY:cY,ocW:0,ocH:0};
+    }
+  }
+  C.style.cursor=drag?cursorFor(drag.type==='move'?'move':drag.edge):'default';
+}
+
+function onMove(e){
+  const {x,y}=pt(e);
+  if(!drag){
+    const edge=hitHandle(x,y);
+    C.style.cursor=edge?cursorFor(edge):insideCrop(x,y)?'move':'crosshair';
+    return;
+  }
+  const dx=(x-drag.sx)/scl, dy=(y-drag.sy)/scl;
+  if(drag.type==='move'){
+    cX=drag.ocX+dx; cY=drag.ocY+dy; clamp(); draw(); return;
+  }
+  let nx=drag.ocX, ny=drag.ocY, nw=drag.ocW, nh=drag.ocH;
+  const {edge}=drag;
+  const fixRatio=!e.shiftKey;
+  if(edge.includes('e')) nw=Math.max(20,drag.ocW+dx);
+  if(edge.includes('s')) nh=Math.max(20,drag.ocH+dy);
+  if(edge.includes('w')){nw=Math.max(20,drag.ocW-dx);nx=drag.ocX+drag.ocW-nw;}
+  if(edge.includes('n')){nh=Math.max(20,drag.ocH-dy);ny=drag.ocY+drag.ocH-nh;}
+  if(fixRatio){
+    if(edge==='n'||edge==='s') nw=nh*ratio;
+    else if(edge==='e'||edge==='w') nh=nw/ratio;
+    else {
+      if(Math.abs(nw-drag.ocW)>=Math.abs(nh-drag.ocH)){nh=nw/ratio}
+      else{nw=nh*ratio}
+    }
+    if(edge.includes('w')) nx=drag.ocX+drag.ocW-nw;
+    if(edge.includes('n')) ny=drag.ocY+drag.ocH-nh;
+  }
+  cX=nx; cY=ny; cW=nw; cH=nh; clamp(); draw();
+}
+
+function onUp(){drag=null; C.style.cursor='crosshair';}
+
+function setMode(m){
+  mode=m;
+  ['cover','fit','manual'].forEach(id=>{
+    document.getElementById('pill-'+id).classList.toggle('on',id===m);
+  });
+  if(m!=='manual'){initCrop(cur);draw();}
+}
+
+function commitCurrent(){
+  const e=imgs[cur];
+  e.cX=cX;e.cY=cY;e.cW=cW;e.cH=cH;e.done=true;
+}
+function commitAndNext(){commitCurrent();
+  // visually flag done immediately, then advance
+  updateSidebar();
+  if(cur < imgs.length - 1) nav(1);
+  else draw();
+}
+
+function nav(d){
+  const e=imgs[cur];
+  e.cX=cX;e.cY=cY;e.cW=cW;e.cH=cH;
+  const n=cur+d;
+  if(n<0||n>=imgs.length) return;
+  goTo(n);
+}
+
+function goTo(i){
+  cur=i;
+  setupCanvas();
+  const e=imgs[i];
+  iW=e.img.width;iH=e.img.height;
+  if(!e._init||Math.abs(e.cW/e.cH-ratio)>0.02){
+    initCrop(i);e._init=true;
+  } else {
+    cX=e.cX;cY=e.cY;cW=e.cW;cH=e.cH;
+  }
+  document.getElementById('fname').textContent=e.name;
+  document.getElementById('pinfo').textContent=`FILE ${String(i+1).padStart(3,'0')} / ${String(imgs.length).padStart(3,'0')}`;
+  updateSidebar();draw();
+  document.getElementById('sidebar').children[i]?.scrollIntoView({block:'nearest'});
+}
+
+function onKey(e){
+  if(e.target.tagName==='SELECT'||e.target.tagName==='INPUT') return;
+  if(e.key==='Enter'){commitAndNext();}
+  else if(e.key==='ArrowRight'||e.key==='ArrowDown'){e.preventDefault();nav(1);}
+  else if(e.key==='ArrowLeft'||e.key==='ArrowUp'){e.preventDefault();nav(-1);}
+}
+
+function buildSidebar(){
+  const sb=document.getElementById('sidebar');
+  sb.innerHTML='';
+  imgs.forEach((im,i)=>{
+    const d=document.createElement('div');
+    d.className='th'+(i===cur?' active':'')+(im.done?' done':'');
+    d.id='th'+i;
+    d.onclick=()=>{
+      const e=imgs[cur];e.cX=cX;e.cY=cY;e.cW=cW;e.cH=cH;
+      goTo(i);
+    };
+    d.innerHTML=`<span class="idx">${String(i+1).padStart(2,'0')}</span><img src="${im.url}"><span class="tl">${im.name}</span>`+
+      (im.done?`<span class="ck">&#10003;</span>`:'');
+    sb.appendChild(d);
+  });
+}
+function updateSidebar(){
+  imgs.forEach((im,i)=>{
+    const el=document.getElementById('th'+i);
+    if(!el) return;
+    el.className='th'+(i===cur?' active':'')+(im.done?' done':'');
+    el.innerHTML=`<span class="idx">${String(i+1).padStart(2,'0')}</span><img src="${im.url}"><span class="tl">${im.name}</span>`+
+      (im.done?`<span class="ck">&#10003;</span>`:'');
+    el.onclick=()=>{
+      const e=imgs[cur];e.cX=cX;e.cY=cY;e.cW=cW;e.cH=cH;
+      goTo(i);
+    };
+  });
+  const done=imgs.filter(x=>x.done).length;
+  document.getElementById('done-lbl').innerHTML=`<span class="v">${done}</span> / ${imgs.length} done`;
+}
+
+async function buildZip(){
+  const zip=new JSZip();
+  const { outW, outH } = getOutputDims();
+  const fmtSel = document.getElementById('fmt-sel').value;
+  const quality = parseInt(document.getElementById('quality').value)/100;
+
+  for(const e of imgs){
+    const oc=document.createElement('canvas');
+    oc.width=outW;oc.height=outH;
+    const ox=oc.getContext('2d');
+    let sx=e.cX,sy=e.cY,sw=e.cW,sh=e.cH;
+    if(!e.done){
+      if(e.img.width/e.img.height>ratio){
+        sh=e.img.height;sw=sh*ratio;sx=(e.img.width-sw)/2;sy=0;
+      } else {
+        sw=e.img.width;sh=sw/ratio;sy=(e.img.height-sh)/2;sx=0;
+      }
+    }
+    const srcW=Math.round(sw), srcH=Math.round(sh);
+    if(srcW>outW*2){
+      // step-down resampling for sharper big-to-small downscales
+      let tmp=document.createElement('canvas');
+      tmp.width=srcW;tmp.height=srcH;
+      tmp.getContext('2d').drawImage(e.img,sx,sy,sw,sh,0,0,srcW,srcH);
+      let w=srcW,h=srcH;
+      while(w>outW*2){
+        const t2=document.createElement('canvas');
+        t2.width=Math.floor(w/2);t2.height=Math.floor(h/2);
+        const tc=t2.getContext('2d');
+        tc.imageSmoothingEnabled=true;
+        tc.imageSmoothingQuality='high';
+        tc.drawImage(tmp,0,0,t2.width,t2.height);
+        tmp=t2;w=t2.width;h=t2.height;
+      }
+      ox.imageSmoothingEnabled=true;
+      ox.imageSmoothingQuality='high';
+      ox.drawImage(tmp,0,0,outW,outH);
+    } else {
+      ox.imageSmoothingEnabled=true;
+      ox.imageSmoothingQuality='high';
+      ox.drawImage(e.img,sx,sy,sw,sh,0,0,outW,outH);
+    }
+
+    let mime, ext;
+    if(fmtSel==='auto'){
+      const origExt=e.name.split('.').pop().toLowerCase();
+      mime=origExt==='png'?'image/png':origExt==='webp'?'image/webp':'image/jpeg';
+      ext=origExt==='png'?'png':origExt==='webp'?'webp':'jpg';
+    } else {
+      mime=fmtSel;
+      ext=fmtSel==='image/png'?'png':fmtSel==='image/webp'?'webp':'jpg';
+    }
+    const q = mime==='image/png' ? undefined : quality;
+    const baseName = e.name.replace(/\.[^.]+$/,'');
+    const outName = baseName + '.' + ext;
+    const blob=await new Promise(r=>oc.toBlob(r,mime,q));
+    zip.file(outName,blob);
+  }
+
+  const zb=await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(zb);
+  a.download='formatted-images.zip';
+  a.click();
+}
+
+function resetAll(){
+  if(!confirm('Clear all images and start over?')) return;
+  imgs.forEach(im=>URL.revokeObjectURL(im.url));
+  imgs=[]; cur=0;
+  document.getElementById('upload').style.display='flex';
+  document.getElementById('editor').style.display='none';
+  document.getElementById('file-input').value='';
+}
+</script>
+</body>
+</html>

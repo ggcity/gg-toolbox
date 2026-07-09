@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /*
- * embed-logos.mjs — bakes real logo artwork into gg-qr-generator.html as
+ * embed-logos.mjs — bakes real logo artwork into index.html as
  * base64 data URIs. Data URIs are used (instead of <img src> paths) so the
  * QR canvas can still export to PNG/SVG when the page is opened locally
  * over file:// (external paths taint the canvas and break export).
@@ -17,7 +17,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join, extname } from 'node:path';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const htmlPath = join(here, 'gg-qr-generator.html');
+const htmlPath = join(here, 'index.html');
 const logoDir = join(here, 'assets', 'logos');
 
 // logo key (matches LOGOS / PRESETS in the HTML)  ->  exact source filename
@@ -55,9 +55,9 @@ const block = entries.length
 const re = /\/\* LOGO-PNGS:START[^\n]*\*\/[\s\S]*?\/\* LOGO-PNGS:END \*\//;
 let html = readFileSync(htmlPath, 'utf8');
 if (!re.test(html)) {
-  console.error('ERROR: LOGO-PNGS markers not found in gg-qr-generator.html');
+  console.error('ERROR: LOGO-PNGS markers not found in index.html');
   process.exit(1);
 }
 html = html.replace(re, `/* LOGO-PNGS:START — baked by embed-logos.mjs; do not edit by hand */\n${block}\n/* LOGO-PNGS:END */`);
 writeFileSync(htmlPath, html);
-console.log(`\nWrote ${entries.length} embedded logo(s) into gg-qr-generator.html`);
+console.log(`\nWrote ${entries.length} embedded logo(s) into index.html`);
