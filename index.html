@@ -12,198 +12,161 @@
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta http-equiv="X-Content-Type-Options" content="nosniff">
 <meta name="robots" content="noindex, nofollow">
-<meta name="color-scheme" content="dark">
-<meta name="theme-color" content="#003A67">
+<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#091E4A">
 
-<title>IT Toolbox</title>
+<title>GG IT Toolbox</title>
 
-<!-- Performance: preconnect to font origins so first paint is faster.
-     For fully air-gapped deployment, self-host these fonts and drop the CDN. -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&family=Barlow+Condensed:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@400;500;700&family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
 
 <style>
 /* ────────────────────────────────────────────────────────────────
-   GG IT TOOLS  ·  Civic terminal launcher
-   Palette aligned to City of Garden Grove brand navy (#003A67).
-   Aesthetic: Half-Life HUD + Papers Please stamp + retro DOS desktop.
+   GG IT TOOLBOX · launcher
+   Shares the family design language of the Imagge Compressor and
+   QR GGenerator: plain light page, navy-deep header bar,
+   condensed uppercase labels, hard offset shadows.
    ──────────────────────────────────────────────────────────────── */
 
 :root {
-  /* Civic navy, derived from official GG brand color #003A67 */
-  --navy:        #003A67;
-  --navy-deep:   #001628;
-  --navy-darker: #00253F;
-  --navy-mid:    #0A5089;
-  --navy-rim:    #1B6BAE;
-
-  /* Warm civic gold */
-  --gold:        #D4B254;
-  --gold-bright: #F0D078;
-  --gold-dim:    #8A7128;
-  --gold-glow:   rgba(212, 178, 84, 0.22);
-
-  /* Surface ink + paper */
-  --ink:         #00091A;
-  --chalk:       #E4EDF7;
+  --navy:        #0D2F6E;
+  --navy-deep:   #091E4A;
+  --navy-mid:    #1A4A96;
+  --steel:       #3A6EA8;
   --ice:         #F0F5FB;
+  --chalk:       #E4EDF7;
+  --chalk-dark:  #C0D2E8;
+  --gold:        #C8A84B;
+  --gold-deep:   #7A5E10;
+  --text-primary:#0D2F6E;
+  --text-body:   #1A3A6A;
+  --text-muted:  #5070A0;
+  --text-navy:   #E8F0FB;
+  --text-navy-dim:#7A9ACA;
+  --success:     #1A5E38;
+  --radius:      2px;
+  --page-bg:     #E4EDF7;
+  --card-bg:     #FFFFFF;
+  --card-border: #C0D2E8;
 
-  /* Signals */
-  --warn:        #B8421C;
-  --ok:          #2ECC71;
+  /* FLAMING CHEETOS — shared accent */
+  --flame-yellow: #FFD23F;
+  --flame-orange: #FF7A18;
+  --flame-deep:   #7A0D0D;
+  --flame-ink:    #1A0606;
 
-  /* Texture */
-  --scanline:    rgba(0, 0, 0, 0.14);
-
-  --app-size:    140px;
+  --app-size: 148px;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-html, body { width: 100%; height: 100%; }
-
 body {
-  font-family: 'Barlow Condensed', sans-serif;
-  background:
-    radial-gradient(ellipse at 50% 0%, var(--navy-darker) 0%, var(--navy-deep) 60%, var(--ink) 100%);
-  color: var(--chalk);
+  font-family: 'Barlow', sans-serif;
+  font-size: 15px;
+  background: var(--page-bg);   /* plain — no gradients, no scanlines */
+  color: var(--text-body);
   min-height: 100vh;
-  overflow-x: hidden;
-  position: relative;
+  padding-bottom: 60px;
 }
 
-/* CRT scanlines */
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background: repeating-linear-gradient(
-    0deg,
-    transparent,
-    transparent 3px,
-    var(--scanline) 3px,
-    var(--scanline) 4px
-  );
-  pointer-events: none;
-  z-index: 9999;
-}
+svg { image-rendering: pixelated; shape-rendering: crispEdges; }
 
-/* Pixel noise grain */
-body::after {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background-image:
-    url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
-  background-size: 200px 200px;
-  pointer-events: none;
-  z-index: 9998;
-  opacity: 0.55;
-  mix-blend-mode: overlay;
-}
-
-/* All inline SVG renders crisp */
-svg { image-rendering: pixelated; image-rendering: crisp-edges; shape-rendering: crispEdges; }
-
-/* ── SKIP LINK (visible on focus, like real accessibility, not always hidden) ── */
+/* ── SKIP LINK ── */
 .skip-link {
-  position: absolute;
-  top: -40px;
-  left: 8px;
-  background: var(--gold);
-  color: var(--ink);
-  font-family: 'Press Start 2P', monospace;
-  font-size: 8px;
-  padding: 8px 14px;
-  letter-spacing: 1px;
-  text-decoration: none;
-  z-index: 10000;
-  box-shadow: 3px 3px 0 var(--gold-dim);
-  transition: top 0.12s ease-out;
+  position: absolute; top: -52px; left: 0;
+  background: var(--navy-deep); color: var(--flame-yellow);
+  border: 2px solid var(--flame-yellow);
+  padding: 0.75rem 1rem; z-index: 1000; text-decoration: none; font-weight: 700;
 }
-.skip-link:focus { top: 8px; outline: 2px solid var(--chalk); outline-offset: 2px; }
+.skip-link:focus { top: 0; }
 
-/* ── HEADER ── */
-.header {
-  background:
-    linear-gradient(180deg, #010615 0%, var(--ink) 100%);
-  border-bottom: 2px solid var(--gold);
-  padding: 0 24px;
-  height: 56px;
-  display: flex;
+/* ── HEADER — same bar as the Compressor / QR GGenerator ── */
+.app-header {
+  background: var(--navy-deep);
+  background-image:
+    linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(0,0,0,0) 30%, rgba(0,0,0,0.4) 100%);
+  border-bottom: 1px solid rgba(0,0,0,0.55);
+  box-shadow:
+    inset 0 -1px 0 rgba(255,210,63,0.08),
+    inset 0 -4px 12px rgba(0,0,0,0.55);
+  padding: 12px 24px;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  justify-content: space-between;
+  gap: 16px;
+  min-height: 64px;
   position: sticky;
   top: 0;
   z-index: 100;
-  box-shadow:
-    0 2px 0 var(--gold-dim),
-    0 4px 20px rgba(0, 0, 0, 0.6);
+}
+.header-left   { display: flex; align-items: center; gap: 10px; }
+.header-center { display: flex; align-items: center; justify-content: center; }
+.header-right  { display: flex; align-items: center; justify-content: flex-end; }
+
+.brand-email-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px;
+  background: transparent;
+  border: 2px solid rgba(255, 210, 63, 0.35);
+  color: rgba(255, 210, 63, 0.65);
+  box-shadow: 2px 2px 0 rgba(0,0,0,0.5);
+  text-decoration: none; flex-shrink: 0;
+  transition: border-color 0.12s, color 0.12s, background 0.12s, transform 0.08s, box-shadow 0.08s;
+}
+.brand-email-btn:hover,
+.brand-email-btn:focus-visible {
+  border-color: var(--flame-yellow);
+  color: var(--flame-yellow);
+  background: rgba(255, 210, 63, 0.08);
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0 var(--flame-deep), 0 0 10px rgba(255,210,63,0.2);
+}
+.brand-email-btn:active { transform: translate(1px, 1px); box-shadow: 1px 1px 0 var(--flame-deep); }
+.brand-email-btn:focus-visible { outline: 2px solid var(--flame-yellow); outline-offset: 3px; }
+.brand-email-btn svg { width: 16px; height: 12px; }
+
+/* Title — refined condensed caps */
+.app-title {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 21px;
+  font-weight: 700;
+  letter-spacing: 7px;
+  text-transform: uppercase;
+  color: var(--text-navy);
+  white-space: nowrap;
+  padding-left: 7px;   /* optically recentre: offsets the trailing letter-space */
 }
 
-/* HL2-style corner accents along the gold separator */
-.header::before,
-.header::after {
-  content: '';
-  position: absolute;
-  bottom: -2px;
-  width: 14px;
-  height: 6px;
-  background: var(--gold);
-  z-index: 1;
-}
-.header::before { left: 0; clip-path: polygon(0 0, 100% 0, 0 100%); }
-.header::after  { right: 0; clip-path: polygon(0 0, 100% 0, 100% 100%); }
-
-.header-brand {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-
-
-.header-title {
-  font-family: 'Press Start 2P', monospace;
-  font-size: 9px;
-  color: var(--gold);
-  letter-spacing: 1.5px;
-  text-shadow: 1px 1px 0 var(--gold-dim);
-  line-height: 1.4;
-}
-
+/* Clock — quiet tabular time */
 .header-clock {
-  font-family: 'VT323', monospace;
-  font-size: 22px;
-  color: var(--gold);
-  letter-spacing: 2px;
-  text-shadow: 0 0 8px rgba(212, 178, 84, 0.45);
-  opacity: 0.9;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: 3px;
+  color: var(--text-navy-dim);
+  font-variant-numeric: tabular-nums;
 }
 
 /* ── DESKTOP AREA ── */
 .desktop {
-  min-height: calc(100vh - 56px);
-  padding: 56px 32px 80px;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
+  padding: 48px 32px 100px;
 }
 
 /* ── APP GRID ── */
 .app-grid {
   display: flex;
   flex-wrap: wrap;
-  gap: 24px;
+  gap: 20px;
   align-items: flex-start;
 }
 
-/* ── APP ICON ── */
+/* ── APP TILE — white card, navy icon screen, gold hard-shadow hover ── */
 .app-icon {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: 0;
   cursor: pointer;
   text-decoration: none;
   color: inherit;
@@ -211,145 +174,69 @@ svg { image-rendering: pixelated; image-rendering: crisp-edges; shape-rendering:
   outline: none;
   -webkit-tap-highlight-color: transparent;
   position: relative;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius);
+  transition: border-color 0.12s, transform 0.1s, box-shadow 0.12s;
+}
+.app-icon:hover,
+.app-icon:focus-visible {
+  border-color: var(--gold);
+  transform: translate(-2px, -2px);
+  box-shadow: 4px 4px 0 var(--gold);
+}
+.app-icon:focus-visible { outline: 2px solid var(--navy-mid); outline-offset: 3px; }
+.app-icon:active {
+  transform: translate(0, 0);
+  box-shadow: 1px 1px 0 var(--gold);
 }
 
 .app-box {
-  width: var(--app-size);
-  height: var(--app-size);
-  background:
-    linear-gradient(160deg, #001F38 0%, var(--ink) 100%);
-  border: 1px solid rgba(27, 107, 174, 0.55);
+  width: calc(var(--app-size) - 18px);
+  height: calc(var(--app-size) - 18px);
+  margin: 9px 9px 6px;
+  background: linear-gradient(160deg, #0B2554 0%, var(--navy-deep) 100%);
+  border: 1px solid var(--navy-deep);
+  border-radius: var(--radius);
   display: grid;
   place-items: center;
   position: relative;
-  transition:
-    border-color 0.18s ease,
-    transform 0.12s ease,
-    box-shadow 0.18s ease,
-    background 0.18s ease;
-  box-shadow:
-    0 4px 14px rgba(0, 0, 0, 0.55),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05),
-    inset 0 0 0 1px rgba(0, 0, 0, 0.4);
-  border-radius: 2px;
-}
-
-/* HL2-style corner brackets on the app box — base state subtle */
-.app-box::before,
-.app-box::after {
-  content: '';
-  position: absolute;
-  width: 10px;
-  height: 10px;
-  border: 1px solid rgba(212, 178, 84, 0.35);
-  transition: border-color 0.18s ease, width 0.18s ease, height 0.18s ease;
-  pointer-events: none;
-}
-.app-box::before {
-  top: 3px;
-  left: 3px;
-  border-right: none;
-  border-bottom: none;
-}
-.app-box::after {
-  bottom: 3px;
-  right: 3px;
-  border-left: none;
-  border-top: none;
-}
-
-/* Hover / focus: corners brighten + lift */
-.app-icon:hover .app-box,
-.app-icon:focus-visible .app-box {
-  border-color: var(--gold);
-  transform: translateY(-3px);
-  box-shadow:
-    0 10px 24px rgba(0, 0, 0, 0.55),
-    0 0 0 1px var(--gold-dim),
-    inset 0 0 18px var(--gold-glow);
-}
-.app-icon:hover .app-box::before,
-.app-icon:focus-visible .app-box::before,
-.app-icon:hover .app-box::after,
-.app-icon:focus-visible .app-box::after {
-  border-color: var(--gold-bright);
-  width: 14px;
-  height: 14px;
-}
-
-.app-icon:active .app-box {
-  transform: translateY(1px);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
-}
-
-/* Selected state */
-.app-icon.selected .app-box {
-  border-color: var(--gold);
-  background:
-    linear-gradient(160deg, #00264A 0%, #001028 100%);
-  box-shadow:
-    0 6px 18px rgba(0, 0, 0, 0.55),
-    0 0 0 1px var(--gold-dim),
-    inset 0 0 22px var(--gold-glow);
-}
-.app-icon.selected .app-box::before,
-.app-icon.selected .app-box::after { border-color: var(--gold-bright); }
-.app-icon.selected .app-label {
-  background: var(--gold);
-  color: var(--ink);
 }
 
 .app-label {
-  font-family: 'Press Start 2P', monospace;
-  font-size: 8px;
-  color: var(--chalk);
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 15px; font-weight: 700;
+  letter-spacing: 1.5px; text-transform: uppercase;
+  color: var(--text-primary);
   text-align: center;
-  line-height: 1.6;
-  letter-spacing: 0.5px;
-  padding: 4px 6px;
-  max-width: var(--app-size);
-  word-break: break-word;
-  transition: background 0.1s, color 0.1s;
+  line-height: 1.25;
+  padding: 2px 8px 10px;
 }
 
-/* ── "NEW" STAMP BADGE (top-right of app box) ── */
+/* Selected state (click feedback while navigating) */
+.app-icon.selected { border-color: var(--gold); box-shadow: 3px 3px 0 var(--gold); }
+
+/* ── "NEW" STAMP BADGE ── */
 .new-badge {
   position: absolute;
   top: -8px;
   right: -8px;
-  background: var(--gold);
-  color: var(--ink);
+  background: var(--flame-yellow);
+  color: var(--flame-ink);
   font-family: 'Press Start 2P', monospace;
   font-size: 8px;
   padding: 5px 7px 4px;
   letter-spacing: 1.5px;
-  box-shadow:
-    2px 2px 0 var(--gold-dim),
-    0 0 0 1px var(--ink);
+  box-shadow: 2px 2px 0 var(--flame-deep);
   z-index: 3;
   pointer-events: none;
   transform: rotate(4deg);
-  animation: new-flicker 3.4s steps(1) infinite;
 }
 
-@keyframes new-flicker {
-  0%, 88%, 100% { opacity: 1; }
-  90%           { opacity: 0.35; }
-  92%           { opacity: 1; }
-  94%           { opacity: 0.65; }
-  96%           { opacity: 1; }
-}
 
-/* ── IMAGE COMPRESSOR HOVER ANIMATION (FIXED) ──
-   Bug in the old version: the dark navy screen background lived inside
-   .icon-img, so it shrank with the picture, exposing the app-box behind
-   and breaking the "compression" metaphor. Also, transform-origin
-   "center bottom" pulled everything downward.
-   Fix: screen background is now static (outside the animated group),
-   only the picture content (mountains + sun) compresses around its
-   center, and the corner arrows physically translate INWARD to sell
-   the squeeze. Selector is also scoped to this tool only so it
-   cannot fire on future unrelated icons. */
+/* ── IMAGE COMPRESSOR HOVER ANIMATION ──
+   Screen background stays static; only the picture content compresses
+   around its centre while the corner arrows squeeze inward. */
 @keyframes ic-compress-content {
   0%   { transform: scale(1); }
   35%  { transform: scale(0.5); }
@@ -357,7 +244,6 @@ svg { image-rendering: pixelated; image-rendering: crisp-edges; shape-rendering:
   78%  { transform: scale(1.06); }
   100% { transform: scale(1); }
 }
-
 @keyframes ic-arrow-tl {
   0%   { transform: translate(0, 0); }
   35%  { transform: translate(2px, 2px); }
@@ -365,7 +251,6 @@ svg { image-rendering: pixelated; image-rendering: crisp-edges; shape-rendering:
   78%  { transform: translate(-0.4px, -0.4px); }
   100% { transform: translate(0, 0); }
 }
-
 @keyframes ic-arrow-br {
   0%   { transform: translate(0, 0); }
   35%  { transform: translate(-2px, -2px); }
@@ -373,85 +258,64 @@ svg { image-rendering: pixelated; image-rendering: crisp-edges; shape-rendering:
   78%  { transform: translate(0.4px, 0.4px); }
   100% { transform: translate(0, 0); }
 }
-
 .app-icon[data-app="image-compressor"]:hover .ic-content,
 .app-icon[data-app="image-compressor"]:focus-visible .ic-content {
   transform-origin: 50% 50%;
   transform-box: fill-box;
   animation: ic-compress-content 1.2s cubic-bezier(0.65, 0, 0.35, 1) infinite;
 }
-
 .app-icon[data-app="image-compressor"]:hover .ic-arrow-tl,
 .app-icon[data-app="image-compressor"]:focus-visible .ic-arrow-tl {
   animation: ic-arrow-tl 1.2s cubic-bezier(0.65, 0, 0.35, 1) infinite;
 }
-
 .app-icon[data-app="image-compressor"]:hover .ic-arrow-br,
 .app-icon[data-app="image-compressor"]:focus-visible .ic-arrow-br {
   animation: ic-arrow-br 1.2s cubic-bezier(0.65, 0, 0.35, 1) infinite;
 }
 
-/* ── PLACEHOLDER BOX ── */
-.app-icon.placeholder .app-box,
-.app-icon.placeholder:hover .app-box,
-.app-icon.placeholder:focus-visible .app-box,
-.app-icon.placeholder:active .app-box {
-  background: transparent !important;
-  box-shadow: none !important;
+/* ── PLACEHOLDER (suggest a tool) ── */
+.app-icon.placeholder,
+.app-icon.placeholder:hover,
+.app-icon.placeholder:focus-visible,
+.app-icon.placeholder:active {
+  background: transparent;
+  box-shadow: none;
+  transform: none;
 }
-
+.app-icon.placeholder {
+  border: 2px dashed var(--chalk-dark);
+  min-height: var(--app-size);
+  justify-content: center;
+  transition: border-color 0.15s;
+}
 .app-icon.placeholder .app-box {
-  border: 2px dashed rgba(212, 178, 84, 0.35);
-  cursor: pointer;
-  border-radius: 2px;
-  transition: border-color 0.18s ease, transform 0.15s ease;
+  background: none;
+  border: none;
+  margin: 0;
 }
+.app-icon.placeholder:hover,
+.app-icon.placeholder:focus-visible { border-color: var(--gold); }
+.app-icon.placeholder:focus-visible { outline: 2px solid var(--navy-mid); outline-offset: 3px; }
 
-.app-icon.placeholder .app-box::before,
-.app-icon.placeholder .app-box::after { display: none; }
-
-.app-icon.placeholder:hover .app-box,
-.app-icon.placeholder:focus-visible .app-box {
-  border-color: rgba(212, 178, 84, 0.8);
-  transform: scale(0.92);
-}
-
-.app-icon.placeholder:active .app-box {
-  transform: scale(0.87);
-}
-
-/* ── PIXEL PLUS ── */
-.pixel-plus {
-  width: 32px;
-  height: 32px;
-}
-
-.pixel-plus rect {
-  transition: fill 0.15s;
-}
-
+.pixel-plus { width: 32px; height: 32px; }
+.pixel-plus rect { fill: var(--chalk-dark); transition: fill 0.15s; }
+.app-icon.placeholder:hover .pixel-plus rect,
+.app-icon.placeholder:focus-visible .pixel-plus rect { fill: var(--gold); }
 .app-icon.placeholder:hover .pixel-plus,
 .app-icon.placeholder:focus-visible .pixel-plus {
   animation: plus-pulse 0.55s steps(1) infinite;
 }
-
 @keyframes plus-pulse {
   0%   { opacity: 1; }
-  50%  { opacity: 0.35; }
+  50%  { opacity: 0.45; }
   100% { opacity: 1; }
 }
 
-.app-icon.placeholder:hover .pixel-plus rect,
-.app-icon.placeholder:focus-visible .pixel-plus rect {
-  fill: rgba(212, 178, 84, 0.9);
-}
-
-/* ── MODAL OVERLAY ── */
+/* ── MODAL ── */
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 11, 26, 0.9);
-  backdrop-filter: blur(2px);
+  background: rgba(9, 30, 74, 0.55);
   z-index: 1000;
   display: flex;
   align-items: center;
@@ -461,78 +325,48 @@ svg { image-rendering: pixelated; image-rendering: crisp-edges; shape-rendering:
   pointer-events: none;
   transition: opacity 0.14s ease;
 }
-
-.modal-overlay.open {
-  opacity: 1;
-  pointer-events: auto;
-}
+.modal-overlay.open { opacity: 1; pointer-events: auto; }
 
 .modal {
-  background: var(--ink);
-  border: 3px solid var(--gold);
-  box-shadow:
-    6px 6px 0 var(--gold-dim),
-    inset 0 0 0 1px rgba(212, 178, 84, 0.12),
-    0 0 40px rgba(0, 0, 0, 0.6);
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  box-shadow: 6px 6px 0 var(--gold), 0 20px 50px rgba(9, 30, 74, 0.35);
   max-width: 400px;
   width: 100%;
-  position: relative;
   transform: translate(4px, 4px) scale(0.97);
   transition: transform 0.14s ease;
 }
-
-.modal-overlay.open .modal {
-  transform: translate(0, 0) scale(1);
-}
-
-/* Modal title-bar corner brackets, Papers Please feel */
-.modal::before,
-.modal::after {
-  content: '';
-  position: absolute;
-  width: 10px;
-  height: 10px;
-  border: 2px solid var(--ink);
-  pointer-events: none;
-  z-index: 1;
-}
-.modal::before { top: 6px; left: 6px;     border-right: none; border-bottom: none; }
-.modal::after  { top: 6px; right: 6px;    border-left: none;  border-bottom: none; }
+.modal-overlay.open .modal { transform: translate(0, 0) scale(1); }
 
 .modal-header {
-  background: var(--gold);
-  padding: 10px 14px;
+  background: var(--navy-deep);
+  padding: 8px 14px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
 }
-
 .modal-title {
-  font-family: 'Press Start 2P', monospace;
-  font-size: 8px;
-  color: var(--ink);
-  letter-spacing: 1px;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 14px; font-weight: 700;
+  letter-spacing: 2px; text-transform: uppercase;
+  color: var(--text-navy-dim);
 }
-
 .modal-close {
-  background: var(--ink);
-  border: 2px solid var(--ink);
-  color: var(--gold);
+  background: transparent;
+  border: 1px solid rgba(255, 210, 63, 0.4);
+  color: var(--flame-yellow);
   font-family: 'Press Start 2P', monospace;
   font-size: 8px;
   cursor: pointer;
-  width: 24px;
-  height: 24px;
-  display: grid;
-  place-items: center;
+  width: 24px; height: 24px;
+  display: grid; place-items: center;
   flex-shrink: 0;
+  padding: 0; line-height: 1;
   transition: background 0.08s, border-color 0.08s;
-  padding: 0;
-  line-height: 1;
 }
-.modal-close:hover { background: rgba(184, 66, 28, 0.85); border-color: var(--warn); }
-.modal-close:focus-visible { outline: 2px solid var(--chalk); outline-offset: 2px; }
+.modal-close:hover { border-color: var(--flame-yellow); background: rgba(255, 210, 63, 0.1); }
+.modal-close:focus-visible { outline: 2px solid var(--flame-yellow); outline-offset: 2px; }
 
 .modal-body {
   padding: 28px 24px 24px;
@@ -542,176 +376,116 @@ svg { image-rendering: pixelated; image-rendering: crisp-edges; shape-rendering:
   align-items: center;
   text-align: center;
 }
-
-.modal-icon {
-  width: 48px;
-  height: 48px;
-}
-
-.modal-msg {
-  font-family: 'VT323', monospace;
-  font-size: 22px;
-  color: var(--chalk);
-  line-height: 1.4;
-  letter-spacing: 0.5px;
-}
+.modal-icon { width: 48px; height: 48px; }
+.modal-msg { font-size: 15px; color: var(--text-body); line-height: 1.5; }
 
 .modal-email {
-  font-family: 'Press Start 2P', monospace;
-  font-size: 8px;
-  color: var(--gold);
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 16px; font-weight: 700;
+  letter-spacing: 1.5px; text-transform: uppercase;
+  color: var(--text-primary);
   text-decoration: none;
-  border: 2px solid var(--gold);
-  padding: 10px 16px;
+  border: 1px solid var(--gold);
+  background: var(--card-bg);
+  padding: 10px 18px;
   display: inline-block;
-  letter-spacing: 1px;
-  transition: background 0.08s, color 0.08s, transform 0.08s, box-shadow 0.08s;
-  box-shadow: 3px 3px 0 var(--gold-dim);
+  transition: transform 0.08s, box-shadow 0.08s, background 0.1s;
+  box-shadow: 3px 3px 0 var(--gold);
 }
-
 .modal-email:hover {
-  background: var(--gold);
-  color: var(--ink);
+  background: var(--ice);
   transform: translate(-1px, -1px);
-  box-shadow: 4px 4px 0 var(--gold-dim);
+  box-shadow: 4px 4px 0 var(--gold);
 }
-
-.modal-email:focus-visible {
-  outline: 2px solid var(--chalk);
-  outline-offset: 4px;
-}
+.modal-email:focus-visible { outline: 2px solid var(--navy-mid); outline-offset: 3px; }
 
 .modal-dismiss {
-  font-family: 'Press Start 2P', monospace;
-  font-size: 7px;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 13px; font-weight: 700;
+  letter-spacing: 1.5px; text-transform: uppercase;
   background: transparent;
-  border: 2px solid rgba(212, 178, 84, 0.3);
-  color: rgba(212, 178, 84, 0.55);
+  border: 1px solid var(--chalk-dark);
+  color: var(--text-muted);
   cursor: pointer;
-  padding: 8px 14px;
-  letter-spacing: 1px;
+  padding: 8px 16px;
+  border-radius: var(--radius);
   transition: border-color 0.1s, color 0.1s;
 }
-
-.modal-dismiss:hover {
-  border-color: rgba(212, 178, 84, 0.75);
-  color: rgba(212, 178, 84, 0.95);
-}
-
-.modal-dismiss:focus-visible {
-  outline: 2px solid var(--chalk);
-  outline-offset: 2px;
-}
+.modal-dismiss:hover { border-color: var(--steel); color: var(--text-primary); }
+.modal-dismiss:focus-visible { outline: 2px solid var(--navy-mid); outline-offset: 2px; }
 
 /* ── STATUSBAR / CONSOLE ── */
 .statusbar {
   position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
+  bottom: 0; left: 0; right: 0;
   height: 32px;
-  background: var(--ink);
-  border-top: 1px solid var(--gold-dim);
+  background: var(--navy-deep);
+  border-top: 1px solid rgba(255, 210, 63, 0.25);
   display: flex;
   align-items: center;
   padding: 0 14px;
   gap: 12px;
   z-index: 100;
   overflow: hidden;
-  box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.5);
 }
-
 .status-dot {
-  width: 7px;
-  height: 7px;
-  background: var(--ok);
+  width: 7px; height: 7px;
+  background: #2ECC71;
   border-radius: 50%;
   flex-shrink: 0;
   box-shadow: 0 0 6px rgba(46, 204, 113, 0.7);
   animation: pulse-dot 2s ease-in-out infinite;
 }
-
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.5; }
+}
 .status-divider {
-  width: 1px;
-  height: 14px;
-  background: rgba(212, 178, 84, 0.25);
+  width: 1px; height: 14px;
+  background: rgba(255, 210, 63, 0.25);
   flex-shrink: 0;
 }
-
-@keyframes pulse-dot {
-  0%, 100% { opacity: 1; box-shadow: 0 0 6px rgba(46, 204, 113, 0.7); }
-  50%      { opacity: 0.5; box-shadow: 0 0 2px rgba(46, 204, 113, 0.3); }
-}
-
 .console-ticker {
   font-family: 'VT323', monospace;
   font-size: 16px;
-  color: rgba(46, 204, 113, 0.78);
+  color: var(--text-navy-dim);
   letter-spacing: 1px;
   white-space: nowrap;
   overflow: hidden;
   flex: 1;
-  position: relative;
 }
-
-.console-text {
-  display: inline-block;
-  position: relative;
-}
-
 .console-cursor {
   display: inline-block;
-  width: 8px;
-  height: 14px;
-  background: rgba(46, 204, 113, 0.7);
+  width: 8px; height: 14px;
+  background: var(--text-navy-dim);
   vertical-align: middle;
   margin-left: 2px;
   animation: cursor-blink 1s steps(1) infinite;
 }
-
 @keyframes cursor-blink {
-  0%, 49%  { opacity: 1; }
+  0%, 49%   { opacity: 1; }
   50%, 100% { opacity: 0; }
 }
 
 /* ── MOBILE ── */
 @media (max-width: 600px) {
-  :root { --app-size: 120px; }
-
-  .desktop {
-    padding: 40px 20px 60px;
-    align-items: center;
-  }
-
-  .app-grid {
-    justify-content: center;
-    gap: 18px;
-  }
-
-  .header-clock { font-size: 18px; }
-  .header-title { font-size: 8px; }
+  :root { --app-size: 128px; }
+  .app-header { padding: 10px 12px; gap: 10px; min-height: 56px; }
+  .app-title { font-size: 15px; letter-spacing: 4px; gap: 8px; padding-left: 4px; }
+  .app-title::before, .app-title::after { width: 16px; }
+  .header-clock { font-size: 14px; letter-spacing: 2px; }
+  .desktop { padding: 32px 16px 80px; }
+  .app-grid { gap: 16px; }
 }
-
 @media (max-width: 360px) {
-  :root { --app-size: 108px; }
-  .app-grid { gap: 14px; }
+  :root { --app-size: 112px; }
+  .app-grid { gap: 12px; }
   .new-badge { font-size: 7px; padding: 4px 5px 3px; }
 }
 
 /* ── REDUCED MOTION ── */
 @media (prefers-reduced-motion: reduce) {
-  .app-icon.placeholder:hover .pixel-plus,
-  .app-icon.placeholder:focus-visible .pixel-plus { animation: none; }
-  .status-dot { animation: none; opacity: 1; }
-  .modal, .modal-overlay { transition: none; }
-  .app-box, .app-box::before, .app-box::after { transition: none; }
-  .new-badge { animation: none; }
-  .app-icon[data-app="image-compressor"]:hover .ic-content,
-  .app-icon[data-app="image-compressor"]:focus-visible .ic-content,
-  .app-icon[data-app="image-compressor"]:hover .ic-arrow-tl,
-  .app-icon[data-app="image-compressor"]:focus-visible .ic-arrow-tl,
-  .app-icon[data-app="image-compressor"]:hover .ic-arrow-br,
-  .app-icon[data-app="image-compressor"]:focus-visible .ic-arrow-br { animation: none; }
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
 
 /* ── SR-ONLY ── */
@@ -724,22 +498,39 @@ svg { image-rendering: pixelated; image-rendering: crisp-edges; shape-rendering:
 </head>
 <body>
 
-<!-- Skip link, hidden until keyboard focus -->
 <a href="#main" class="skip-link">Skip to content</a>
 
-<!-- Live region for screen readers -->
 <div id="liveRegion" aria-live="polite" aria-atomic="true" class="sr-only"></div>
 
-<!-- HEADER -->
-<header class="header" role="banner">
-  <div class="header-brand">
-    <!-- Toolbox + hammer icon. Body and lid are TRANSPARENT (fill="none") so the
-         desktop background shows through, per request. -->
-    <div class="header-title" aria-label="Garden Grove IT Tools">
-      GG TOOLS
-    </div>
+<!-- HEADER — family bar: GG brand + email · pixel title · clock -->
+<header class="app-header" role="banner">
+  <div class="header-left">
+    <a
+      class="brand-email-btn"
+      href="mailto:nikitas@ggcity.org"
+      aria-label="Contact nikitas@ggcity.org for troubleshooting and feedback"
+    >
+      <svg viewBox="0 0 16 12" aria-hidden="true">
+        <rect x="0" y="0" width="16" height="12" fill="currentColor"/>
+        <rect x="1" y="1" width="14" height="10" fill="var(--navy-deep)"/>
+        <rect x="1" y="1" width="2" height="2" fill="currentColor"/>
+        <rect x="3" y="2" width="2" height="2" fill="currentColor"/>
+        <rect x="5" y="3" width="2" height="2" fill="currentColor"/>
+        <rect x="7" y="4" width="2" height="2" fill="currentColor"/>
+        <rect x="13" y="1" width="2" height="2" fill="currentColor"/>
+        <rect x="11" y="2" width="2" height="2" fill="currentColor"/>
+        <rect x="9" y="3" width="2" height="2" fill="currentColor"/>
+        <rect x="1" y="9" width="2" height="2" fill="currentColor"/>
+        <rect x="13" y="9" width="2" height="2" fill="currentColor"/>
+      </svg>
+    </a>
   </div>
-  <div class="header-clock" id="clock" aria-label="Current time" role="timer"></div>
+  <div class="header-center">
+    <h1 class="app-title">IT Toolbox</h1>
+  </div>
+  <div class="header-right">
+    <div class="header-clock" id="clock" aria-label="Current time" role="timer"></div>
+  </div>
 </header>
 
 <!-- MAIN -->
@@ -747,7 +538,7 @@ svg { image-rendering: pixelated; image-rendering: crisp-edges; shape-rendering:
 
   <div class="app-grid" role="list" aria-label="Available tools">
 
-    <!-- APP: IMAGE COMPRESSOR (with NEW badge + fixed compression animation) -->
+    <!-- APP: IMAGE COMPRESSOR -->
     <a
       class="app-icon"
       data-app="image-compressor"
@@ -756,25 +547,20 @@ svg { image-rendering: pixelated; image-rendering: crisp-edges; shape-rendering:
       aria-label="Image Compressor, new tool. Open."
     >
       <div class="app-box" aria-hidden="true">
-        <!-- NEW stamp -->
         <span class="new-badge" aria-hidden="true">NEW</span>
-
         <svg width="68" height="68" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
           <!-- STATIC screen background (does NOT animate) -->
           <rect x="2" y="4" width="16" height="10" fill="#001A33"/>
-
           <!-- STATIC monitor frame -->
           <rect x="1" y="3" width="18" height="12" rx="1" fill="none" stroke="#D4B254" stroke-width="1"/>
           <rect x="16" y="15" width="1" height="2" fill="#D4B254"/>
           <rect x="3"  y="15" width="1" height="2" fill="#D4B254"/>
           <rect x="2"  y="17" width="16" height="1" fill="#D4B254"/>
-
           <!-- ANIMATED picture content: this is the image getting compressed -->
           <g class="ic-content">
             <polygon points="3,13 7,8 10,10 13,6 17,13" fill="#0A5089"/>
             <rect x="13" y="6" width="2" height="2" fill="#D4B254"/>
           </g>
-
           <!-- ANIMATED corner arrows that close inward -->
           <g class="ic-arrow-tl">
             <rect x="2" y="4" width="3" height="1" fill="#F0D078"/>
@@ -786,7 +572,7 @@ svg { image-rendering: pixelated; image-rendering: crisp-edges; shape-rendering:
           </g>
         </svg>
       </div>
-      <span class="app-label">IMAGGE<br>COMPRESSOR</span>
+      <span class="app-label">Imagge<br>Compressor</span>
     </a>
 
     <!-- APP: QR GGENERATOR -->
@@ -817,7 +603,7 @@ svg { image-rendering: pixelated; image-rendering: crisp-edges; shape-rendering:
           <rect x="16" y="16" width="2" height="2" fill="#D4B254"/>
         </svg>
       </div>
-      <span class="app-label">QR<br>GGENERATOR</span>
+      <span class="app-label">QR<br>GGenerator</span>
     </a>
 
     <!-- PLACEHOLDER -->
@@ -830,8 +616,8 @@ svg { image-rendering: pixelated; image-rendering: crisp-edges; shape-rendering:
     >
       <div class="app-box" aria-hidden="true">
         <svg class="pixel-plus" width="32" height="32" viewBox="0 0 9 9" aria-hidden="true">
-          <rect x="3" y="0" width="3" height="9" fill="rgba(212,178,84,0.45)"/>
-          <rect x="0" y="3" width="9" height="3" fill="rgba(212,178,84,0.45)"/>
+          <rect x="3" y="0" width="3" height="9"/>
+          <rect x="0" y="3" width="9" height="3"/>
         </svg>
       </div>
     </button>
@@ -859,22 +645,22 @@ svg { image-rendering: pixelated; image-rendering: crisp-edges; shape-rendering:
 >
   <div class="modal">
     <div class="modal-header">
-      <span class="modal-title" id="modalTitle">SUGGEST A TOOL</span>
+      <span class="modal-title" id="modalTitle">Suggest a Tool</span>
       <button class="modal-close" id="modalClose" aria-label="Close dialog">X</button>
     </div>
     <div class="modal-body">
       <svg class="modal-icon" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-        <rect x="1" y="3" width="14" height="10" fill="none" stroke="#D4B254" stroke-width="1"/>
-        <rect x="2" y="4" width="12" height="8" fill="#003A67"/>
-        <polygon points="1,3 8,9 15,3" fill="none" stroke="#D4B254" stroke-width="1"/>
-        <rect x="2" y="4" width="5" height="1" fill="#0A5089"/>
-        <rect x="9" y="4" width="5" height="1" fill="#0A5089"/>
-        <rect x="3" y="5" width="4" height="1" fill="#0A5089"/>
-        <rect x="9" y="5" width="4" height="1" fill="#0A5089"/>
-        <rect x="4" y="6" width="2" height="1" fill="#D4B254" opacity="0.6"/>
-        <rect x="10" y="6" width="2" height="1" fill="#D4B254" opacity="0.6"/>
-        <rect x="6" y="7" width="2" height="1" fill="#D4B254" opacity="0.6"/>
-        <rect x="8" y="8" width="1" height="1" fill="#D4B254" opacity="0.6"/>
+        <rect x="1" y="3" width="14" height="10" fill="none" stroke="#C8A84B" stroke-width="1"/>
+        <rect x="2" y="4" width="12" height="8" fill="#091E4A"/>
+        <polygon points="1,3 8,9 15,3" fill="none" stroke="#C8A84B" stroke-width="1"/>
+        <rect x="2" y="4" width="5" height="1" fill="#1A4A96"/>
+        <rect x="9" y="4" width="5" height="1" fill="#1A4A96"/>
+        <rect x="3" y="5" width="4" height="1" fill="#1A4A96"/>
+        <rect x="9" y="5" width="4" height="1" fill="#1A4A96"/>
+        <rect x="4" y="6" width="2" height="1" fill="#C8A84B" opacity="0.6"/>
+        <rect x="10" y="6" width="2" height="1" fill="#C8A84B" opacity="0.6"/>
+        <rect x="6" y="7" width="2" height="1" fill="#C8A84B" opacity="0.6"/>
+        <rect x="8" y="8" width="1" height="1" fill="#C8A84B" opacity="0.6"/>
       </svg>
 
       <p class="modal-msg" id="modalDesc">
@@ -889,7 +675,7 @@ svg { image-rendering: pixelated; image-rendering: crisp-edges; shape-rendering:
         nikitas@ggcity.org
       </a>
 
-      <button class="modal-dismiss" id="modalDismiss">CLOSE</button>
+      <button class="modal-dismiss" id="modalDismiss">Close</button>
     </div>
   </div>
 </div>
