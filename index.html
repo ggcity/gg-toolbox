@@ -359,7 +359,7 @@ svg { image-rendering: pixelated; shape-rendering: crispEdges; }
 
 .toybox-tray {
   position: relative;
-  min-width: 150px;
+  min-width: 250px;
   background: var(--card-bg);
   border: 1px solid var(--card-border);
   border-bottom: none;
@@ -377,22 +377,28 @@ svg { image-rendering: pixelated; shape-rendering: crispEdges; }
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  padding: 16px 20px 26px;
+  gap: 16px;
+  padding: 30px 26px 34px;
 }
 
-/* the drawer's floor print, under the loose toys */
+/* the drawer's floor print — big, filling the whole drawer behind the toys */
 .toybox-floor {
   position: absolute;
-  left: 0; right: 0; bottom: 6px;
+  inset: 0;
   z-index: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   text-align: center;
   font-family: 'Barlow Condensed', sans-serif;
-  font-size: 13px;
+  font-size: 44px;
   font-weight: 700;
-  letter-spacing: 4px;
+  letter-spacing: 7px;
+  line-height: 0.92;
   text-transform: uppercase;
   color: var(--chalk-dark);
+  opacity: 0.55;
   pointer-events: none;
   user-select: none;
 }
@@ -400,15 +406,15 @@ svg { image-rendering: pixelated; shape-rendering: crispEdges; }
 /* Toy objects — unnamed icons, rattling around loose in the drawer.
    Their resting spot is randomised (--dx/--dy/--rot) every time it opens. */
 .toy-tile {
-  width: 44px;
-  height: 44px;
+  width: 52px;
+  height: 52px;
   display: grid;
   place-items: center;
   text-decoration: none;
   background: linear-gradient(160deg, #0B2554 0%, var(--navy-deep) 100%);
   border: 1px solid var(--navy-deep);
   border-radius: var(--radius);
-  transform: translate(var(--dx, 0px), var(--dy, 0px)) rotate(var(--rot, 0deg));
+  will-change: transform;
   transition: border-color 0.12s, box-shadow 0.12s;
 }
 .toy-tile:hover,
@@ -417,19 +423,8 @@ svg { image-rendering: pixelated; shape-rendering: crispEdges; }
   box-shadow: 3px 3px 0 var(--gold);
 }
 .toy-tile:focus-visible { outline: 2px solid var(--navy-mid); outline-offset: 2px; }
-.toy-tile svg { width: 26px; height: 26px; pointer-events: none; }
+.toy-tile svg { width: 32px; height: 32px; pointer-events: none; }
 
-/* tossed-in bounce as the drawer slides open */
-.toy-tile.settle {
-  animation: toy-settle 0.55s cubic-bezier(0.3, 1.2, 0.4, 1) backwards;
-  animation-delay: var(--delay, 0s);
-}
-@keyframes toy-settle {
-  0%   { transform: translate(var(--dx, 0px), calc(var(--dy, 0px) - 14px)) rotate(var(--rot, 0deg)); }
-  55%  { transform: translate(var(--dx, 0px), calc(var(--dy, 0px) + 3px))  rotate(var(--rot, 0deg)); }
-  75%  { transform: translate(var(--dx, 0px), calc(var(--dy, 0px) - 2px))  rotate(var(--rot, 0deg)); }
-  100% { transform: translate(var(--dx, 0px), var(--dy, 0px)) rotate(var(--rot, 0deg)); }
-}
 
 /* ── MODAL ── */
 .modal-overlay {
@@ -769,19 +764,65 @@ svg { image-rendering: pixelated; shape-rendering: crispEdges; }
   <div class="toybox-tray" id="toyboxTray" role="region" aria-label="Snack Shack">
     <div class="toybox-tiles">
       <a class="toy-tile" href="daily haiku/index.html" aria-label="Daily Haiku" title="Daily Haiku">
-        <!-- three bars in 5·7·5 — the haiku meter — plus a blossom -->
+        <!-- wind — three streaks rolling into cute open curls -->
+        <svg viewBox="0 0 22 22" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <!-- top streak -->
+          <rect x="0" y="5" width="9" height="1" fill="#D4B254"/>
+          <rect x="9" y="4" width="1" height="1" fill="#D4B254"/>
+          <rect x="10" y="3" width="1" height="1" fill="#D4B254"/>
+          <rect x="10" y="2" width="1" height="1" fill="#D4B254"/>
+          <rect x="7" y="1" width="3" height="1" fill="#D4B254"/>
+          <rect x="6" y="2" width="1" height="1" fill="#D4B254"/>
+          <rect x="7" y="3" width="1" height="1" fill="#F0D078"/>
+          <rect x="8" y="3" width="1" height="1" fill="#F0D078"/>
+          <!-- middle streak, the big roll -->
+          <rect x="0" y="14" width="13" height="1" fill="#D4B254"/>
+          <rect x="13" y="13" width="1" height="1" fill="#D4B254"/>
+          <rect x="14" y="12" width="1" height="1" fill="#D4B254"/>
+          <rect x="15" y="10" width="1" height="2" fill="#D4B254"/>
+          <rect x="14" y="9" width="1" height="1" fill="#D4B254"/>
+          <rect x="10" y="8" width="4" height="1" fill="#D4B254"/>
+          <rect x="9" y="9" width="1" height="1" fill="#D4B254"/>
+          <rect x="9" y="10" width="1" height="1" fill="#D4B254"/>
+          <rect x="10" y="11" width="1" height="1" fill="#F0D078"/>
+          <rect x="11" y="11" width="1" height="1" fill="#F0D078"/>
+          <rect x="12" y="11" width="1" height="1" fill="#F0D078"/>
+          <!-- bottom streak -->
+          <rect x="0" y="21" width="10" height="1" fill="#D4B254"/>
+          <rect x="10" y="20" width="1" height="1" fill="#D4B254"/>
+          <rect x="11" y="19" width="1" height="1" fill="#D4B254"/>
+          <rect x="11" y="18" width="1" height="1" fill="#D4B254"/>
+          <rect x="8" y="17" width="3" height="1" fill="#D4B254"/>
+          <rect x="7" y="18" width="1" height="1" fill="#D4B254"/>
+          <rect x="8" y="19" width="1" height="1" fill="#F0D078"/>
+          <rect x="9" y="19" width="1" height="1" fill="#F0D078"/>
+        </svg>
+      </a>
+      <a class="toy-tile" href="ggnator/index.html" aria-label="GGnator" title="GGnator">
+        <!-- the double G: dark first, light second -->
         <svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-          <rect x="2" y="5"  width="5" height="2" fill="#D4B254"/>
-          <rect x="2" y="9"  width="7" height="2" fill="#D4B254"/>
-          <rect x="2" y="13" width="5" height="2" fill="#D4B254"/>
-          <rect x="11" y="2" width="2" height="2" fill="#F0D078"/>
-          <rect x="10" y="3" width="1" height="1" fill="#F0D078"/>
-          <rect x="13" y="3" width="1" height="1" fill="#F0D078"/>
-          <rect x="11" y="4" width="2" height="1" fill="#B8863B"/>
+          <g fill="#B8863B" transform="translate(2,4)">
+            <rect x="1" y="0" width="3" height="1"/>
+            <rect x="0" y="1" width="1" height="1"/><rect x="4" y="1" width="1" height="1"/>
+            <rect x="0" y="2" width="1" height="1"/>
+            <rect x="0" y="3" width="1" height="1"/><rect x="2" y="3" width="3" height="1"/>
+            <rect x="0" y="4" width="1" height="1"/><rect x="4" y="4" width="1" height="1"/>
+            <rect x="0" y="5" width="1" height="1"/><rect x="4" y="5" width="1" height="1"/>
+            <rect x="1" y="6" width="3" height="1"/>
+          </g>
+          <g fill="#F0D078" transform="translate(9,4)">
+            <rect x="1" y="0" width="3" height="1"/>
+            <rect x="0" y="1" width="1" height="1"/><rect x="4" y="1" width="1" height="1"/>
+            <rect x="0" y="2" width="1" height="1"/>
+            <rect x="0" y="3" width="1" height="1"/><rect x="2" y="3" width="3" height="1"/>
+            <rect x="0" y="4" width="1" height="1"/><rect x="4" y="4" width="1" height="1"/>
+            <rect x="0" y="5" width="1" height="1"/><rect x="4" y="5" width="1" height="1"/>
+            <rect x="1" y="6" width="3" height="1"/>
+          </g>
         </svg>
       </a>
     </div>
-    <span class="toybox-floor" aria-hidden="true">Snack Shack</span>
+    <span class="toybox-floor" aria-hidden="true">Snack<br>Shack</span>
   </div>
 </div>
 
@@ -951,23 +992,111 @@ if (CONSOLE_MESSAGES.length > 0) {
 const toybox = document.getElementById('toybox');
 const toyHandle = document.getElementById('toyboxHandle');
 
-function toyScatter() {
-  document.querySelectorAll('.toy-tile').forEach((t, i) => {
-    t.style.setProperty('--dx', (Math.random() * 12 - 6).toFixed(1) + 'px');
-    t.style.setProperty('--dy', (Math.random() * 8 - 4).toFixed(1) + 'px');
-    t.style.setProperty('--rot', (Math.random() * 12 - 6).toFixed(1) + 'deg');
-    t.style.setProperty('--delay', (0.08 + i * 0.07).toFixed(2) + 's');
-    t.classList.remove('settle');
-    void t.offsetWidth;                       // restart the bounce
-    t.classList.add('settle');
+/* Pool-ball physics: toys carry velocity, spin, and momentum; they bounce off
+   the drawer walls and each other, then glide to rest. Every open is a fresh
+   break, and dragging the drawer itself rattles them. */
+const toyArena = document.querySelector('.toybox-tiles');
+const toyReduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const toyBodies = [];
+let toyRaf = 0, toyLast = 0;
+
+function toyInitBodies() {
+  toyBodies.length = 0;
+  document.querySelectorAll('.toy-tile').forEach(el => {
+    const r = el.offsetWidth / 2;
+    toyBodies.push({
+      el, r,
+      bx: el.offsetLeft + r, by: el.offsetTop + r,   // home centre from layout
+      x: 0, y: 0, vx: 0, vy: 0,                      // offset + velocity
+      th: 0, w: 0,                                   // angle + spin
+    });
   });
+}
+
+function toyStep(now) {
+  const dt = Math.min(Math.max((now - toyLast) / 1000, 0.001), 0.032);
+  toyLast = now;
+  const W = toyArena.clientWidth, H = toyArena.clientHeight, M = 2;
+  let alive = false;
+
+  for (const b of toyBodies) {
+    // felt friction + a soft spring that woobles the angle back upright
+    b.vx *= Math.max(0, 1 - 1.6 * dt);
+    b.vy *= Math.max(0, 1 - 1.6 * dt);
+    b.w  += (-30 * b.th - 6 * b.w) * dt;
+    b.x  += b.vx * dt;
+    b.y  += b.vy * dt;
+    b.th += b.w * dt;
+
+    // cushion bounces
+    const cx = b.bx + b.x, cy = b.by + b.y;
+    if (cx < b.r + M)     { b.x += (b.r + M) - cx;     b.vx =  Math.abs(b.vx) * 0.78; b.w += b.vy * 0.015; }
+    if (cx > W - b.r - M) { b.x -= cx - (W - b.r - M); b.vx = -Math.abs(b.vx) * 0.78; b.w -= b.vy * 0.015; }
+    if (cy < b.r + M)     { b.y += (b.r + M) - cy;     b.vy =  Math.abs(b.vy) * 0.78; b.w -= b.vx * 0.015; }
+    if (cy > H - b.r - M) { b.y -= cy - (H - b.r - M); b.vy = -Math.abs(b.vy) * 0.78; b.w += b.vx * 0.015; }
+  }
+
+  // toy-on-toy collisions: equal-mass impulse along the contact normal
+  for (let i = 0; i < toyBodies.length; i++) {
+    for (let j = i + 1; j < toyBodies.length; j++) {
+      const a = toyBodies[i], c = toyBodies[j];
+      const dx = (c.bx + c.x) - (a.bx + a.x);
+      const dy = (c.by + c.y) - (a.by + a.y);
+      const dist = Math.hypot(dx, dy) || 0.001, min = a.r + c.r;
+      if (dist >= min) continue;
+      const nx = dx / dist, ny = dy / dist, push = (min - dist) / 2;
+      a.x -= nx * push; a.y -= ny * push;
+      c.x += nx * push; c.y += ny * push;
+      const rvx = c.vx - a.vx, rvy = c.vy - a.vy;
+      const vn = rvx * nx + rvy * ny;
+      if (vn < 0) {
+        const imp = -(1 + 0.85) * vn / 2;
+        a.vx -= imp * nx; a.vy -= imp * ny;
+        c.vx += imp * nx; c.vy += imp * ny;
+        const vt = rvx * -ny + rvy * nx;         // tangential graze → spin
+        a.w -= vt * 0.02; c.w += vt * 0.02;
+      }
+    }
+  }
+
+  for (const b of toyBodies) {
+    if (Math.abs(b.vx) > 3 || Math.abs(b.vy) > 3 || Math.abs(b.w) > 0.06 || Math.abs(b.th) > 0.01) alive = true;
+    b.el.style.transform = 'translate(' + b.x.toFixed(1) + 'px,' + b.y.toFixed(1) + 'px) rotate(' + b.th.toFixed(3) + 'rad)';
+  }
+  toyRaf = alive ? requestAnimationFrame(toyStep) : 0;
+}
+
+function toyWake() {
+  if (!toyRaf && !toyReduce) { toyLast = performance.now(); toyRaf = requestAnimationFrame(toyStep); }
+}
+
+function toyBreak() {                            // the drawer flies open — rack 'em
+  if (toyReduce) return;
+  toyInitBodies();
+  for (const b of toyBodies) {
+    b.vx = (Math.random() - 0.5) * 560;
+    b.vy = 220 + Math.random() * 280;            // slammed against the near cushion
+    b.w  = (Math.random() - 0.5) * 10;
+  }
+  toyWake();
+}
+
+function toyRattle(kick) {                       // drawer motion shoves the toys
+  if (toyReduce || !toyBodies.length) return;
+  for (const b of toyBodies) b.vy -= kick * (0.8 + Math.random() * 0.4);
+  toyWake();
 }
 
 function toySetOpen(o) {
   toybox.classList.toggle('open', o);
   toybox.style.transform = '';
   toyHandle.setAttribute('aria-expanded', String(o));
-  if (o) toyScatter();                        // toys rattle into new spots
+  if (o) toyBreak();
+  else {
+    if (toyRaf) { cancelAnimationFrame(toyRaf); toyRaf = 0; }
+    toyBodies.forEach(b => { b.el.style.transform = ''; });
+    toyBodies.length = 0;
+  }
 }
 
 let toyDrag = null;
@@ -985,6 +1114,9 @@ toyHandle.addEventListener('pointermove', (e) => {
   const current = Math.min(closedOffset, Math.max(0, base - dy));
   toybox.classList.add('dragging');
   toybox.style.transform = 'translateY(' + current + 'px)';
+  if (!toyBodies.length) toyInitBodies();
+  if (toyDrag.prev !== undefined) toyRattle((toyDrag.prev - current) * 24);   // momentum from the pull
+  toyDrag.prev = current;
   toyDrag.current = current;
   toyDrag.closedOffset = closedOffset;
 });
