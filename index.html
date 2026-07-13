@@ -273,6 +273,64 @@ svg { image-rendering: pixelated; shape-rendering: crispEdges; }
   animation: ic-arrow-br 1.2s cubic-bezier(0.65, 0, 0.35, 1) infinite;
 }
 
+/* ── QR GGENERATOR HOVER — the four squares orbit the grid like a sliding
+   puzzle: quick slide to the next corner, click, pause, repeat. One full
+   lap per 2.8s; everything returns home so the loop is seamless. ── */
+@keyframes qr-orbit-tl {
+  0%   { transform: translate(0, 0); }
+  10%  { transform: translate(9px, 0); }
+  25%  { transform: translate(9px, 0); }
+  35%  { transform: translate(9px, 9px); }
+  50%  { transform: translate(9px, 9px); }
+  60%  { transform: translate(0, 9px); }
+  75%  { transform: translate(0, 9px); }
+  85%  { transform: translate(0, 0); }
+  100% { transform: translate(0, 0); }
+}
+@keyframes qr-orbit-tr {
+  0%   { transform: translate(0, 0); }
+  10%  { transform: translate(0, 9px); }
+  25%  { transform: translate(0, 9px); }
+  35%  { transform: translate(-9px, 9px); }
+  50%  { transform: translate(-9px, 9px); }
+  60%  { transform: translate(-9px, 0); }
+  75%  { transform: translate(-9px, 0); }
+  85%  { transform: translate(0, 0); }
+  100% { transform: translate(0, 0); }
+}
+@keyframes qr-orbit-br {
+  0%   { transform: translate(0, 0); }
+  10%  { transform: translate(-9px, 0); }
+  25%  { transform: translate(-9px, 0); }
+  35%  { transform: translate(-9px, -9px); }
+  50%  { transform: translate(-9px, -9px); }
+  60%  { transform: translate(0, -9px); }
+  75%  { transform: translate(0, -9px); }
+  85%  { transform: translate(0, 0); }
+  100% { transform: translate(0, 0); }
+}
+@keyframes qr-orbit-bl {
+  0%   { transform: translate(0, 0); }
+  10%  { transform: translate(0, -9px); }
+  25%  { transform: translate(0, -9px); }
+  35%  { transform: translate(9px, -9px); }
+  50%  { transform: translate(9px, -9px); }
+  60%  { transform: translate(9px, 0); }
+  75%  { transform: translate(9px, 0); }
+  85%  { transform: translate(0, 0); }
+  100% { transform: translate(0, 0); }
+}
+/* The animation is always attached but paused — hovering only runs the clock.
+   Un-hovering freezes the puzzle mid-scramble; the next hover resumes it. */
+.app-icon[data-app="qr-generator"] .qr-tl { animation: qr-orbit-tl 2.8s cubic-bezier(0.4, 0, 0.2, 1) infinite paused; }
+.app-icon[data-app="qr-generator"] .qr-tr { animation: qr-orbit-tr 2.8s cubic-bezier(0.4, 0, 0.2, 1) infinite paused; }
+.app-icon[data-app="qr-generator"] .qr-br { animation: qr-orbit-br 2.8s cubic-bezier(0.4, 0, 0.2, 1) infinite paused; }
+.app-icon[data-app="qr-generator"] .qr-bl { animation: qr-orbit-bl 2.8s cubic-bezier(0.4, 0, 0.2, 1) infinite paused; }
+.app-icon[data-app="qr-generator"]:hover .qr-piece,
+.app-icon[data-app="qr-generator"]:focus-visible .qr-piece {
+  animation-play-state: running;
+}
+
 /* ── PLACEHOLDER (suggest a tool) ── */
 .app-icon.placeholder,
 .app-icon.placeholder:hover,
@@ -701,21 +759,26 @@ svg { image-rendering: pixelated; shape-rendering: crispEdges; }
       <div class="app-box" aria-hidden="true">
         <span class="new-badge" aria-hidden="true">NEW</span>
         <svg width="68" height="68" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-          <!-- Top-left finder square -->
-          <rect x="2" y="2" width="7" height="7" fill="none" stroke="#D4B254" stroke-width="1"/>
-          <rect x="4" y="4" width="3" height="3" fill="#D4B254"/>
-          <!-- Top-right finder square -->
-          <rect x="11" y="2" width="7" height="7" fill="none" stroke="#D4B254" stroke-width="1"/>
-          <rect x="13" y="4" width="3" height="3" fill="#D4B254"/>
-          <!-- Bottom-left finder square -->
-          <rect x="2" y="11" width="7" height="7" fill="none" stroke="#D4B254" stroke-width="1"/>
-          <rect x="4" y="13" width="3" height="3" fill="#D4B254"/>
-          <!-- Data modules (bottom-right quadrant) -->
-          <rect x="11" y="11" width="2" height="2" fill="#D4B254"/>
-          <rect x="14" y="11" width="2" height="2" fill="#D4B254"/>
-          <rect x="11" y="14" width="2" height="2" fill="#D4B254"/>
-          <rect x="14" y="14" width="2" height="2" fill="#D4B254"/>
-          <rect x="16" y="16" width="2" height="2" fill="#D4B254"/>
+          <!-- four puzzle pieces: three finder squares + the module cluster -->
+          <g class="qr-piece qr-tl">
+            <rect x="2" y="2" width="7" height="7" fill="none" stroke="#D4B254" stroke-width="1"/>
+            <rect x="4" y="4" width="3" height="3" fill="#D4B254"/>
+          </g>
+          <g class="qr-piece qr-tr">
+            <rect x="11" y="2" width="7" height="7" fill="none" stroke="#D4B254" stroke-width="1"/>
+            <rect x="13" y="4" width="3" height="3" fill="#D4B254"/>
+          </g>
+          <g class="qr-piece qr-bl">
+            <rect x="2" y="11" width="7" height="7" fill="none" stroke="#D4B254" stroke-width="1"/>
+            <rect x="4" y="13" width="3" height="3" fill="#D4B254"/>
+          </g>
+          <g class="qr-piece qr-br">
+            <rect x="11" y="11" width="2" height="2" fill="#D4B254"/>
+            <rect x="14" y="11" width="2" height="2" fill="#D4B254"/>
+            <rect x="11" y="14" width="2" height="2" fill="#D4B254"/>
+            <rect x="14" y="14" width="2" height="2" fill="#D4B254"/>
+            <rect x="16" y="16" width="2" height="2" fill="#D4B254"/>
+          </g>
         </svg>
       </div>
       <span class="app-label">QR<br>GGenerator</span>
