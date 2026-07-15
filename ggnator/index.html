@@ -96,17 +96,6 @@ main {
   gap: 34px;
 }
 
-.brand {
-  text-align: center;
-  font-family: var(--mono);
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 6px;
-  text-transform: uppercase;
-  color: var(--dim);
-  text-shadow: 0 0 18px rgba(91, 230, 255, 0.25);
-}
-
 .panel {
   position: relative;
   background: var(--glass);
@@ -229,7 +218,6 @@ textarea::placeholder { color: var(--dim2); }
 @media (max-width: 400px) {
   main { padding: 22px 10px; gap: 18px; }
   textarea, .output { min-height: 120px; padding: 13px; }
-  .brand { font-size: 11px; letter-spacing: 4px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -249,7 +237,7 @@ textarea::placeholder { color: var(--dim2); }
 <div id="veil" aria-hidden="true"></div>
 
 <main>
-  <h1 class="brand">GGnator</h1>
+  <h1 class="sr-only">GGnator</h1>
 
   <div class="panel panel--in">
     <div class="panel-head">
