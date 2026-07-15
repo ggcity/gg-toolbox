@@ -4,182 +4,232 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex, nofollow">
-<meta name="color-scheme" content="light">
-<meta name="theme-color" content="#091E4A">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#080a15">
 
 <title>GGnator</title>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 
 <style>
 /* ────────────────────────────────────────────────────────────────
    GGNATOR · doubles every lone G, and that's all it does.
-   Family design language: plain light page, navy-deep header bar,
-   condensed uppercase labels, hard offset shadows. Kept minimal.
+   Set against the procedural G-pipes: dark neon glass over a living
+   backdrop of streaming G's. Minimal, terminal, luminous.
    ──────────────────────────────────────────────────────────────── */
 
 :root {
-  --navy-deep:   #091E4A;
-  --navy-mid:    #1A4A96;
-  --steel:       #3A6EA8;
-  --chalk:       #E4EDF7;
-  --chalk-dark:  #C0D2E8;
-  --gold:        #C8A84B;
-  --text-primary:#0D2F6E;
-  --text-body:   #1A3A6A;
-  --text-muted:  #5070A0;
-  --text-navy-dim:#7A9ACA;
-  --radius:      2px;
-  --card-bg:     #FFFFFF;
-  --card-border: #C0D2E8;
-  --flame-yellow: #FFD23F;
-  --flame-deep:   #7A0D0D;
+  --bg:      #080a15;
+  --cyan:    #5be6ff;
+  --pink:    #ff6bd0;
+  --amber:   #ffcf5b;
+  --ink:     #e6ecff;
+  --dim:     #8b93cc;
+  --dim2:    #6f77a8;
+  --glass:   rgba(12, 16, 34, 0.52);
+  --line:    rgba(120, 150, 230, 0.16);
+  --mono:    'Space Mono', ui-monospace, 'Courier New', monospace;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+html, body { min-height: 100%; }
 body {
-  font-family: 'Barlow', sans-serif;
+  font-family: var(--mono);
   font-size: 15px;
-  background: var(--chalk);
-  color: var(--text-body);
+  background: var(--bg);
+  color: var(--ink);
   min-height: 100vh;
-}
-
-/* ── HEADER — the family bar ── */
-.app-header {
-  background: var(--navy-deep);
-  background-image:
-    linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(0,0,0,0) 30%, rgba(0,0,0,0.4) 100%);
-  border-bottom: 1px solid rgba(0,0,0,0.55);
-  box-shadow:
-    inset 0 -1px 0 rgba(255,210,63,0.08),
-    inset 0 -4px 12px rgba(0,0,0,0.55);
-  padding: 12px 24px;
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: center;
-  min-height: 56px;
-}
-
-.back-btn {
-  display: inline-flex;
+  min-height: 100dvh;
+  position: relative;
+  display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
-  margin-left: -14px;
-  color: rgba(255, 210, 63, 0.6);
-  text-decoration: none;
-  justify-self: start;
-  transition: color 0.12s, transform 0.08s, filter 0.12s;
-}
-.back-btn:hover,
-.back-btn:focus-visible {
-  color: var(--flame-yellow);
-  transform: translate(-1px, -1px);
-  filter: drop-shadow(0 0 8px rgba(255, 210, 63, 0.45));
-}
-.back-btn:active { transform: translate(1px, 1px); }
-.back-btn:focus-visible { outline: 2px solid var(--flame-yellow); outline-offset: 2px; }
-.back-btn svg { width: 22px; height: 22px; shape-rendering: crispEdges; }
-.back-btn:hover svg,
-.back-btn:focus-visible svg { animation: back-nudge 0.6s ease-in-out infinite; }
-@keyframes back-nudge {
-  0%, 100% { transform: translate(0, 0); }
-  50%      { transform: translate(-2px, -2px); }
 }
 
-.app-title {
-  font-family: 'Barlow Condensed', sans-serif;
-  font-size: 21px;
-  font-weight: 700;
-  letter-spacing: 7px;
-  text-transform: uppercase;
-  color: #E8F0FB;
-  white-space: nowrap;
-  padding-left: 7px;   /* optically recentre the trailing letter-space */
+/* ── the living backdrop ── */
+#stage {
+  position: fixed;
+  inset: 0;
+  display: block;
+  z-index: 0;
+  pointer-events: none;
+}
+#scan {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0,0,0,0) 0px,
+    rgba(0,0,0,0) 2px,
+    rgba(0,0,0,0.22) 3px,
+    rgba(0,0,0,0) 4px
+  );
+  opacity: 0.5;
+  mix-blend-mode: multiply;
+}
+/* soft focus vignette so the centred UI reads over the busy field */
+#veil {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: radial-gradient(120% 90% at 50% 42%,
+    rgba(8,10,21,0.15) 0%, rgba(8,10,21,0.55) 55%, rgba(8,10,21,0.82) 100%);
 }
 
-/* ── MAIN ── */
+/* ── MAIN — panels float and centre over the living field ── */
 main {
-  max-width: 680px;
-  margin: 0 auto;
-  padding: 40px 20px 80px;
+  position: relative;
+  z-index: 5;
+  width: 100%;
+  max-width: 640px;
+  margin: auto;
+  padding: 48px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 34px;
+}
+
+.brand {
+  text-align: center;
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 6px;
+  text-transform: uppercase;
+  color: var(--dim);
+  text-shadow: 0 0 18px rgba(91, 230, 255, 0.25);
 }
 
 .panel {
-  background: var(--card-bg);
-  border: 1px solid var(--card-border);
-  border-radius: var(--radius);
-  margin-bottom: 22px;
+  position: relative;
+  background: var(--glass);
+  backdrop-filter: blur(8px) saturate(1.15);
+  -webkit-backdrop-filter: blur(8px) saturate(1.15);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 10px 46px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05);
+  overflow: hidden;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
+/* accent hairline along the top of each panel */
+.panel::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  opacity: 0.85;
+}
+.panel--in::before  { background: linear-gradient(90deg, transparent, var(--cyan), transparent); }
+.panel--out::before { background: linear-gradient(90deg, transparent, var(--pink), transparent); }
+.panel--in:hover,
+.panel--in:focus-within { border-color: rgba(91, 230, 255, 0.5);  box-shadow: 0 10px 46px rgba(0,0,0,0.5), 0 0 0 1px rgba(91,230,255,0.28), 0 0 44px rgba(91,230,255,0.16); }
+.panel--out:hover       { border-color: rgba(255, 107, 208, 0.5); box-shadow: 0 10px 46px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,107,208,0.28), 0 0 44px rgba(255,107,208,0.16); }
+
 .panel-head {
-  background: var(--navy-deep);
-  padding: 6px 14px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--line);
+  background: rgba(8, 10, 21, 0.35);
 }
 .panel-label {
-  font-family: 'Barlow Condensed', sans-serif;
-  font-size: 13px;
+  font-family: var(--mono);
+  font-size: 11px;
   font-weight: 700;
-  letter-spacing: 2px;
+  letter-spacing: 3px;
   text-transform: uppercase;
-  color: var(--text-navy-dim);
 }
+.panel--in  .panel-label { color: var(--cyan); }
+.panel--out .panel-label { color: var(--pink); }
 
-textarea {
+textarea, .output {
   display: block;
   width: 100%;
   min-height: 150px;
-  padding: 14px;
+  padding: 16px;
   border: none;
-  resize: vertical;
-  font-family: 'Barlow', sans-serif;
-  font-size: 16px;
-  line-height: 1.55;
-  color: var(--text-primary);
+  font-family: var(--mono);
+  font-size: 16px; /* 16px+ keeps iOS Safari from zooming in on focus */
+  line-height: 1.7;
   background: transparent;
 }
-textarea:focus-visible { outline: 2px solid var(--navy-mid); outline-offset: -2px; }
-textarea::placeholder { color: var(--text-muted); opacity: 0.6; }
-#output { color: var(--text-body); }
+textarea {
+  resize: vertical;
+  color: var(--ink);
+  caret-color: var(--cyan);
+}
+textarea:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: -3px;
+}
+textarea::placeholder { color: var(--dim2); }
+
+/* result is a rich element so doubled G's can be highlighted */
+.output {
+  color: #f4e9ff;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  text-shadow: 0 0 14px rgba(255, 107, 208, 0.14);
+}
+.output mark {
+  background: none;
+  color: var(--amber);
+  text-shadow: 0 0 8px rgba(255, 207, 91, 0.85), 0 0 18px rgba(255, 207, 91, 0.45);
+}
+
+/* pleasing selection highlight — each window glows in its own accent */
+#input::selection { background: rgba(91, 230, 255, 0.30); color: #eafcff; }
+.output::selection { background: rgba(255, 107, 208, 0.30); color: #fff0fa; }
+.output *::selection { background: rgba(255, 107, 208, 0.30); color: #fff0fa; }
 
 .copy-btn {
-  font-family: 'Barlow Condensed', sans-serif;
-  font-size: 12px;
+  font-family: var(--mono);
+  font-size: 11px;
   font-weight: 700;
-  letter-spacing: 1.5px;
+  letter-spacing: 2px;
   text-transform: uppercase;
-  background: transparent;
-  border: 1px solid rgba(255, 210, 63, 0.4);
-  color: rgba(255, 210, 63, 0.75);
-  padding: 3px 10px;
+  background: rgba(255, 207, 91, 0.06);
+  border: 1px solid rgba(255, 207, 91, 0.35);
+  color: var(--amber);
+  padding: 6px 16px;
+  min-height: 44px;
+  min-width: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
-  border-radius: var(--radius);
-  transition: border-color 0.12s, color 0.12s, background 0.12s;
+  border-radius: 5px;
+  transition: border-color 0.14s, color 0.14s, background 0.14s, box-shadow 0.14s;
+  touch-action: manipulation;
 }
 .copy-btn:hover,
 .copy-btn:focus-visible {
-  border-color: var(--flame-yellow);
-  color: var(--flame-yellow);
-  background: rgba(255, 210, 63, 0.08);
+  border-color: var(--amber);
+  background: rgba(255, 207, 91, 0.14);
+  box-shadow: 0 0 14px rgba(255, 207, 91, 0.3);
 }
-.copy-btn:focus-visible { outline: 2px solid var(--flame-yellow); outline-offset: 2px; }
+.copy-btn:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: 2px;
+}
 
-.tally {
-  font-family: 'Barlow Condensed', sans-serif;
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  color: var(--text-muted);
-  text-align: center;
+@media (max-width: 560px) {
+  main { padding: 32px 14px; gap: 26px; }
+}
+
+@media (max-width: 400px) {
+  main { padding: 22px 10px; gap: 18px; }
+  textarea, .output { min-height: 120px; padding: 13px; }
+  .brand { font-size: 11px; letter-spacing: 4px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -194,42 +244,394 @@ textarea::placeholder { color: var(--text-muted); opacity: 0.6; }
 </head>
 <body>
 
-<header class="app-header" role="banner">
-  <a class="back-btn" href="../index.html" aria-label="Back to the GG IT Toolbox">
-    <svg viewBox="0 0 12 12" aria-hidden="true">
-      <rect x="0" y="0" width="6" height="2" fill="currentColor"/>
-      <rect x="0" y="0" width="2" height="6" fill="currentColor"/>
-      <rect x="2" y="2" width="2" height="2" fill="currentColor"/>
-      <rect x="4" y="4" width="2" height="2" fill="currentColor"/>
-      <rect x="6" y="6" width="2" height="2" fill="currentColor"/>
-      <rect x="8" y="8" width="2" height="2" fill="currentColor"/>
-    </svg>
-  </a>
-  <h1 class="app-title">GGnator</h1>
-  <span></span>
-</header>
+<canvas id="stage" aria-hidden="true"></canvas>
+<div id="scan" aria-hidden="true"></div>
+<div id="veil" aria-hidden="true"></div>
 
 <main>
-  <div class="panel">
+  <h1 class="brand">GGnator</h1>
+
+  <div class="panel panel--in">
     <div class="panel-head">
       <span class="panel-label">Your text</span>
     </div>
     <label class="sr-only" for="input">Text to GGnate</label>
-    <textarea id="input" placeholder="Type or paste text&hellip;" autofocus spellcheck="false"></textarea>
+    <textarea id="input" spellcheck="false"></textarea>
   </div>
 
-  <div class="panel">
+  <div class="panel panel--out">
     <div class="panel-head">
       <span class="panel-label">GGnated</span>
       <button class="copy-btn" id="copy" type="button">Copy</button>
     </div>
-    <label class="sr-only" for="output">GGnated result</label>
-    <textarea id="output" readonly placeholder="&hellip;and out it comes, twice as GG."></textarea>
+    <div id="output" class="output" aria-label="GGnated result"></div>
   </div>
-
-  <p class="tally" id="tally" aria-live="polite"></p>
 </main>
 
+<!-- announces the result to screen readers on a debounce (not per keystroke) and confirms copy -->
+<div id="status" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
+
+<!-- ── Procedural G-Pipes background ─────────────────────────────────────
+     Streams of G's snake through a 3D volume, matrix-style, recolouring as
+     they retire. Runs seamlessly as a passive backdrop (no cursor capture,
+     no key/click hijacking) and freezes to a still frame under reduced motion. -->
+<script>
+(function () {
+  "use strict";
+
+  const GRID_Y        = 12;
+  const GRID_Z        = 10;
+  const SPACING       = 1;
+  const COVERAGE      = 0.10;
+  const MAX_LEN       = 26;
+  const SAMPLE_STEPS  = 2;
+  const TURN_PROB     = 0.28;
+
+  const START_GAP     = 2200;
+  const SPAWN_ACCEL   = 0.82;
+  const MIN_GAP       = 280;
+  const START_STEP    = 150;
+  const STEADY_STEP   = 60;
+
+  const LIFESPAN_MIN  = 14000;
+  const LIFESPAN_MAX  = 24000;
+
+  const VIEW_YAW      = 0.0;    // rest angles
+  const VIEW_PITCH    = 0.10;
+  const MAX_YAW       = 0.11;   // how far the cursor can swing the camera (radians)
+  const MAX_PITCH     = 0.07;
+  const EASE          = 0.06;   // how lazily the camera drifts toward the cursor
+  const CAM_DIST      = 13;
+  const OVERSCAN      = 1.15;
+  const GLYPH_FRAC    = 0.37;
+
+  const PERIOD        = 7;
+  const FLOW_SPEED    = 4.5;
+  const FLICKER_PROB  = 0.015;
+
+  const PALETTE = [190, 216, 258, 288, 330, 42];
+
+  const DIRS = [
+    {x: 1,y: 0,z: 0}, {x:-1,y: 0,z: 0},
+    {x: 0,y: 1,z: 0}, {x: 0,y:-1,z: 0},
+    {x: 0,y: 0,z: 1}, {x: 0,y: 0,z:-1},
+  ];
+  const rnd = (n) => Math.floor(Math.random() * n);
+  const rndRange = (a, b) => a + Math.random() * (b - a);
+
+  const stage = document.getElementById("stage");
+  const ctx = stage.getContext("2d");
+  const REDUCE = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  // ---- Font zoo: every G is drawn in a face picked from this set, so the
+  //      stream is a riot of styles — sans, serif, slab, mono, pixel, display,
+  //      script. Each family is subset to the single glyph "G", so all ~40
+  //      arrive as tiny files. ------------------------------------------------
+  const ANIM_FONTS = [
+    // sans
+    "Roboto", "Montserrat", "Oswald", "Raleway", "Poppins", "Work Sans",
+    "Anton", "Bebas Neue", "Archivo Black", "Josefin Sans",
+    // serif & slab
+    "Playfair Display", "Merriweather", "Lora", "PT Serif", "Cormorant Garamond",
+    "Bitter", "Roboto Slab", "Zilla Slab", "Abril Fatface", "Old Standard TT",
+    // mono
+    "JetBrains Mono", "IBM Plex Mono", "Inconsolata", "Courier Prime", "Fira Mono",
+    // display / retro
+    "Bungee", "Monoton", "Press Start 2P", "Rubik Mono One", "Orbitron",
+    "Audiowide", "Righteous", "VT323", "Silkscreen", "Faster One",
+    // script / hand
+    "Pacifico", "Caveat", "Dancing Script", "Permanent Marker", "Satisfy",
+    "Great Vibes",
+    // gothic / blackletter
+    "UnifrakturMaguntia", "Pirata One", "Germania One", "MedievalSharp", "Grenze Gotisch",
+    // rock / metal / horror
+    "Metal Mania", "Nosifer", "Creepster", "Eater", "Butcherman", "Jolly Lodger", "Lacquer",
+    // western / vintage
+    "Rye", "Sancreek", "Smokum", "Vast Shadow",
+    // wild / 3D / decorative
+    "Bungee Shade", "Bungee Inline", "Fascinate", "Ewert", "Frijole", "Piedra",
+    // glitch / graffiti
+    "Rubik Glitch", "Rubik Wet Paint", "Rubik Vinyl"
+  ];
+  const FN = ANIM_FONTS.length;
+  (function loadFonts() {
+    for (let i = 0; i < ANIM_FONTS.length; i += 24) {  // chunk so the request URL stays short
+      const fam = ANIM_FONTS.slice(i, i + 24).map(f => "family=" + f.replace(/ /g, "+")).join("&");
+      const link = document.createElement("link");
+      link.rel = "stylesheet";
+      link.href = "https://fonts.googleapis.com/css2?" + fam + "&text=G&display=swap";
+      document.head.appendChild(link);
+    }
+    if (document.fonts && document.fonts.load) {
+      ANIM_FONTS.forEach(f => { try { document.fonts.load("40px '" + f + "'", "G"); } catch (e) {} });
+    }
+  })();
+
+  let W, H, dpr, GX, FOV, GLYPH_MAX, ZMIN, ZSPAN, MAX_WORMS;
+  let viewYaw = VIEW_YAW, viewPitch = VIEW_PITCH;   // eased current angles
+  let tgtYaw = VIEW_YAW, tgtPitch = VIEW_PITCH;     // cursor-driven targets
+  let worms = [];
+  let occupied = new Set();
+  let spawnGap = START_GAP;
+  let nextSpawn = 0;
+  let lastStep = 0;
+
+  function layout() {
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    W = window.innerWidth;
+    H = window.innerHeight;
+    stage.width = Math.floor(W * dpr);
+    stage.height = Math.floor(H * dpr);
+    stage.style.width = W + "px";
+    stage.style.height = H + "px";
+
+    GX = Math.max(4, Math.round(GRID_Y * W / H));
+    FOV = OVERSCAN * H * CAM_DIST / (GRID_Y - 1);
+    GLYPH_MAX = 0.16 * H;
+    ZMIN = CAM_DIST - ((GRID_Z - 1) / 2) * SPACING;
+    ZSPAN = (GRID_Z - 1) * SPACING || 1;
+
+    const volume = GX * GRID_Y * GRID_Z;
+    MAX_WORMS = Math.max(1, Math.min(40, Math.round(volume * COVERAGE / MAX_LEN)));
+  }
+
+  const key = (cx, cy, cz) => cx + "," + cy + "," + cz;
+
+  function toWorld(cx, cy, cz) {
+    return {
+      x: (cx - (GX - 1) / 2) * SPACING,
+      y: (cy - (GRID_Y - 1) / 2) * SPACING,
+      z: (cz - (GRID_Z - 1) / 2) * SPACING,
+    };
+  }
+
+  function randomEmpty() {
+    for (let i = 0; i < 120; i++) {
+      const c = { x: rnd(GX), y: rnd(GRID_Y), z: rnd(GRID_Z) };
+      if (!occupied.has(key(c.x, c.y, c.z))) return c;
+    }
+    return null;
+  }
+
+  function spawnWorm(now) {
+    const c = randomEmpty();
+    if (!c) return null;
+    occupied.add(key(c.x, c.y, c.z));
+    const dir = DIRS[rnd(6)];
+    return {
+      cells: [{ cx: c.x, cy: c.y, cz: c.z, seq: 0 }],
+      dx: dir.x, dy: dir.y, dz: dir.z,
+      hue: PALETTE[rnd(PALETTE.length)],
+      seqCounter: 1,
+      fontSeed: rnd(FN),
+      phase: Math.random() * PERIOD,
+      bornAt: now,
+      lifespan: rndRange(LIFESPAN_MIN, LIFESPAN_MAX),
+      retiring: false,
+    };
+  }
+
+  function trimTail(w) {
+    const t = w.cells.shift();
+    if (t) occupied.delete(key(t.cx, t.cy, t.cz));
+  }
+
+  function stepWorm(w, now) {
+    if (w.cells.length === 0) {
+      const nw = spawnWorm(now);
+      if (nw) Object.assign(w, nw);
+      return;
+    }
+    if (!w.retiring && now - w.bornAt > w.lifespan) w.retiring = true;
+    if (w.retiring) { trimTail(w); return; }
+
+    const willTrim = w.cells.length >= MAX_LEN;
+    const head = w.cells[w.cells.length - 1];
+    const tailKey = willTrim
+      ? key(w.cells[0].cx, w.cells[0].cy, w.cells[0].cz)
+      : null;
+
+    const opts = DIRS.filter((d) => {
+      const nx = head.cx + d.x, ny = head.cy + d.y, nz = head.cz + d.z;
+      if (nx < 0 || nx >= GX || ny < 0 || ny >= GRID_Y ||
+          nz < 0 || nz >= GRID_Z) return false;
+      const k = key(nx, ny, nz);
+      return !occupied.has(k) || k === tailKey;
+    });
+
+    if (opts.length === 0) { trimTail(w); return; }
+
+    let dir;
+    const straightOK = opts.some(
+      (d) => d.x === w.dx && d.y === w.dy && d.z === w.dz
+    );
+    if (straightOK && Math.random() > TURN_PROB) {
+      dir = { x: w.dx, y: w.dy, z: w.dz };
+    } else {
+      const turns = opts.filter(
+        (d) => !(d.x === -w.dx && d.y === -w.dy && d.z === -w.dz)
+      );
+      const pool = turns.length ? turns : opts;
+      dir = pool[rnd(pool.length)];
+    }
+
+    if (willTrim) trimTail(w);
+    const nx = head.cx + dir.x, ny = head.cy + dir.y, nz = head.cz + dir.z;
+    occupied.add(key(nx, ny, nz));
+    w.cells.push({ cx: nx, cy: ny, cz: nz, seq: w.seqCounter++ });
+    w.dx = dir.x; w.dy = dir.y; w.dz = dir.z;
+  }
+
+  function stepAll(now) { for (let i = 0; i < worms.length; i++) stepWorm(worms[i], now); }
+
+  function reinit(now) {
+    occupied = new Set();
+    worms = [];
+    const first = spawnWorm(now);
+    if (first) worms.push(first);
+    spawnGap = START_GAP;
+    nextSpawn = now + spawnGap;
+    lastStep = now;
+  }
+
+  function render(now) {
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+
+    viewYaw   += (tgtYaw - viewYaw) * EASE;      // drift toward where the cursor points
+    viewPitch += (tgtPitch - viewPitch) * EASE;
+    const cosB = Math.cos(viewYaw), sinB = Math.sin(viewYaw);
+    const cosA = Math.cos(viewPitch), sinA = Math.sin(viewPitch);
+    const cx = W / 2, cy = H / 2;
+    const time = now / 1000;
+    const arr = [];
+
+    function push(wx, wy, wz, s, hue, phase, fam) {
+      const x1 = wx * cosB + wz * sinB;
+      const z1 = -wx * sinB + wz * cosB;
+      const y1 = wy;
+      const y2 = y1 * cosA - z1 * sinA;
+      const z2 = y1 * sinA + z1 * cosA;
+      const zc = z2 + CAM_DIST;
+      if (zc < 0.4) return;
+
+      const ps = FOV / zc;
+      const sx = cx + x1 * ps;
+      const sy = cy - y2 * ps;
+
+      let g = GLYPH_FRAC * FOV / zc;
+      if (g < 5) g = 5; else if (g > GLYPH_MAX) g = GLYPH_MAX;
+
+      const t = Math.max(0, Math.min(1, (zc - ZMIN) / ZSPAN));
+      let u = ((s - time * FLOW_SPEED + phase) % PERIOD + PERIOD) % PERIOD;
+      u /= PERIOD;
+      const pulse = Math.pow(1 - u, 2.5);
+
+      let light = (40 - t * 24) + pulse * 48;
+      let sat = 92 - pulse * 48;
+      if (Math.random() < FLICKER_PROB) { light += 28; sat -= 25; }
+      if (light > 97) light = 97;
+      if (sat < 30) sat = 30;
+
+      arr.push({ sx: sx, sy: sy, g: g, hue: hue, fam: fam,
+                 sat: sat, light: light, alpha: 1 - t * 0.25, zc: zc });
+    }
+
+    for (let wi = 0; wi < worms.length; wi++) {
+      const w = worms[wi];
+      const cs = w.cells;
+      const n = cs.length;
+      for (let i = 0; i < n - 1; i++) {
+        const a = toWorld(cs[i].cx, cs[i].cy, cs[i].cz);
+        const b = toWorld(cs[i + 1].cx, cs[i + 1].cy, cs[i + 1].cz);
+        const base = cs[i].seq * SAMPLE_STEPS;
+        for (let j = 0; j < SAMPLE_STEPS; j++) {
+          const t = j / SAMPLE_STEPS;
+          push(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t,
+               a.z + (b.z - a.z) * t, base + j, w.hue, w.phase,
+               ANIM_FONTS[(w.fontSeed + base + j) % FN]);
+        }
+      }
+      if (n > 0) {
+        const h = toWorld(cs[n - 1].cx, cs[n - 1].cy, cs[n - 1].cz);
+        const hs = cs[n - 1].seq * SAMPLE_STEPS;
+        push(h.x, h.y, h.z, hs, w.hue, w.phase, ANIM_FONTS[(w.fontSeed + hs) % FN]);
+      }
+    }
+
+    arr.sort((a, b) => b.zc - a.zc);
+
+    let lastFont = "";
+    for (let i = 0; i < arr.length; i++) {
+      const o = arr[i];
+      const fstr = Math.round(o.g) + "px '" + o.fam + "', 'Courier New', ui-monospace, monospace";
+      if (fstr !== lastFont) { ctx.font = fstr; lastFont = fstr; }
+      ctx.globalAlpha = o.alpha;
+      ctx.fillStyle = "hsl(" + o.hue + ", " + o.sat.toFixed(0) + "%, " +
+                      o.light.toFixed(1) + "%)";
+      ctx.fillText("G", o.sx, o.sy);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function frame(now) {
+    requestAnimationFrame(frame);
+
+    if (worms.length < MAX_WORMS && now >= nextSpawn) {
+      const w = spawnWorm(now);
+      if (w) worms.push(w);
+      spawnGap = Math.max(MIN_GAP, spawnGap * SPAWN_ACCEL);
+      nextSpawn = now + spawnGap;
+    }
+
+    const ratio = MAX_WORMS > 1 ? (worms.length - 1) / (MAX_WORMS - 1) : 1;
+    const stepInterval = START_STEP + (STEADY_STEP - START_STEP) * ratio;
+
+    if (now - lastStep > stepInterval) {
+      lastStep = now;
+      stepAll(now);
+    }
+
+    render(now);
+  }
+
+  function boot() {
+    layout();
+    reinit(performance.now());
+    if (REDUCE) {
+      // fill the volume once and draw a single calm frame — no motion
+      for (let i = 0; i < 40; i++) stepAll(performance.now());
+      render(performance.now());
+      if (document.fonts) document.fonts.ready.then(() => render(performance.now()));
+    } else {
+      requestAnimationFrame(frame);
+    }
+  }
+
+  if (!REDUCE) {
+    window.addEventListener("pointermove", (e) => {
+      tgtYaw   = (e.clientX / window.innerWidth  - 0.5) * 2 * MAX_YAW;
+      tgtPitch = VIEW_PITCH + (e.clientY / window.innerHeight - 0.5) * 2 * MAX_PITCH;
+    }, { passive: true });
+  }
+
+  let resizeTimer = null;
+  window.addEventListener("resize", () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      layout();
+      reinit(performance.now());
+      if (REDUCE) { for (let i = 0; i < 40; i++) stepAll(performance.now()); render(performance.now()); }
+    }, 150);
+  });
+
+  boot();
+})();
+</script>
+
+<!-- ── GGnation logic ──────────────────────────────────────────────────── -->
 <script>
 'use strict';
 
@@ -237,7 +639,10 @@ textarea::placeholder { color: var(--text-muted); opacity: 0.6; }
    already GG enough and pass through as-is. URLs, www-links and email
    addresses are never touched, so links keep working. */
 const LINK_RE = /(https?:\/\/\S+|www\.\S+|\S+@\S+\.\S+)/gi;
+// Numeric entities (no letters) so the g-doubler below can't corrupt them.
+const esc = (s) => s.replace(/[&<>]/g, c => ({ '&': '&#38;', '<': '&#60;', '>': '&#62;' }[c]));
 
+// Plain doubled text (for copying).
 function ggnate(text) {
   return text
     .split(LINK_RE)
@@ -247,25 +652,51 @@ function ggnate(text) {
     .join('');
 }
 
+// Same, but as HTML with each ADDED g wrapped in <mark> so the doublings glow.
+function ggnateHTML(text) {
+  return text
+    .split(LINK_RE)
+    .map((part, i) => i % 2
+      ? esc(part)                                               // link — untouched
+      : esc(part).replace(/g+/gi, m =>
+          m.length === 1 ? m + '<mark>' + m + '</mark>' : m))   // lone g → g + highlighted clone
+    .join('');
+}
+
 const input  = document.getElementById('input');
 const output = document.getElementById('output');
-const tally  = document.getElementById('tally');
+const status = document.getElementById('status');
 
+// Screen readers get the result on a debounce, not on every keystroke —
+// announcing the full text after each character would be unusable.
+let announceTimer = null;
 function run() {
-  const src = input.value;
-  output.value = ggnate(src);
-  const gained = output.value.length - src.length;
-  tally.textContent = gained > 0 ? '+' + gained + " G" + (gained === 1 ? '' : "'s") + ' gained' : '';
+  output.innerHTML = ggnateHTML(input.value);
+  clearTimeout(announceTimer);
+  announceTimer = setTimeout(() => {
+    status.textContent = input.value ? ggnate(input.value) : '';
+  }, 700);
 }
 input.addEventListener('input', run);
 
+// Skip autofocus on touch devices — it forces the keyboard open over half
+// the screen before the page has even been seen.
+if (!window.matchMedia('(pointer: coarse)').matches) input.focus();
+
 document.getElementById('copy').addEventListener('click', async () => {
-  if (!output.value) return;
-  try { await navigator.clipboard.writeText(output.value); }
-  catch (e) { output.select(); document.execCommand('copy'); }
+  const text = ggnate(input.value);
+  if (!text) return;
+  try { await navigator.clipboard.writeText(text); }
+  catch (e) {
+    const ta = document.createElement('textarea');
+    ta.value = text; document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); ta.remove();
+  }
   const btn = document.getElementById('copy');
   const old = btn.textContent;
   btn.textContent = 'Copied!';
+  clearTimeout(announceTimer);
+  status.textContent = 'Copied to clipboard';
   setTimeout(() => { btn.textContent = old; }, 1200);
 });
 </script>
