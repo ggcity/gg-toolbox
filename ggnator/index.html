@@ -211,6 +211,35 @@ textarea::placeholder { color: var(--dim2); }
   outline-offset: 2px;
 }
 
+#tilt-enable {
+  position: fixed;
+  right: max(14px, env(safe-area-inset-right));
+  bottom: max(14px, env(safe-area-inset-bottom));
+  z-index: 20;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  background: rgba(91, 230, 255, 0.08);
+  border: 1px solid rgba(91, 230, 255, 0.4);
+  color: var(--cyan);
+  padding: 10px 16px;
+  min-height: 44px;
+  border-radius: 5px;
+  cursor: pointer;
+  touch-action: manipulation;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  transition: border-color 0.14s, background 0.14s, box-shadow 0.14s;
+}
+#tilt-enable:hover,
+#tilt-enable:focus-visible {
+  border-color: var(--cyan);
+  background: rgba(91, 230, 255, 0.16);
+  box-shadow: 0 0 14px rgba(91, 230, 255, 0.35);
+}
+#tilt-enable:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+
 @media (max-width: 560px) {
   main { padding: 32px 14px; gap: 26px; }
 }
@@ -598,11 +627,53 @@ textarea::placeholder { color: var(--dim2); }
     }
   }
 
+  // On phones the background tilts with the gyroscope (device orientation)
+  // instead of the pointer, since touch has no "hover" to drive it. iOS
+  // requires a tap before it will hand over motion data, so we surface a
+  // small button there; Android/others get it with no prompt.
+  const COARSE = window.matchMedia("(pointer: coarse)").matches;
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+
+  let gammaBase = null, betaBase = null;
+  function onOrientation(e) {
+    if (e.gamma === null || e.beta === null) return;
+    const angle = (screen.orientation && screen.orientation.angle) || window.orientation || 0;
+    let g = e.gamma, b = e.beta;
+    if (angle === 90)                     { const t = g; g = -b; b = t; }
+    else if (angle === -90 || angle === 270) { const t = g; g = b;  b = -t; }
+    if (gammaBase === null) { gammaBase = g; betaBase = b; }   // however they're holding it = centre
+    const SENS = 1 / 45;   // full swing at ~45° of tilt away from the starting angle
+    tgtYaw   = clamp((g - gammaBase) * SENS, -1, 1) * MAX_YAW;
+    tgtPitch = VIEW_PITCH + clamp((b - betaBase) * SENS, -1, 1) * MAX_PITCH;
+  }
+
+  function showTiltPrompt(onGrant) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.id = "tilt-enable";
+    btn.textContent = "Enable tilt";
+    btn.setAttribute("aria-label", "Enable motion tilt for the background");
+    document.body.appendChild(btn);
+    btn.addEventListener("click", () => { onGrant(); btn.remove(); }, { once: true });
+  }
+
   if (!REDUCE) {
-    window.addEventListener("pointermove", (e) => {
-      tgtYaw   = (e.clientX / window.innerWidth  - 0.5) * 2 * MAX_YAW;
-      tgtPitch = VIEW_PITCH + (e.clientY / window.innerHeight - 0.5) * 2 * MAX_PITCH;
-    }, { passive: true });
+    if (COARSE && window.DeviceOrientationEvent) {
+      if (typeof DeviceOrientationEvent.requestPermission === "function") {
+        showTiltPrompt(() => {
+          DeviceOrientationEvent.requestPermission().then((state) => {
+            if (state === "granted") window.addEventListener("deviceorientation", onOrientation);
+          }).catch(() => {});
+        });
+      } else {
+        window.addEventListener("deviceorientation", onOrientation);
+      }
+    } else {
+      window.addEventListener("pointermove", (e) => {
+        tgtYaw   = (e.clientX / window.innerWidth  - 0.5) * 2 * MAX_YAW;
+        tgtPitch = VIEW_PITCH + (e.clientY / window.innerHeight - 0.5) * 2 * MAX_PITCH;
+      }, { passive: true });
+    }
   }
 
   let resizeTimer = null;
