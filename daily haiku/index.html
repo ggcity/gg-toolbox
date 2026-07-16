@@ -27,6 +27,7 @@
     font-size: clamp(2rem, 6vw, 4.5rem); font-weight: 300;
     line-height: 1.5; letter-spacing: 0.02em; font-style: italic; padding: 0 1rem;
   }
+  .hk-line { display: block; white-space: nowrap; }
 </style>
 </head>
 <body>
@@ -147,7 +148,32 @@ const l1 = pickNoRepeat(line1_options, 1);
 const l2 = pickNoRepeat(line2_options, 2);
 const l3 = pickNoRepeat(line3_options, 3);
 
-document.getElementById('haiku').innerHTML = '\u201C' + l1 + '<br>' + l2 + '<br>' + l3 + '\u201D';
+const haikuEl = document.getElementById('haiku');
+haikuEl.innerHTML =
+  '<span class="hk-line">\u201C' + l1 + '</span>' +
+  '<span class="hk-line">' + l2 + '</span>' +
+  '<span class="hk-line">' + l3 + '\u201D</span>';
+
+// Each line must read as one unbroken line (no mobile word-wrap), so after
+// laying out at the CSS clamp size we measure the widest line against the
+// available width and shrink the font to fit if it would've wrapped.
+function fitHaiku() {
+  haikuEl.style.fontSize = '';
+  const lines = haikuEl.querySelectorAll('.hk-line');
+  const style = getComputedStyle(haikuEl);
+  const budget = window.innerWidth * 0.9 - (parseFloat(style.paddingLeft) + parseFloat(style.paddingRight));
+  let widest = 0;
+  lines.forEach(function(l) { widest = Math.max(widest, l.scrollWidth); });
+  if (widest > budget) {
+    const base = parseFloat(style.fontSize);
+    const scaled = Math.max(14, Math.floor(base * (budget / widest) * 0.98));
+    haikuEl.style.fontSize = scaled + 'px';
+  }
+}
+fitHaiku();
+window.addEventListener('resize', fitHaiku);
+window.addEventListener('orientationchange', fitHaiku);
+if (document.fonts) document.fonts.ready.then(fitHaiku);
 
 // --- Color theme ---
 const themeRng = seededRng(hashStr(dayKey(0) + '-theme'));
