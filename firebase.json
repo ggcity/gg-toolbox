@@ -1,0 +1,18 @@
+{
+  "hosting": {
+    "target": "gg-toolbox",
+    "public": ".",
+    "cleanUrls": false,
+    "trailingSlash": false,
+    "ignore": [
+      ".firebaserc",
+      "firebase.json",
+      ".git/**",
+      ".claude/**",
+      "**/node_modules/**",
+      "**/server/**",
+      "**/embed-logos.mjs",
+      "**/*.md"
+    ]
+  }
+}

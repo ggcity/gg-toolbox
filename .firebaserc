@@ -1,0 +1,14 @@
+{
+  "projects": {
+    "default": "ggapp-d2bae"
+  },
+  "targets": {
+    "ggapp-d2bae": {
+      "hosting": {
+        "gg-toolbox": [
+          "gg-toolbox"
+        ]
+      }
+    }
+  }
+}
