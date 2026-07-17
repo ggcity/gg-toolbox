@@ -8,7 +8,7 @@
 <!-- Strict CSP. 'unsafe-inline' is required only because all CSS/JS is inline by design.
      For maximum hardening, extract styles/scripts to external files with nonces or hashes.
      frame-ancestors must be set as an HTTP header at the server (cannot be set via meta). -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; script-src 'self' 'unsafe-inline'; connect-src 'self'; base-uri 'self'; form-action 'self'; object-src 'none';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; script-src 'self' 'unsafe-inline'; connect-src 'self' https://api.open-meteo.com; base-uri 'self'; form-action 'self'; object-src 'none';">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta http-equiv="X-Content-Type-Options" content="nosniff">
 <meta name="robots" content="noindex, nofollow">
@@ -640,6 +640,74 @@ svg { image-rendering: pixelated; shape-rendering: crispEdges; }
   50%, 100% { opacity: 0; }
 }
 
+/* ── WEATHER PANE — a little underlay window right of the tool grid.
+   Desktop only: it appears (and fetches) at ≥1000px. Rows follow the
+   classic daily-forecast pattern: day · icon · low ─range─ high, with
+   each day's span plotted against the 3-day overall range. ── */
+.weather-pane { display: none; width: 276px; flex-shrink: 0; }
+
+.weather-window {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius);
+  box-shadow: 3px 3px 0 var(--chalk-dark);
+  overflow: hidden;
+}
+.weather-titlebar {
+  background: linear-gradient(160deg, #0B2554 0%, var(--navy-deep) 100%);
+  padding: 10px 14px;
+  display: flex; align-items: center; gap: 9px;
+}
+.weather-title {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 14px; font-weight: 700;
+  letter-spacing: 2.5px; text-transform: uppercase;
+  color: var(--text-navy);
+  flex: 1;
+}
+.weather-rows { padding: 6px 14px 10px; }
+.weather-row {
+  display: grid;
+  grid-template-columns: 46px 26px 30px 1fr 30px;
+  align-items: center; gap: 9px;
+  padding: 11px 0;
+}
+.weather-row + .weather-row { border-top: 1px solid var(--chalk); }
+.wx-day {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 13px; font-weight: 700;
+  letter-spacing: 1.5px; text-transform: uppercase;
+  color: var(--text-muted);
+}
+.weather-row:first-child .wx-day { color: var(--text-primary); }
+.wx-icon { display: flex; }
+.wx-icon svg { width: 24px; height: 24px; display: block; }
+.wx-sun-core  { fill: var(--flame-yellow); }
+.wx-sun-ray   { fill: var(--gold); }
+.wx-glint     { fill: #FFFFFF; opacity: 0.55; }
+.wx-cloud      { fill: var(--steel); }
+.wx-cloud-lite { fill: var(--chalk-dark); }
+.wx-cloud-dark { fill: var(--navy-mid); }
+.wx-drop       { fill: var(--steel); }
+.wx-lo, .wx-hi {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 17px; text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.wx-lo { font-weight: 600; color: var(--text-muted); }
+.wx-hi { font-weight: 800; color: var(--text-primary); }
+.wx-bar { height: 6px; background: var(--chalk); border-radius: 1px; position: relative; overflow: hidden; }
+.wx-bar-fill {
+  position: absolute; top: 0; bottom: 0; border-radius: 1px;
+  background: linear-gradient(90deg, var(--steel), var(--gold));
+}
+
+@media (min-width: 1000px) {
+  .desktop { display: flex; gap: 28px; align-items: flex-start; }
+  .app-grid { flex: 1; }
+  .weather-pane:not([hidden]) { display: block; }
+}
+
 /* ── MOBILE ── */
 @media (max-width: 600px) {
   :root { --app-size: 128px; }
@@ -801,6 +869,16 @@ svg { image-rendering: pixelated; shape-rendering: crispEdges; }
     </button>
 
   </div>
+
+  <!-- WEATHER — Garden Grove 3-day peek, desktop underlay window -->
+  <aside class="weather-pane" id="weatherPane" hidden role="complementary" aria-label="Garden Grove weather, next three days">
+    <div class="weather-window">
+      <div class="weather-titlebar">
+        <span class="weather-title">GG Weather</span>
+      </div>
+      <div class="weather-rows" id="weatherRows" role="list"></div>
+    </div>
+  </aside>
 </main>
 
 <!-- SNACK SHACK — pull the drawer up out of the footer -->
@@ -1023,8 +1101,12 @@ const CONSOLE_MESSAGES = [
   'GGing...',
   'Calling Moo...',
   'Snacking on strawberries...',
-  'Gems Gems',
-  'Evaluating new building',
+  'Gems Gems Gems',
+  'Evaluating new building...',
+  'Surfing the intraweb...',
+  'Grooving in the garden...',
+  'Licensing businesses...',
+  'Budgeting with friends...'
 ];
 
 const consoleLine = document.getElementById('consoleLine');
@@ -1206,6 +1288,129 @@ document.querySelectorAll('.app-icon:not(.placeholder)').forEach(icon => {
     this.classList.add('selected');
   });
 });
+
+/* ── WEATHER — Garden Grove 3-day peek (Open-Meteo, no key needed).
+   Desktop pane only: the fetch is skipped entirely on small screens.
+   Cached 30 min so frequent launcher visits don't hammer the API.
+   On any failure the pane simply stays hidden — it's a bonus, not a tool. ── */
+(function () {
+  const pane = document.getElementById('weatherPane');
+  const rowsEl = document.getElementById('weatherRows');
+  if (!pane || !rowsEl) return;
+
+  const WX_URL = 'https://api.open-meteo.com/v1/forecast'
+    + '?latitude=33.7743&longitude=-117.9414'
+    + '&daily=temperature_2m_max,temperature_2m_min&hourly=weather_code'
+    + '&temperature_unit=fahrenheit&timezone=America%2FLos_Angeles&forecast_days=3';
+  const CACHE_KEY = 'gg_weather_v2';
+  const CACHE_TTL = 30 * 60 * 1000;
+
+  /* Day mood from the DAYTIME hourly codes (8:00–20:00), not the daily
+     aggregate — Open-Meteo's daily weather_code is "worst moment of the
+     day", which brands every marine-layer morning as gloomy even when
+     the afternoon is clear. Any daytime rain wins; otherwise majority
+     cloudy-vs-clear across working hours decides. */
+  function wxMood(hourlyCodes, dayIndex) {
+    const day = hourlyCodes.slice(dayIndex * 24 + 8, dayIndex * 24 + 21);
+    if (day.some(c => c >= 51)) return 'rainy';        // drizzle, rain, snow, storms
+    const gloomyHours = day.filter(c => c >= 3).length; // overcast, fog
+    return gloomyHours > day.length / 2 ? 'gloomy' : 'sunny';
+  }
+
+  /* pixel icons — 16×16 grids, crispEdges like the rest of the page.
+     Cute rules: rounded silhouettes, two-tone shading, a glint of light. */
+  const WX_ICONS = {
+    sunny:
+      '<svg viewBox="0 0 16 16" aria-hidden="true"><g class="wx-sun-ray">' +
+      '<rect x="7" y="0" width="2" height="3"/><rect x="7" y="13" width="2" height="3"/>' +
+      '<rect x="0" y="7" width="3" height="2"/><rect x="13" y="7" width="3" height="2"/>' +
+      '<rect x="2" y="2" width="2" height="2"/><rect x="12" y="2" width="2" height="2"/>' +
+      '<rect x="2" y="12" width="2" height="2"/><rect x="12" y="12" width="2" height="2"/>' +
+      '</g><g class="wx-sun-core">' +
+      '<rect x="6" y="4" width="4" height="1"/><rect x="5" y="5" width="6" height="1"/>' +
+      '<rect x="4" y="6" width="8" height="4"/><rect x="5" y="10" width="6" height="1"/>' +
+      '<rect x="6" y="11" width="4" height="1"/>' +
+      '</g><g class="wx-glint">' +
+      '<rect x="6" y="6" width="2" height="1"/><rect x="6" y="7" width="1" height="1"/>' +
+      '</g></svg>',
+    gloomy:
+      '<svg viewBox="0 0 16 16" aria-hidden="true"><g class="wx-cloud">' +
+      '<rect x="4" y="5" width="4" height="1"/>' +
+      '<rect x="3" y="6" width="6" height="1"/><rect x="10" y="6" width="3" height="1"/>' +
+      '<rect x="2" y="7" width="12" height="1"/>' +
+      '<rect x="1" y="8" width="14" height="3"/>' +
+      '<rect x="2" y="11" width="12" height="1"/>' +
+      '</g><g class="wx-cloud-lite">' +
+      '<rect x="4" y="6" width="3" height="1"/><rect x="3" y="7" width="2" height="1"/>' +
+      '</g></svg>',
+    rainy:
+      '<svg viewBox="0 0 16 16" aria-hidden="true"><g class="wx-cloud-dark">' +
+      '<rect x="4" y="2" width="4" height="1"/>' +
+      '<rect x="3" y="3" width="6" height="1"/><rect x="10" y="3" width="3" height="1"/>' +
+      '<rect x="2" y="4" width="12" height="1"/>' +
+      '<rect x="1" y="5" width="14" height="2"/>' +
+      '<rect x="2" y="7" width="12" height="1"/>' +
+      '</g><g class="wx-cloud">' +
+      '<rect x="4" y="3" width="3" height="1"/><rect x="3" y="4" width="2" height="1"/>' +
+      '</g><g class="wx-drop">' +
+      '<rect x="4" y="9" width="1" height="1"/><rect x="3" y="10" width="2" height="2"/>' +
+      '<rect x="8" y="11" width="1" height="1"/><rect x="7" y="12" width="2" height="2"/>' +
+      '<rect x="12" y="9" width="1" height="1"/><rect x="11" y="10" width="2" height="2"/>' +
+      '</g></svg>'
+  };
+
+  function wxDayName(iso, i) {
+    if (i === 0) return 'Today';
+    const p = iso.split('-');
+    return new Date(+p[0], p[1] - 1, +p[2]).toLocaleDateString('en-US', { weekday: 'short' });
+  }
+
+  function wxRender(days) {
+    const gmin = Math.min.apply(null, days.map(d => d.lo));
+    const gmax = Math.max.apply(null, days.map(d => d.hi));
+    const span = Math.max(1, gmax - gmin);
+    rowsEl.innerHTML = days.map((d, i) => {
+      const name = wxDayName(d.date, i);
+      const left  = ((d.lo - gmin) / span * 100).toFixed(1);
+      const width = Math.max(4, (d.hi - d.lo) / span * 100).toFixed(1);
+      return '<div class="weather-row" role="listitem" aria-label="' +
+        name + ': ' + d.mood + ', high ' + d.hi + ', low ' + d.lo + ' degrees">' +
+        '<span class="wx-day">' + name + '</span>' +
+        '<span class="wx-icon" title="' + d.mood + '">' + WX_ICONS[d.mood] + '</span>' +
+        '<span class="wx-lo">' + d.lo + '°</span>' +
+        '<span class="wx-bar"><span class="wx-bar-fill" style="left:' + left + '%;width:' + width + '%"></span></span>' +
+        '<span class="wx-hi">' + d.hi + '°</span>' +
+        '</div>';
+    }).join('');
+    pane.hidden = false;
+  }
+
+  function wxLoad() {
+    try {
+      const c = JSON.parse(localStorage.getItem(CACHE_KEY));
+      if (c && c.days && Date.now() - c.at < CACHE_TTL) { wxRender(c.days); return; }
+    } catch (e) { /* stale/corrupt cache — refetch */ }
+    fetch(WX_URL)
+      .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then(d => {
+        const days = d.daily.time.map((t, i) => ({
+          date: t,
+          hi: Math.round(d.daily.temperature_2m_max[i]),
+          lo: Math.round(d.daily.temperature_2m_min[i]),
+          mood: wxMood(d.hourly.weather_code, i)
+        }));
+        try { localStorage.setItem(CACHE_KEY, JSON.stringify({ at: Date.now(), days })); } catch (e) {}
+        wxRender(days);
+      })
+      .catch(() => { pane.hidden = true; });
+  }
+
+  const wxMq = window.matchMedia('(min-width: 1000px)');
+  if (wxMq.matches) wxLoad();
+  else wxMq.addEventListener('change', function once(e) {
+    if (e.matches) { wxMq.removeEventListener('change', once); wxLoad(); }
+  });
+})();
 </script>
 </body>
 </html>
