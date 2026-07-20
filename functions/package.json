@@ -1,0 +1,18 @@
+{
+  "name": "gg-toolbox-functions",
+  "description": "Cloud Functions for the GG Toolbox — dynamic QR tracking",
+  "scripts": {
+    "serve": "firebase emulators:start --only functions",
+    "deploy": "firebase deploy --only functions:qrtracking",
+    "logs": "firebase functions:log"
+  },
+  "engines": {
+    "node": "20"
+  },
+  "main": "index.js",
+  "dependencies": {
+    "firebase-admin": "^12.7.0",
+    "firebase-functions": "^6.6.0"
+  },
+  "private": true
+}
