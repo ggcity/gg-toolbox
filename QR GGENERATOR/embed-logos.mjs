@@ -28,12 +28,11 @@ const MAP = {
   'ggtv3': 'GGTV3.png',                    // GGTV3 community television
   'parks': 'pmlb.png',                     // Parks Make Life Better!
   'pd':    'badge patch combined 2024.png',// Garden Grove Police badge + patch
-  // --- extra icons (custom-logo picker only, no preset) ---
-  'ornament':    'christmas-ball-icon.png',
-  'ornament-2':  'christmas-ball-icon-christmas-new-year-symbol-traditional-holiday-decoration-vector-illustration-eps.png',
-  'cityscape':   'cityscape-icon-vector-building-images-graphics.png',
-  'cone':        'emergency-barrier-gray-cone-icon.png',
-  'water-drop':  'water-drop-illustration-logo-template-vector-design.png',
+  // --- extra logos (custom-logo picker only, no preset) ---
+  'bc':             'bc-logo-vert.png',              // Buena Clinton Youth & Family Center
+  'magnolia-park':  'Magnolia Park logo.png',        // Magnolia Park Family Resource Center
+  'pw-seal':        'PW Seal.png',                   // Garden Grove Public Works Department
+  'senior-center':  'Senior Center Logo 2016.png',   // H. Louis Lake Senior Center
 };
 
 const MIME = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.svg': 'image/svg+xml', '.webp': 'image/webp' };
