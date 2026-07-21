@@ -20,6 +20,7 @@
 const {onRequest} = require('firebase-functions/v2/https');
 const {defineString} = require('firebase-functions/params');
 const admin = require('firebase-admin');
+const QRCode = require('qrcode');
 
 admin.initializeApp();
 const db = admin.firestore();
@@ -47,6 +48,12 @@ function fmtStamp(ts) {
   if (!ts) return '';
   const d = ts.toDate ? ts.toDate() : new Date(ts);
   return d.toISOString().slice(0, 19).replace('T', ' ');   // YYYY-MM-DD HH:MM:SS
+}
+// How long a code has been live, from its created timestamp — for the admin list.
+function daysActive(ts) {
+  if (!ts || !ts.toDate) return '';
+  const d = Math.max(0, Math.floor((Date.now() - ts.toDate().getTime()) / 86400000));
+  return d === 0 ? 'today' : d + (d === 1 ? ' day' : ' days');
 }
 function originOf(req) {
   const proto = req.headers['x-forwarded-proto'] || req.protocol || 'https';
@@ -115,6 +122,14 @@ function pageTop(title) {
     'th{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:#8A7860;padding:6px 8px;text-align:left;border-bottom:2px solid #D6CAB0;}' +
     'td{padding:8px;border-bottom:1px solid #EAE1CE;vertical-align:top;overflow-wrap:anywhere;}' +
     'td.hits{font-size:20px;font-weight:800;color:#6E4E14;white-space:nowrap;}' +
+    '.qrwrap{text-align:center;margin:18px 0;padding:16px;background:#F7F2E7;border:1px solid #EAE1CE;}' +
+    '.qrimg{display:inline-block;background:#fff;padding:10px;border:1px solid #D6CAB0;line-height:0;}' +
+    '.qrimg svg{display:block;width:220px;height:220px;}' +
+    '.dlrow{margin-top:12px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;}' +
+    '.dl{padding:8px 16px;background:#2C2018;color:#F3E9D6;text-decoration:none;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;border:1px solid #6E3E12;}' +
+    '.del{margin:0;padding:5px 12px;font-size:11px;background:#7A0D0D;border:1px solid #4A0808;color:#F3E9D6;letter-spacing:1px;text-transform:uppercase;cursor:pointer;white-space:nowrap;}' +
+    'th:last-child,td:last-child{white-space:nowrap;}' +
+    'td form{margin:0;}' +
     'a{color:#7A5A32;}' +
     '</style></head><body><div class="card">';
 }
@@ -192,10 +207,27 @@ exports.qr = onRequest({region: 'us-central1', memory: '256MiB', maxInstances: 1
       const saved = req.query.saved ?
         '<div class="ok">Destination updated — your printed QR now forwards to the new page.</div>' : '';
 
+      // the scannable code for this short link, shown on the page and downloadable
+      let qrBlock = '';
+      try {
+        const link = shortUrl(req, doc.id);
+        const svg = await QRCode.toString(link, {type: 'svg', margin: 1, width: 220});
+        const png = await QRCode.toDataURL(link, {margin: 1, width: 1024});
+        const svgB64 = Buffer.from(svg).toString('base64');
+        qrBlock = '<div class="qrwrap"><div class="qrimg">' + svg + '</div>' +
+          '<div class="dlrow">' +
+          '<a class="dl" href="' + png + '" download="gg-qr-' + doc.id + '.png">Download PNG</a>' +
+          '<a class="dl" href="data:image/svg+xml;base64,' + svgB64 + '" download="gg-qr-' + doc.id + '.svg">Download SVG</a>' +
+          '</div><div class="bl" style="margin-top:8px;">Scannable code for this link</div></div>';
+      } catch (e) {
+        console.error('qr image gen failed', e);
+      }
+
       return res.send(pageTop('Scans — ' + (d.label || doc.id)) +
         '<div class="head">GG QR &middot; Scan stats</div><div class="body">' + saved +
         '<div class="big">' + (d.hits || 0) + '<small>total scans</small></div>' +
         '<div class="bars">' + bars + '</div><div class="bl">last 14 days</div>' +
+        qrBlock +
         '<div class="kv">' +
         '<div><b>Name</b> ' + h(d.label || 'Untitled') + '</div>' +
         '<div><b>QR points to</b> ' + h(shortUrl(req, doc.id)) + '</div>' +
@@ -223,25 +255,44 @@ exports.qr = onRequest({region: 'us-central1', memory: '256MiB', maxInstances: 1
     }
 
     /* ── admin directory  ( /qradmin?key=… ) ─────────────────────────────── */
-    if (path === '/qradmin' && method === 'GET') {
+    if (path === '/qradmin') {
       const key = ADMIN_KEY.value();
       if (!key || req.query.key !== key) {
         return res.status(403).type('text/plain').send('Wrong admin key (or key not set yet).');
       }
+      const adminUrl = originOf(req) + '/qradmin?key=' + encodeURIComponent(key);
+
+      // Remove a code: deletes its Firestore doc (frees that storage) and its
+      // tracking — the short link 404s afterward, so any printed copies stop.
+      if (method === 'POST') {
+        if (req.body && req.body.action === 'delete') {
+          const code = String(req.body.code || '').replace(/[^A-Za-z0-9]/g, '');
+          if (code) await db.collection(COLLECTION).doc(code).delete();
+        }
+        return res.redirect(303, adminUrl);
+      }
+
       const snap = await db.collection(COLLECTION).orderBy('created', 'desc').get();
       res.type('text/html');
       let html = pageTop('GG QR — all tracked codes') +
         '<div class="head">GG QR &middot; All tracked codes (' + snap.size + ')</div><div class="body">' +
-        '<table><tr><th>Scans</th><th>Name</th><th>Forwards to</th><th>Created</th><th>Stats link</th></tr>';
+        '<table><tr><th>Scans</th><th>Name</th><th>Forwards to</th><th>Created</th><th>Active</th><th>Stats</th><th></th></tr>';
       snap.forEach((docSnap) => {
         const l = docSnap.data();
         html += '<tr><td class="hits">' + (l.hits || 0) + '</td>' +
           '<td>' + h(l.label || 'Untitled') + '<br><span class="bl">' + h(docSnap.id) + '</span></td>' +
           '<td>' + h(l.dest) + '</td>' +
           '<td>' + h(fmtStamp(l.created).slice(0, 10)) + '</td>' +
-          '<td><a href="' + h(statsUrl(req, l.token || '')) + '">stats page</a></td></tr>';
+          '<td>' + h(daysActive(l.created)) + '</td>' +
+          '<td><a href="' + h(statsUrl(req, l.token || '')) + '">stats</a></td>' +
+          '<td><form method="post" action="' + h(adminUrl) + '" ' +
+          'onsubmit="return confirm(\'Delete this QR tracking?\\n\\nThe printed code will STOP working and its scan history is erased. This cannot be undone.\')">' +
+          '<input type="hidden" name="action" value="delete">' +
+          '<input type="hidden" name="code" value="' + h(docSnap.id) + '">' +
+          '<button type="submit" class="del">Remove</button></form></td></tr>';
       });
-      html += '</table><p class="bl" style="margin-top:14px;">Send an employee their stats link if they lose it — the link is their access.</p>' +
+      html += '</table><p class="bl" style="margin-top:14px;">Send an employee their stats link if they lose it — the link is their access. ' +
+        'Removing a code deletes its tracking and frees its storage; any printed copies stop working.</p>' +
         '</div></div></body></html>';
       return res.send(html);
     }
