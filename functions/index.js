@@ -21,12 +21,17 @@ const {onRequest} = require('firebase-functions/v2/https');
 const {defineString} = require('firebase-functions/params');
 const admin = require('firebase-admin');
 const QRCode = require('qrcode');
+const fs = require('fs');
+const path = require('path');
 
 admin.initializeApp();
 const db = admin.firestore();
 const {FieldValue} = admin.firestore;
 
 const COLLECTION = 'qrLinks';
+// Client-side ambient Tetris animation (same one as the QR generator), read
+// once at cold start and injected into the stats/admin pages by pageBottom().
+const TETRIS_JS = fs.readFileSync(path.join(__dirname, 'client-tetris.js'), 'utf8');
 const KEEP_DAYS = 180;                 // per-day counts kept this long (totals kept forever)
 const ADMIN_KEY = defineString('QR_ADMIN_KEY');   // recovery-directory password (functions/.env)
 
@@ -105,7 +110,8 @@ function pageTop(title) {
   return '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">' +
     '<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>' + h(title) + '</title><style>' +
     'body{font-family:"Segoe UI",system-ui,sans-serif;background:#E9E1CF;color:#4A3A28;margin:0;padding:24px;}' +
-    '.card{max-width:720px;margin:0 auto;background:#fff;border:1px solid #D6CAB0;}' +
+    '.card{max-width:720px;margin:0 auto;background:#fff;border:1px solid #D6CAB0;position:relative;z-index:1;}' +
+    '#tetris-bg{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;display:block;}' +
     '.head{background:#2C2018;color:#C9B48C;padding:10px 18px;font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;}' +
     '.body{padding:20px 18px;}' +
     '.big{font-size:64px;font-weight:800;color:#6E4E14;line-height:1;}' +
@@ -131,7 +137,11 @@ function pageTop(title) {
     'th:last-child,td:last-child{white-space:nowrap;}' +
     'td form{margin:0;}' +
     'a{color:#7A5A32;}' +
-    '</style></head><body><div class="card">';
+    '</style></head><body><canvas id="tetris-bg" aria-hidden="true"></canvas><div class="card">';
+}
+// Closes the card + body, injecting the ambient Tetris animation script.
+function pageBottom() {
+  return '</div></div><script>' + TETRIS_JS + '</script></body></html>';
 }
 
 /* ── the single HTTP entry point (hosting rewrites /q, /s, /api/qr, /qradmin here) ── */
@@ -178,7 +188,7 @@ exports.qr = onRequest({region: 'us-central1', memory: '256MiB', maxInstances: 1
       res.type('text/html');
       if (!doc) {
         return res.status(404).send(pageTop('Not found') +
-          '<div class="head">GG QR</div><div class="body">This stats link is not valid.</div></div></body></html>');
+          '<div class="head">GG QR</div><div class="body">This stats link is not valid.' + pageBottom());
       }
       const d = doc.data();
       const days = d.days || {};
@@ -240,7 +250,7 @@ exports.qr = onRequest({region: 'us-central1', memory: '256MiB', maxInstances: 1
         '<input type="url" name="dest" required placeholder="https://…" value="' + h(d.dest) + '">' +
         '<button type="submit">Save new destination</button></form>' +
         '<p class="bl" style="margin-top:16px;">Bookmark this page — it is your key to this QR code.</p>' +
-        '</div></div></body></html>');
+        pageBottom());
     }
 
     /* ── repoint from the stats-page form  ( POST /s/TOKEN ) ──────────────── */
@@ -293,7 +303,7 @@ exports.qr = onRequest({region: 'us-central1', memory: '256MiB', maxInstances: 1
       });
       html += '</table><p class="bl" style="margin-top:14px;">Send an employee their stats link if they lose it — the link is their access. ' +
         'Removing a code deletes its tracking and frees its storage; any printed copies stop working.</p>' +
-        '</div></div></body></html>';
+        pageBottom();
       return res.send(html);
     }
 
