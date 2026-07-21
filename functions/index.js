@@ -75,6 +75,66 @@ function daysActive(ts) {
   const d = Math.max(0, Math.floor((Date.now() - ts.toDate().getTime()) / 86400000));
   return d === 0 ? 'today' : d + (d === 1 ? ' day' : ' days');
 }
+// Month key "YYYY-MM" in Garden Grove time — the unbounded monthly rollup that
+// lets a years-long campaign keep its history after daily counts are pruned.
+function ggMonth(d) {
+  const p = new Intl.DateTimeFormat('en-CA', {timeZone: TZ, year: 'numeric', month: '2-digit'})
+    .formatToParts(d).reduce((o, x) => (o[x.type] = x.value, o), {});
+  return p.year + '-' + p.month;
+}
+// Adaptive activity chart. The window and granularity grow with the campaign:
+//   ≤ 20 days  → 14 daily bars
+//   ≤ 133 days → weekly bars (rolling 7-day buckets, from the daily map)
+//   older      → monthly bars (from the never-pruned monthly rollup)
+// so a code that runs for weeks, months, or years always reads clearly.
+function buildChart(created, days, months) {
+  const now = Date.now();
+  const createdMs = (created && created.toDate) ? created.toDate().getTime() : now;
+  const ageDays = Math.max(0, Math.floor((now - createdMs) / 86400000));
+  const dm = (dt) => new Intl.DateTimeFormat('en-US', {timeZone: TZ, month: 'short', day: 'numeric'}).format(dt);
+  const bars = [];
+  let unit;
+
+  if (ageDays <= 20) {
+    unit = 'days';
+    const dayFmt = (dt) => new Intl.DateTimeFormat('en-US',
+      {timeZone: TZ, weekday: 'short', month: 'short', day: 'numeric'}).format(dt);
+    for (let i = 13; i >= 0; i--) {
+      const dt = new Date(now - i * 86400000);
+      bars.push({n: days[ggDay(dt)] || 0, label: i === 0 ? 'Today' : dayFmt(dt)});
+    }
+  } else if (ageDays <= 133) {
+    unit = 'weeks';
+    const count = Math.min(19, Math.max(4, Math.ceil((ageDays + 1) / 7)));
+    const monShort = (dt) => new Intl.DateTimeFormat('en-US', {timeZone: TZ, month: 'short'}).format(dt);
+    const dayNum = (dt) => new Intl.DateTimeFormat('en-US', {timeZone: TZ, day: 'numeric'}).format(dt);
+    for (let i = count - 1; i >= 0; i--) {
+      const end = new Date(now - i * 7 * 86400000);
+      const start = new Date(end.getTime() - 6 * 86400000);
+      let sum = 0;
+      for (let k = 0; k < 7; k++) sum += days[ggDay(new Date(end.getTime() - k * 86400000))] || 0;
+      const label = monShort(start) === monShort(end) ?
+        monShort(start) + ' ' + dayNum(start) + '–' + dayNum(end) :
+        dm(start) + ' – ' + dm(end);
+      bars.push({n: sum, label: i === 0 ? 'This week · ' + label : label});
+    }
+  } else {
+    unit = 'months';
+    const cur = ggMonth(new Date(now)).split('-');
+    const baseIdx = parseInt(cur[0], 10) * 12 + (parseInt(cur[1], 10) - 1);
+    const count = Math.min(24, Math.max(5, Math.ceil((ageDays + 1) / 30)));
+    for (let i = count - 1; i >= 0; i--) {
+      const idx = baseIdx - i;
+      const yy = Math.floor(idx / 12);
+      const mm = (idx % 12) + 1;
+      const key = yy + '-' + String(mm).padStart(2, '0');
+      const label = new Intl.DateTimeFormat('en-US',
+        {timeZone: 'UTC', month: 'short', year: 'numeric'}).format(new Date(Date.UTC(yy, mm - 1, 1)));
+      bars.push({n: (months && months[key]) || 0, label: i === 0 ? 'This month · ' + label : label});
+    }
+  }
+  return {bars, caption: 'last ' + bars.length + ' ' + unit};
+}
 function originOf(req) {
   const proto = req.headers['x-forwarded-proto'] || req.protocol || 'https';
   const host = req.headers['x-forwarded-host'] || req.get('host');
@@ -195,11 +255,12 @@ exports.qr = onRequest({region: 'us-central1', memory: '256MiB', maxInstances: 1
       }
       const dest = snap.data().dest;
       if (!isPreviewRequest(req, method)) {   // don't count unfurl bots / prefetch / HEAD
-        const today = ggDay(new Date());
+        const nowD = new Date();
         await ref.update({
           hits: FieldValue.increment(1),
           lastScan: FieldValue.serverTimestamp(),
-          ['days.' + today]: FieldValue.increment(1),
+          ['days.' + ggDay(nowD)]: FieldValue.increment(1),      // pruned to 180 days
+          ['months.' + ggMonth(nowD)]: FieldValue.increment(1),  // kept forever
         });
       }
       res.set('Cache-Control', 'private, no-store');
@@ -228,19 +289,11 @@ exports.qr = onRequest({region: 'us-central1', memory: '256MiB', maxInstances: 1
         await doc.ref.update({days: trimmed});
       }
 
-      // last-14-day bars, each with a hover tooltip (day · scan count)
-      const fmtBarDay = (dt) => new Intl.DateTimeFormat('en-US', {
-        timeZone: TZ, weekday: 'short', month: 'short', day: 'numeric',
-      }).format(dt);
+      // adaptive activity chart: daily → weekly → monthly as the campaign ages
+      const chart = buildChart(d.created, days, d.months || {});
       let max = 1;
-      const bars14 = [];
-      for (let i = 13; i >= 0; i--) {
-        const dt = new Date(Date.now() - i * 86400000);
-        const n = days[ggDay(dt)] || 0;
-        bars14.push({n, label: i === 0 ? 'Today' : fmtBarDay(dt)});
-        if (n > max) max = n;
-      }
-      const bars = bars14.map((b) => {
+      chart.bars.forEach((b) => { if (b.n > max) max = b.n; });
+      const bars = chart.bars.map((b) => {
         const scans = b.n === 1 ? '1 scan' : b.n + ' scans';
         const hpct = Math.max(3, Math.round(b.n / max * 100));
         return '<div class="bar-col" data-label="' + h(b.label + ' · ' + scans) + '">' +
@@ -289,7 +342,7 @@ exports.qr = onRequest({region: 'us-central1', memory: '256MiB', maxInstances: 1
       return res.send(pageTop('Scans — ' + (d.label || doc.id)) +
         '<div class="head">GG QR &middot; Scan stats</div><div class="body">' + saved +
         '<div class="big">' + (d.hits || 0) + '<small>total scans</small></div>' +
-        '<div class="bars">' + bars + '</div><div class="bl">last 14 days</div>' +
+        '<div class="bars">' + bars + '</div><div class="bl">' + h(chart.caption) + '</div>' +
         qrBlock +
         '<div class="kv">' +
         '<div><b>Name</b> ' + h(d.label || 'Untitled') + '</div>' +
@@ -384,7 +437,7 @@ exports.qr = onRequest({region: 'us-central1', memory: '256MiB', maxInstances: 1
             tx.set(ref, {
               dest, label, token, hits: 0,
               created: FieldValue.serverTimestamp(),
-              lastScan: null, days: {},
+              lastScan: null, days: {}, months: {},
             });
             return true;
           });
