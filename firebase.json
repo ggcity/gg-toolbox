@@ -6,6 +6,7 @@
       "cleanUrls": false,
       "trailingSlash": false,
       "rewrites": [
+        { "source": "/qr", "destination": "/QR GGENERATOR/index.html" },
         { "source": "/api/qr", "function": "qr", "region": "us-central1", "pinTag": true },
         { "source": "/q/**", "function": "qr", "region": "us-central1", "pinTag": true },
         { "source": "/s/**", "function": "qr", "region": "us-central1", "pinTag": true },
