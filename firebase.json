@@ -1,28 +1,44 @@
 {
-  "hosting": {
-    "target": "gg-toolbox",
-    "public": ".",
-    "cleanUrls": false,
-    "trailingSlash": false,
-    "rewrites": [
-      { "source": "/api/qr", "function": "qr", "region": "us-central1", "pinTag": true },
-      { "source": "/q/**", "function": "qr", "region": "us-central1", "pinTag": true },
-      { "source": "/s/**", "function": "qr", "region": "us-central1", "pinTag": true },
-      { "source": "/qradmin", "function": "qr", "region": "us-central1", "pinTag": true }
-    ],
-    "ignore": [
-      ".firebaserc",
-      "firebase.json",
-      "firestore.rules",
-      ".git/**",
-      ".claude/**",
-      "functions/**",
-      "**/node_modules/**",
-      "**/server/**",
-      "**/embed-logos.mjs",
-      "**/*.md"
-    ]
-  },
+  "hosting": [
+    {
+      "target": "gg-toolbox",
+      "public": ".",
+      "cleanUrls": false,
+      "trailingSlash": false,
+      "rewrites": [
+        { "source": "/api/qr", "function": "qr", "region": "us-central1", "pinTag": true },
+        { "source": "/q/**", "function": "qr", "region": "us-central1", "pinTag": true },
+        { "source": "/s/**", "function": "qr", "region": "us-central1", "pinTag": true },
+        { "source": "/qradmin", "function": "qr", "region": "us-central1", "pinTag": true }
+      ],
+      "ignore": [
+        ".firebaserc",
+        "firebase.json",
+        "firestore.rules",
+        ".git/**",
+        ".claude/**",
+        "functions/**",
+        "qr-public/**",
+        "**/node_modules/**",
+        "**/server/**",
+        "**/embed-logos.mjs",
+        "**/*.md"
+      ]
+    },
+    {
+      "target": "ggc-go",
+      "public": "qr-public",
+      "cleanUrls": false,
+      "trailingSlash": false,
+      "redirects": [
+        { "source": "/", "destination": "https://www.ggcity.org", "type": 302 }
+      ],
+      "rewrites": [
+        { "source": "/q/**", "function": "qr", "region": "us-central1", "pinTag": true },
+        { "source": "/s/**", "function": "qr", "region": "us-central1", "pinTag": true }
+      ]
+    }
+  ],
   "functions": [
     {
       "source": "functions",

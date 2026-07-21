@@ -34,6 +34,10 @@ const COLLECTION = 'qrLinks';
 const TETRIS_JS = fs.readFileSync(path.join(__dirname, 'client-tetris.js'), 'utf8');
 const KEEP_DAYS = 180;                 // per-day counts kept this long (totals kept forever)
 const ADMIN_KEY = defineString('QR_ADMIN_KEY');   // recovery-directory password (functions/.env)
+// Public origin the printed QR short-links (/q/…) and stats links (/s/…) are
+// built on — a neutral domain residents see instead of the internal toolbox
+// host. Empty → fall back to the request's own host (functions/.env).
+const PUBLIC_BASE = defineString('QR_PUBLIC_BASE', {default: ''});
 
 /* ── helpers ────────────────────────────────────────────────────────────── */
 
@@ -65,11 +69,17 @@ function originOf(req) {
   const host = req.headers['x-forwarded-host'] || req.get('host');
   return proto + '://' + host;
 }
+// Base for the resident-facing short/stats links: the configured neutral
+// domain if set, else whatever host this request arrived on.
+function publicBase(req) {
+  const b = PUBLIC_BASE.value();
+  return b ? b.replace(/\/+$/, '') : originOf(req);
+}
 function shortUrl(req, code) {
-  return originOf(req) + '/q/' + code;
+  return publicBase(req) + '/q/' + code;
 }
 function statsUrl(req, token) {
-  return originOf(req) + '/s/' + token;
+  return publicBase(req) + '/s/' + token;
 }
 function isHttpUrl(s) {
   return /^https?:\/\//i.test(s || '');
