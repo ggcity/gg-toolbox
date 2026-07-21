@@ -140,7 +140,12 @@ function pageTop(title) {
     '.kv{margin:14px 0;font-size:14px;line-height:1.7;overflow-wrap:anywhere;}' +
     '.kv b{display:inline-block;min-width:110px;color:#8A7860;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;}' +
     '.bars{display:flex;align-items:flex-end;gap:3px;height:56px;margin:10px 0 4px;}' +
-    '.bars div{flex:1;background:#C0892E;min-height:2px;}' +
+    '.bar-col{flex:1;height:100%;display:flex;align-items:flex-end;position:relative;}' +
+    '.bar-fill{width:100%;background:#C0892E;min-height:2px;border-radius:1px;transition:background .12s;}' +
+    '.bar-col:hover .bar-fill{background:#6E4E14;}' +
+    '.bar-col::after{content:attr(data-label);position:absolute;left:50%;bottom:calc(100% + 7px);transform:translateX(-50%);background:#2C2018;color:#F3E9D6;padding:5px 9px;border-radius:3px;font-size:11px;font-weight:600;letter-spacing:.4px;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .1s;z-index:6;}' +
+    '.bar-col::before{content:"";position:absolute;left:50%;bottom:calc(100% + 2px);transform:translateX(-50%);border:5px solid transparent;border-top-color:#2C2018;opacity:0;pointer-events:none;transition:opacity .1s;z-index:6;}' +
+    '.bar-col:hover::after,.bar-col:hover::before{opacity:1;}' +
     '.bl{font-size:10px;color:#8A7860;letter-spacing:1px;text-transform:uppercase;}' +
     'input[type=url],input[type=text]{width:100%;box-sizing:border-box;padding:9px 10px;border:1px solid #D6CAB0;background:#F7F2E7;font-size:14px;}' +
     'button{margin-top:8px;padding:9px 18px;border:1px solid #6E3E12;background:#2C2018;color:#F3E9D6;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;font-size:13px;cursor:pointer;}' +
@@ -223,17 +228,24 @@ exports.qr = onRequest({region: 'us-central1', memory: '256MiB', maxInstances: 1
         await doc.ref.update({days: trimmed});
       }
 
-      // last-14-day bars
+      // last-14-day bars, each with a hover tooltip (day · scan count)
+      const fmtBarDay = (dt) => new Intl.DateTimeFormat('en-US', {
+        timeZone: TZ, weekday: 'short', month: 'short', day: 'numeric',
+      }).format(dt);
       let max = 1;
-      const counts = [];
+      const bars14 = [];
       for (let i = 13; i >= 0; i--) {
-        const day = ggDay(new Date(Date.now() - i * 86400000));
-        const n = days[day] || 0;
-        counts.push(n);
+        const dt = new Date(Date.now() - i * 86400000);
+        const n = days[ggDay(dt)] || 0;
+        bars14.push({n, label: i === 0 ? 'Today' : fmtBarDay(dt)});
         if (n > max) max = n;
       }
-      const bars = counts.map((n) =>
-        '<div style="height:' + Math.max(3, Math.round(n / max * 100)) + '%" title="' + n + '"></div>').join('');
+      const bars = bars14.map((b) => {
+        const scans = b.n === 1 ? '1 scan' : b.n + ' scans';
+        const hpct = Math.max(3, Math.round(b.n / max * 100));
+        return '<div class="bar-col" data-label="' + h(b.label + ' · ' + scans) + '">' +
+          '<div class="bar-fill" style="height:' + hpct + '%"></div></div>';
+      }).join('');
 
       const saved = req.query.saved ?
         '<div class="ok">Destination updated — your printed QR now forwards to the new page.</div>' : '';
