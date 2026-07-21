@@ -227,18 +227,38 @@ exports.qr = onRequest({region: 'us-central1', memory: '256MiB', maxInstances: 1
       const saved = req.query.saved ?
         '<div class="ok">Destination updated — your printed QR now forwards to the new page.</div>' : '';
 
-      // the scannable code for this short link, shown on the page and downloadable
+      // The scannable code for this link, shown on the page and downloadable.
+      // Prefer the fully-designed QR the employee built (stored at track time);
+      // fall back to a plain generated one for codes made before that existed.
       let qrBlock = '';
       try {
-        const link = shortUrl(req, doc.id);
-        const svg = await QRCode.toString(link, {type: 'svg', margin: 1, width: 220});
-        const png = await QRCode.toDataURL(link, {margin: 1, width: 1024});
-        const svgB64 = Buffer.from(svg).toString('base64');
-        qrBlock = '<div class="qrwrap"><div class="qrimg">' + svg + '</div>' +
-          '<div class="dlrow">' +
-          '<a class="dl" href="' + png + '" download="gg-qr-' + doc.id + '.png">Download PNG</a>' +
-          '<a class="dl" href="data:image/svg+xml;base64,' + svgB64 + '" download="gg-qr-' + doc.id + '.svg">Download SVG</a>' +
-          '</div><div class="bl" style="margin-top:8px;">Scannable code for this link</div></div>';
+        let design = null;
+        try {
+          const dsnap = await db.collection('qrDesigns').doc(doc.id).get();
+          if (dsnap.exists) design = dsnap.data();
+        } catch (e) { /* fall through to generated */ }
+
+        let imgTag; let dls; let caption;
+        if (design && design.png) {
+          imgTag = '<img src="' + design.png + '" alt="QR code" style="display:block;width:220px;height:220px;">';
+          dls = '<a class="dl" href="' + design.png + '" download="gg-qr-' + doc.id + '.png">Download PNG</a>';
+          if (design.svg) {
+            dls += '<a class="dl" href="' + design.svg + '" download="gg-qr-' + doc.id + '.svg">Download SVG</a>';
+          }
+          caption = 'Your designed code for this link';
+        } else {
+          const link = shortUrl(req, doc.id);
+          const svg = await QRCode.toString(link, {type: 'svg', margin: 1, width: 220});
+          const png = await QRCode.toDataURL(link, {margin: 1, width: 1024});
+          const svgB64 = Buffer.from(svg).toString('base64');
+          imgTag = svg;
+          dls = '<a class="dl" href="' + png + '" download="gg-qr-' + doc.id + '.png">Download PNG</a>' +
+            '<a class="dl" href="data:image/svg+xml;base64,' + svgB64 + '" download="gg-qr-' + doc.id + '.svg">Download SVG</a>';
+          caption = 'Scannable code for this link';
+        }
+        qrBlock = '<div class="qrwrap"><div class="qrimg">' + imgTag + '</div>' +
+          '<div class="dlrow">' + dls + '</div>' +
+          '<div class="bl" style="margin-top:8px;">' + caption + '</div></div>';
       } catch (e) {
         console.error('qr image gen failed', e);
       }
@@ -287,7 +307,10 @@ exports.qr = onRequest({region: 'us-central1', memory: '256MiB', maxInstances: 1
       if (method === 'POST') {
         if (req.body && req.body.action === 'delete') {
           const code = String(req.body.code || '').replace(/[^A-Za-z0-9]/g, '');
-          if (code) await db.collection(COLLECTION).doc(code).delete();
+          if (code) {
+            await db.collection(COLLECTION).doc(code).delete();
+            await db.collection('qrDesigns').doc(code).delete().catch(() => {});   // its stored design, if any
+          }
         }
         return res.redirect(303, adminUrl);
       }
@@ -317,14 +340,14 @@ exports.qr = onRequest({region: 'us-central1', memory: '256MiB', maxInstances: 1
       return res.send(html);
     }
 
-    /* ── JSON API: create (from the generator) & repoint  ( POST /api/qr ) ── */
+    /* ── JSON API: create / repoint / setdesign  ( POST /api/qr ) ────────── */
     if (path === '/api/qr' && method === 'POST') {
       const inp = req.body || {};
       const action = inp.action || '';
-      const dest = String(inp.dest || '').trim();
-      if (!isHttpUrl(dest)) return sendJson(res, 400, {error: 'Destination must start with http:// or https://'});
 
       if (action === 'create') {
+        const dest = String(inp.dest || '').trim();
+        if (!isHttpUrl(dest)) return sendJson(res, 400, {error: 'Destination must start with http:// or https://'});
         const label = String(inp.label || '').trim().slice(0, 120);
         const token = randomId(12);
         let code;
@@ -344,7 +367,7 @@ exports.qr = onRequest({region: 'us-central1', memory: '256MiB', maxInstances: 1
           });
           if (created) {
             return sendJson(res, 200, {
-              code, url: shortUrl(req, code), stats: statsUrl(req, token),
+              code, token, url: shortUrl(req, code), stats: statsUrl(req, token),
             });
           }
         }
@@ -352,11 +375,31 @@ exports.qr = onRequest({region: 'us-central1', memory: '256MiB', maxInstances: 1
       }
 
       if (action === 'repoint') {
+        const dest = String(inp.dest || '').trim();
+        if (!isHttpUrl(dest)) return sendJson(res, 400, {error: 'Destination must start with http:// or https://'});
         const token = String(inp.token || '').replace(/[^A-Za-z0-9]/g, '');
         const doc = await findByToken(token);
         if (!doc) return sendJson(res, 404, {error: 'Unknown stats token.'});
         await doc.ref.update({dest});
         return sendJson(res, 200, {ok: true, stats: statsUrl(req, token)});
+      }
+
+      // Store the fully-designed QR (logo, colours, dot styles) the employee
+      // built, so the stats page shows their real code, not a plain one. Kept
+      // in a separate collection so the scan path (qrLinks) stays small.
+      if (action === 'setdesign') {
+        const token = String(inp.token || '').replace(/[^A-Za-z0-9]/g, '');
+        const doc = await findByToken(token);
+        if (!doc) return sendJson(res, 404, {error: 'Unknown stats token.'});
+        const png = (typeof inp.png === 'string' && inp.png.startsWith('data:image/png')) ? inp.png : null;
+        let svg = (typeof inp.svg === 'string' && inp.svg.startsWith('data:image/svg')) ? inp.svg : null;
+        if (!png && !svg) return sendJson(res, 400, {error: 'No image provided.'});
+        // stay clear of Firestore's 1 MB doc cap — drop the SVG first if huge
+        if (svg && png && (png.length + svg.length) > 900000) svg = null;
+        await db.collection('qrDesigns').doc(doc.id).set({
+          png: png || null, svg: svg || null, updated: FieldValue.serverTimestamp(),
+        });
+        return sendJson(res, 200, {ok: true});
       }
 
       return sendJson(res, 400, {error: 'Unknown action.'});
