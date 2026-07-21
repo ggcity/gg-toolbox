@@ -50,13 +50,24 @@ function randomId(len) {
   return s;
 }
 
-function utcDay(d) {
-  return d.toISOString().slice(0, 10);            // YYYY-MM-DD (UTC), the days-map key
+const TZ = 'America/Los_Angeles';                 // Garden Grove local time
+
+// YYYY-MM-DD in Garden Grove local time — the days-map key.
+function ggDay(d) {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit',
+  }).format(d);
 }
+// YYYY-MM-DD HH:MM:SS in Garden Grove local time (was UTC before).
 function fmtStamp(ts) {
   if (!ts) return '';
   const d = ts.toDate ? ts.toDate() : new Date(ts);
-  return d.toISOString().slice(0, 19).replace('T', ' ');   // YYYY-MM-DD HH:MM:SS
+  const p = new Intl.DateTimeFormat('en-CA', {
+    timeZone: TZ, hourCycle: 'h23',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+  }).formatToParts(d).reduce((o, x) => (o[x.type] = x.value, o), {});
+  return p.year + '-' + p.month + '-' + p.day + ' ' + p.hour + ':' + p.minute + ':' + p.second;
 }
 // How long a code has been live, from its created timestamp — for the admin list.
 function daysActive(ts) {
@@ -179,7 +190,7 @@ exports.qr = onRequest({region: 'us-central1', memory: '256MiB', maxInstances: 1
       }
       const dest = snap.data().dest;
       if (!isPreviewRequest(req, method)) {   // don't count unfurl bots / prefetch / HEAD
-        const today = utcDay(new Date());
+        const today = ggDay(new Date());
         await ref.update({
           hits: FieldValue.increment(1),
           lastScan: FieldValue.serverTimestamp(),
@@ -216,7 +227,7 @@ exports.qr = onRequest({region: 'us-central1', memory: '256MiB', maxInstances: 1
       let max = 1;
       const counts = [];
       for (let i = 13; i >= 0; i--) {
-        const day = utcDay(new Date(Date.now() - i * 86400000));
+        const day = ggDay(new Date(Date.now() - i * 86400000));
         const n = days[day] || 0;
         counts.push(n);
         if (n > max) max = n;
@@ -272,8 +283,8 @@ exports.qr = onRequest({region: 'us-central1', memory: '256MiB', maxInstances: 1
         '<div><b>Name</b> ' + h(d.label || 'Untitled') + '</div>' +
         '<div><b>QR points to</b> ' + h(shortUrl(req, doc.id)) + '</div>' +
         '<div><b>Forwards to</b> <a href="' + h(d.dest) + '">' + h(d.dest) + '</a></div>' +
-        '<div><b>Created</b> ' + h(fmtStamp(d.created)) + '</div>' +
-        '<div><b>Last scan</b> ' + h(fmtStamp(d.lastScan) || 'never') + '</div>' +
+        '<div><b>Created</b> ' + h(fmtStamp(d.created)) + ' PT</div>' +
+        '<div><b>Last scan</b> ' + (d.lastScan ? h(fmtStamp(d.lastScan)) + ' PT' : 'never') + '</div>' +
         '</div><hr style="border:none;border-top:1px solid #EAE1CE;margin:16px 0;">' +
         '<div class="bl" style="margin-bottom:6px;">Change where the QR forwards (the printed code keeps working)</div>' +
         '<form method="post" action="' + h(statsUrl(req, token)) + '">' +
