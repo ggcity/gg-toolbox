@@ -11,6 +11,14 @@
         { "source": "/s/**", "function": "qr", "region": "us-central1", "pinTag": true },
         { "source": "/qradmin", "function": "qr", "region": "us-central1", "pinTag": true }
       ],
+      "headers": [
+        {
+          "source": "**/*.html",
+          "headers": [
+            { "key": "Cache-Control", "value": "no-cache" }
+          ]
+        }
+      ],
       "ignore": [
         ".firebaserc",
         "firebase.json",
