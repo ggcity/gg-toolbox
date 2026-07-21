@@ -38,6 +38,9 @@ const ADMIN_KEY = defineString('QR_ADMIN_KEY');   // recovery-directory password
 // built on — a neutral domain residents see instead of the internal toolbox
 // host. Empty → fall back to the request's own host (functions/.env).
 const PUBLIC_BASE = defineString('QR_PUBLIC_BASE', {default: ''});
+// Where a scan of an unknown/removed code goes, so a retired printed QR still
+// lands somewhere legitimate instead of a dead 404 (functions/.env).
+const FALLBACK_URL = defineString('QR_FALLBACK_URL', {default: 'https://www.ggcity.org'});
 
 /* ── helpers ────────────────────────────────────────────────────────────── */
 
@@ -249,11 +252,13 @@ exports.qr = onRequest({region: 'us-central1', memory: '256MiB', maxInstances: 1
       const code = m[1];
       const ref = db.collection(COLLECTION).doc(code);
       const snap = await ref.get();
+      res.set('Cache-Control', 'private, no-store');
       if (!snap.exists) {
-        res.set('Cache-Control', 'private, no-store');
-        return res.status(404).type('text/plain').send('Unknown QR code.');
+        // Removed or unknown code — don't dead-end the resident; forward to the
+        // city site so a retired printed QR still lands somewhere legitimate.
+        return res.redirect(302, FALLBACK_URL.value() || 'https://www.ggcity.org');
       }
-      const dest = snap.data().dest;
+      const dest = snap.data().dest || (FALLBACK_URL.value() || 'https://www.ggcity.org');
       if (!isPreviewRequest(req, method)) {   // don't count unfurl bots / prefetch / HEAD
         const nowD = new Date();
         await ref.update({
@@ -263,7 +268,6 @@ exports.qr = onRequest({region: 'us-central1', memory: '256MiB', maxInstances: 1
           ['months.' + ggMonth(nowD)]: FieldValue.increment(1),  // kept forever
         });
       }
-      res.set('Cache-Control', 'private, no-store');
       return res.redirect(302, dest);
     }
 
@@ -410,7 +414,7 @@ exports.qr = onRequest({region: 'us-central1', memory: '256MiB', maxInstances: 1
           '<td>' + h(daysActive(l.created)) + '</td>' +
           '<td><a href="' + h(statsUrl(req, l.token || '')) + '">stats</a></td>' +
           '<td><form method="post" action="' + h(adminUrl) + '" ' +
-          'onsubmit="return confirm(\'Delete this QR tracking?\\n\\nThe printed code will STOP working and its scan history is erased. This cannot be undone.\')">' +
+          'onsubmit="return confirm(\'Delete this QR tracking?\\n\\nScans of any printed copies will forward to the city website instead, and the scan history is erased. This cannot be undone.\')">' +
           '<input type="hidden" name="action" value="delete">' +
           '<input type="hidden" name="code" value="' + h(docSnap.id) + '">' +
           '<button type="submit" class="del">Remove</button></form></td></tr>';
@@ -418,7 +422,7 @@ exports.qr = onRequest({region: 'us-central1', memory: '256MiB', maxInstances: 1
       html += '</tbody></table>' +
         '<p class="bl" id="qadmin-empty" style="margin-top:14px;display:none;">No codes match your filter.</p>' +
         '<p class="bl" style="margin-top:14px;">Send an employee their stats link if they lose it — the link is their access. ' +
-        'Removing a code deletes its tracking and frees its storage; any printed copies stop working.</p>' +
+        'Removing a code deletes its tracking and frees its storage; scans of any printed copies then forward to the city website.</p>' +
         '<script>(function(){' +
         'var q=document.getElementById("qadmin-search"),' +
         'rows=[].slice.call(document.querySelectorAll("#qadmin-rows tr")),' +
