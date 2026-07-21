@@ -395,10 +395,15 @@ exports.qr = onRequest({region: 'us-central1', memory: '256MiB', maxInstances: 1
       res.type('text/html');
       let html = pageTop('GG QR — all tracked codes') +
         '<div class="head">GG QR &middot; All tracked codes (' + snap.size + ')</div><div class="body">' +
-        '<table><tr><th>Scans</th><th>Name</th><th>Forwards to</th><th>Created</th><th>Active</th><th>Stats</th><th></th></tr>';
+        '<input type="text" id="qadmin-search" autocomplete="off" autofocus ' +
+        'placeholder="Filter by name, code, or destination…" style="margin-bottom:6px;">' +
+        '<div class="bl" id="qadmin-count" style="margin-bottom:12px;"></div>' +
+        '<table><thead><tr><th>Scans</th><th>Name</th><th>Forwards to</th><th>Created</th><th>Active</th><th>Stats</th><th></th></tr></thead>' +
+        '<tbody id="qadmin-rows">';
       snap.forEach((docSnap) => {
         const l = docSnap.data();
-        html += '<tr><td class="hits">' + (l.hits || 0) + '</td>' +
+        const search = ((l.label || 'Untitled') + ' ' + docSnap.id + ' ' + (l.dest || '')).toLowerCase();
+        html += '<tr data-s="' + h(search) + '"><td class="hits">' + (l.hits || 0) + '</td>' +
           '<td>' + h(l.label || 'Untitled') + '<br><span class="bl">' + h(docSnap.id) + '</span></td>' +
           '<td>' + h(l.dest) + '</td>' +
           '<td>' + h(fmtStamp(l.created).slice(0, 10)) + '</td>' +
@@ -410,8 +415,25 @@ exports.qr = onRequest({region: 'us-central1', memory: '256MiB', maxInstances: 1
           '<input type="hidden" name="code" value="' + h(docSnap.id) + '">' +
           '<button type="submit" class="del">Remove</button></form></td></tr>';
       });
-      html += '</table><p class="bl" style="margin-top:14px;">Send an employee their stats link if they lose it — the link is their access. ' +
+      html += '</tbody></table>' +
+        '<p class="bl" id="qadmin-empty" style="margin-top:14px;display:none;">No codes match your filter.</p>' +
+        '<p class="bl" style="margin-top:14px;">Send an employee their stats link if they lose it — the link is their access. ' +
         'Removing a code deletes its tracking and frees its storage; any printed copies stop working.</p>' +
+        '<script>(function(){' +
+        'var q=document.getElementById("qadmin-search"),' +
+        'rows=[].slice.call(document.querySelectorAll("#qadmin-rows tr")),' +
+        'count=document.getElementById("qadmin-count"),' +
+        'empty=document.getElementById("qadmin-empty"),total=rows.length;' +
+        'function apply(){' +
+        'var t=q.value.trim().toLowerCase(),shown=0;' +
+        'rows.forEach(function(r){' +
+        'var ok=!t||r.getAttribute("data-s").indexOf(t)!==-1;' +
+        'r.style.display=ok?"":"none";if(ok)shown++;});' +
+        'count.textContent=t?("Showing "+shown+" of "+total):(total+" total");' +
+        'empty.style.display=shown?"none":"";' +
+        '}' +
+        'q.addEventListener("input",apply);apply();' +
+        '})();</script>' +
         pageBottom();
       return res.send(html);
     }
