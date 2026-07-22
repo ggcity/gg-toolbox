@@ -7,6 +7,9 @@
       "trailingSlash": false,
       "rewrites": [
         { "source": "/qr", "destination": "/QR GGENERATOR/index.html" },
+        { "source": "/compressor", "destination": "/IMAGGE COMPRESSOR/index.html" },
+        { "source": "/ggnator", "destination": "/ggnator/index.html" },
+        { "source": "/haiku", "destination": "/daily haiku/index.html" },
         { "source": "/api/qr", "function": "qr", "region": "us-central1", "pinTag": true },
         { "source": "/q/**", "function": "qr", "region": "us-central1", "pinTag": true },
         { "source": "/s/**", "function": "qr", "region": "us-central1", "pinTag": true },
