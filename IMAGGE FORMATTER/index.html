@@ -684,18 +684,6 @@ input[type="number"] { width: 74px; }
   #dz .dz-small { animation: none; }
   #dz .dz-scissors, #dz .sc-half { animation: none !important; }
 }
-/* ── LIVE USAGE COUNTER — toolbox-wide totals streamed from Firestore ── */
-.gg-live{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px 26px;margin:0 auto 18px;padding:0 16px;position:relative;z-index:2;}
-.gg-live[hidden]{display:none;}
-.gg-live-dot{width:7px;height:7px;border-radius:50%;background:#2FA84F;animation:gg-live-pulse 2.4s ease-out infinite;}
-.gg-live-item{display:flex;align-items:baseline;gap:7px;font-family:'Barlow Condensed',sans-serif;}
-.gg-live-num{display:inline-block;font-weight:800;font-size:21px;letter-spacing:.5px;font-variant-numeric:tabular-nums;color:var(--flame-deep);}
-[data-theme="dark"] .gg-live-num{color:var(--flame-yellow);}
-.gg-live-label{font-size:12.5px;font-weight:600;letter-spacing:1.6px;text-transform:uppercase;opacity:.66;}
-.gg-live-item.bump .gg-live-num{animation:gg-live-bump .85s cubic-bezier(.25,1.2,.35,1);}
-@keyframes gg-live-bump{0%{transform:scale(1);}25%{transform:scale(1.32);color:var(--flame-orange);text-shadow:0 0 14px var(--flame-glow,rgba(255,170,0,.55));}100%{transform:scale(1);}}
-@keyframes gg-live-pulse{0%{box-shadow:0 0 0 0 rgba(47,168,79,.5);}70%{box-shadow:0 0 0 7px rgba(47,168,79,0);}100%{box-shadow:0 0 0 0 rgba(47,168,79,0);}}
-@media (prefers-reduced-motion: reduce){.gg-live-item.bump .gg-live-num,.gg-live-dot{animation:none;}}
 </style>
 </head>
 <body data-view="upload">
@@ -809,14 +797,6 @@ input[type="number"] { width: 74px; }
 </div>
 
 <main id="main" role="main">
-
-<section class="gg-live" id="ggLive" hidden aria-label="Live toolbox usage">
-  <span class="gg-live-dot" aria-hidden="true"></span>
-  <span class="gg-live-item" title="Total across everyone using this tool — updates live">
-    <span class="gg-live-num" data-stat="imagesFormatted">0</span>
-    <span class="gg-live-label">images formatted</span>
-  </span>
-</section>
 
 
   <!-- UPLOAD VIEW -->
@@ -1527,16 +1507,12 @@ els.dz.addEventListener('drop', e => {
 els.fileInput.addEventListener('change', () => loadFiles(els.fileInput.files));
 </script>
 <script>
-/* ── LIVE USAGE COUNTERS ─────────────────────────────────────────────────
-   Subscribes to the toolbox-wide stats doc (Firestore stats/counters —
-   public read-only; every increment goes through the /api/stats Cloud
-   Function) and bumps the strip when anyone, anywhere, uses a tool.
-   Purely decorative: any failure leaves the strip hidden.
-   Test hooks: localStorage.ggstats_fs_emu = "host:port" points the listener
-   at a Firestore emulator; localStorage.ggstats_ep overrides the report URL. */
+/* ── USAGE REPORTING ─────────────────────────────────────────────────────
+   The toolbox-wide counters are displayed on the launcher home page; this
+   page only reports finished work to POST /api/stats (fire-and-forget).
+   Test hook: localStorage.ggstats_ep overrides the report URL. */
 (function () {
   'use strict';
-  // Report one tool's finished work to the global counters (fire-and-forget).
   window.ggStatReport = function (tool, n) {
     try {
       var ep = localStorage.getItem('ggstats_ep') ||
@@ -1546,62 +1522,6 @@ els.fileInput.addEventListener('change', () => loadFiles(els.fileInput.files));
         body: JSON.stringify({ tool: tool, n: n }), keepalive: true }).catch(function () {});
     } catch (e) { /* stats are best-effort */ }
   };
-
-  var strip = document.getElementById('ggLive');
-  if (!strip) return;
-  var cells = {};
-  strip.querySelectorAll('.gg-live-num').forEach(function (el) {
-    cells[el.getAttribute('data-stat')] = { num: el, item: el.closest('.gg-live-item'), val: null };
-  });
-  var fmt = function (n) { return Number(n || 0).toLocaleString('en-US'); };
-  function tween(c, to) {
-    var from = c.val, t0 = performance.now(), dur = 500;
-    c.val = to;
-    requestAnimationFrame(function step(t) {
-      var k = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - k, 3);
-      c.num.textContent = fmt(Math.round(from + (to - from) * e));
-      if (k < 1) requestAnimationFrame(step);
-    });
-  }
-  function render(data) {
-    Object.keys(cells).forEach(function (f) {
-      var c = cells[f], v = Number(data[f] || 0);
-      if (c.val === null) { c.val = v; c.num.textContent = fmt(v); return; }
-      if (v === c.val) return;
-      if (document.hidden) {   /* background tab: rAF is paused — set it plainly */
-        c.val = v; c.num.textContent = fmt(v);
-        c.item.classList.remove('bump');
-        return;
-      }
-      tween(c, v);
-      c.item.classList.remove('bump');
-      void c.item.offsetWidth;               /* restart the bump animation */
-      c.item.classList.add('bump');
-    });
-    strip.hidden = false;
-  }
-  function init() {
-    var SDK = 'https://www.gstatic.com/firebasejs/12.9.0/';
-    Promise.all([import(SDK + 'firebase-app.js'), import(SDK + 'firebase-firestore.js')])
-      .then(function (mods) {
-        var app = mods[0].initializeApp({
-          apiKey: 'AIzaSyAqwcFPilYLIrVIu1-BprkC08hOAhWQikg',
-          authDomain: 'ggapp-d2bae.firebaseapp.com',
-          projectId: 'ggapp-d2bae',
-          appId: '1:614262062561:web:4def07426bd52832e8a6a0'
-        }, 'gg-live-stats');
-        var fs = mods[1];
-        var db = fs.getFirestore(app);
-        var emu = localStorage.getItem('ggstats_fs_emu');
-        if (emu) fs.connectFirestoreEmulator(db, emu.split(':')[0], Number(emu.split(':')[1]));
-        fs.onSnapshot(fs.doc(db, 'stats', 'counters'),
-          function (snap) { render(snap.data() || {}); },
-          function () { /* stream failed — freeze whatever is shown */ });
-      })
-      .catch(function () { /* offline / CDN blocked — strip stays hidden */ });
-  }
-  if (document.readyState === 'complete') init();
-  else window.addEventListener('load', init, { once: true });
 })();
 </script>
 

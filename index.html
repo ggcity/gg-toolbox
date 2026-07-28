@@ -924,6 +924,35 @@ svg { image-rendering: pixelated; shape-rendering: crispEdges; }
   padding: 0; margin: -1px; overflow: hidden;
   clip: rect(0,0,0,0); white-space: nowrap; border: 0;
 }
+/* ── LIVE STATS — small per-tool counters sitting under each app tile ── */
+.app-cell { width: var(--app-size); }
+.app-cell .app-icon { width: 100%; }
+.app-stats {
+  margin-top: 7px;
+  padding: 0 2px;
+  display: flex; flex-direction: column; gap: 2px;
+}
+.app-stats[hidden] { display: none; }
+.app-stat {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 11.5px; font-weight: 600;
+  letter-spacing: 1.2px; text-transform: uppercase;
+  color: var(--text-muted);
+}
+.app-stat-num {
+  display: inline-block;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+}
+.app-stat.bump .app-stat-num { animation: stats-bump .85s cubic-bezier(.25,1.2,.35,1); }
+@keyframes stats-bump {
+  0%   { transform: scale(1); }
+  25%  { transform: scale(1.3); color: var(--gold, #D4B254); text-shadow: 0 0 12px rgba(212,178,84,.6); }
+  100% { transform: scale(1); }
+}
+@media (prefers-reduced-motion: reduce) { .app-stat.bump .app-stat-num { animation: none; } }
+
 /* ── LIVE STATS in the console: highlighted line + dot ping on a bump ── */
 .console-text.stat-flash{color:var(--flame-yellow);}
 .statusbar.stat-ping .status-dot{animation:gg-stat-ping .9s ease-out;}
@@ -974,6 +1003,7 @@ svg { image-rendering: pixelated; shape-rendering: crispEdges; }
   <div class="app-grid" role="list" aria-label="Available tools">
 
     <!-- APP: IMAGE COMPRESSOR -->
+    <div class="app-cell">
     <a
       class="app-icon"
       data-app="image-compressor"
@@ -1009,8 +1039,13 @@ svg { image-rendering: pixelated; shape-rendering: crispEdges; }
       </div>
       <span class="app-label">Imagge<br>Compressor</span>
     </a>
+    <div class="app-stats" hidden>
+      <span class="app-stat"><span class="app-stat-num" data-stat="imagesCompressed">0</span> images compressed</span>
+    </div>
+    </div>
 
     <!-- APP: QR GGENERATOR -->
+    <div class="app-cell">
     <a
       class="app-icon"
       data-app="qr-generator"
@@ -1045,8 +1080,15 @@ svg { image-rendering: pixelated; shape-rendering: crispEdges; }
       </div>
       <span class="app-label">QR<br>GGenerator</span>
     </a>
+    <div class="app-stats" hidden>
+      <span class="app-stat"><span class="app-stat-num" data-stat="qrGenerated">0</span> QR codes generated</span>
+      <span class="app-stat"><span class="app-stat-num" data-stat="dynamicQrCreated">0</span> dynamic QRs created</span>
+      <span class="app-stat"><span class="app-stat-num" data-stat="dynamicQrScans">0</span> dynamic QR scans</span>
+    </div>
+    </div>
 
     <!-- APP: PDF MERGGER -->
+    <div class="app-cell">
     <a
       class="app-icon"
       data-app="pdf-merger"
@@ -1095,8 +1137,13 @@ svg { image-rendering: pixelated; shape-rendering: crispEdges; }
       </div>
       <span class="app-label">PDF<br>MERGGER</span>
     </a>
+    <div class="app-stats" hidden>
+      <span class="app-stat"><span class="app-stat-num" data-stat="pdfsMerged">0</span> PDFs merged</span>
+    </div>
+    </div>
 
     <!-- APP: IMAGGE FORMATTER -->
+    <div class="app-cell">
     <a
       class="app-icon"
       data-app="image-formatter"
@@ -1146,6 +1193,10 @@ svg { image-rendering: pixelated; shape-rendering: crispEdges; }
       </div>
       <span class="app-label">Imagge<br>Formatter</span>
     </a>
+    <div class="app-stats" hidden>
+      <span class="app-stat"><span class="app-stat-num" data-stat="imagesFormatted">0</span> images formatted</span>
+    </div>
+    </div>
 
     <!-- PLACEHOLDER -->
     <button
@@ -1728,11 +1779,13 @@ document.querySelectorAll('.app-icon:not(.placeholder)').forEach(icon => {
 </script>
 
 <script>
-/* ── LIVE TOOLBOX STATS — feeds the console ticker ──────────────────────
-   Subscribes to the same Firestore stats/counters doc the tools display
-   (public read-only; writes only via the Cloud Function). Totals rotate
-   through the console messages; a live bump jumps the queue as a
-   highlighted "+N …" line and pings the status dot. Purely decorative.
+/* ── LIVE TOOLBOX STATS — the stats window rows + console ticker ─────────
+   Subscribes to the Firestore stats/counters doc (public read-only; writes
+   only via the Cloud Function). Each tool shows its own counters as small
+   text under its tile: numbers tween up with a bump highlight the moment
+   anyone uses a tool. Totals also rotate through the console
+   messages, and a live bump jumps that queue as a highlighted "+N …" line.
+   Purely decorative — any failure leaves the window hidden.
    Test hook: localStorage.ggstats_fs_emu = "host:port" → Firestore emulator. */
 (function () {
   'use strict';
@@ -1744,9 +1797,42 @@ document.querySelectorAll('.app-icon:not(.placeholder)').forEach(icon => {
     dynamicQrCreated: 'dynamic QRs created',
     dynamicQrScans: 'dynamic QR scans'
   };
-  var last = null;
   var fmt = function (n) { return Number(n || 0).toLocaleString('en-US'); };
+
+  var cells = {};
+  document.querySelectorAll('.app-stat-num').forEach(function (el) {
+    cells[el.getAttribute('data-stat')] = { num: el, row: el.closest('.app-stat'), val: null };
+  });
+  function tween(c, to) {
+    var from = c.val, t0 = performance.now(), dur = 500;
+    c.val = to;
+    requestAnimationFrame(function step(t) {
+      var k = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - k, 3);
+      c.num.textContent = fmt(Math.round(from + (to - from) * e));
+      if (k < 1) requestAnimationFrame(step);
+    });
+  }
+  function renderRows(d) {
+    Object.keys(cells).forEach(function (f) {
+      var c = cells[f], v = Number(d[f] || 0);
+      if (c.val === null) { c.val = v; c.num.textContent = fmt(v); return; }
+      if (v === c.val) return;
+      if (document.hidden) {   /* background tab: rAF is paused — set it plainly */
+        c.val = v; c.num.textContent = fmt(v);
+        c.row.classList.remove('bump');
+        return;
+      }
+      tween(c, v);
+      c.row.classList.remove('bump');
+      void c.row.offsetWidth;               /* restart the bump animation */
+      c.row.classList.add('bump');
+    });
+    document.querySelectorAll('.app-stats').forEach(function (el) { el.hidden = false; });
+  }
+
+  var last = null;
   function onData(d) {
+    renderRows(d);
     window.ggStatsLines = Object.keys(LABELS).map(function (f) {
       return fmt(d[f]) + ' ' + LABELS[f] + ' all-time';
     });
@@ -1782,9 +1868,9 @@ document.querySelectorAll('.app-icon:not(.placeholder)').forEach(icon => {
         if (emu) fs.connectFirestoreEmulator(db, emu.split(':')[0], Number(emu.split(':')[1]));
         fs.onSnapshot(fs.doc(db, 'stats', 'counters'),
           function (snap) { onData(snap.data() || {}); },
-          function () { /* stream failed — the default messages carry on */ });
+          function () { /* stream failed — freeze whatever is shown */ });
       })
-      .catch(function () { /* offline / CDN blocked — no stats lines */ });
+      .catch(function () { /* offline / CDN blocked — window stays hidden */ });
   }
   if (document.readyState === 'complete') init();
   else window.addEventListener('load', init, { once: true });
