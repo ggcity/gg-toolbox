@@ -924,29 +924,28 @@ svg { image-rendering: pixelated; shape-rendering: crispEdges; }
   padding: 0; margin: -1px; overflow: hidden;
   clip: rect(0,0,0,0); white-space: nowrap; border: 0;
 }
-/* ── LIVE STATS — a small centered stat tile under each app card:
-   value over label, quiet text tokens. On a live update the number counts
-   up, flashes a bright amber, and slowly fades back to ink. ── */
+/* ── LIVE STATS — one centered line per counter under each app card
+   ("42 PDFs merged"), quiet text tokens. On a live update the number
+   counts up, flashes a bright amber, and slowly fades back to ink. ── */
 .app-cell { width: var(--app-size); }
 .app-cell .app-icon { width: 100%; }
 .app-stats {
-  margin-top: 10px;
-  display: flex; flex-direction: column; align-items: center; gap: 9px;
+  margin-top: 8px;
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
 }
 .app-stats[hidden] { display: none; }
-.app-stat {
-  display: flex; flex-direction: column; align-items: center; gap: 1px;
-  text-align: center;
-}
+.app-stat { text-align: center; line-height: 1.45; }
 .app-stat-num {
+  display: inline-block;
   font-family: 'Barlow Condensed', sans-serif;
-  font-size: 17px; font-weight: 700; line-height: 1.1;
+  font-size: 13px; font-weight: 800;
   color: var(--text-primary);
+  margin-right: 5px;
 }
 .app-stat-label {
   font-family: 'Barlow Condensed', sans-serif;
-  font-size: 10px; font-weight: 600; line-height: 1.3;
-  letter-spacing: 1.6px; text-transform: uppercase;
+  font-size: 10.5px; font-weight: 600;
+  letter-spacing: 1.5px; text-transform: uppercase;
   color: var(--text-muted);
 }
 .app-stat.bump .app-stat-num { animation: stat-glow 2s ease-out; }
