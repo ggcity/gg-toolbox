@@ -8,7 +8,7 @@
 <!-- Strict CSP. 'unsafe-inline' is required only because all CSS/JS is inline by design.
      For maximum hardening, extract styles/scripts to external files with nonces or hashes.
      frame-ancestors must be set as an HTTP header at the server (cannot be set via meta). -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; script-src 'self' 'unsafe-inline'; connect-src 'self' https://api.open-meteo.com; base-uri 'self'; form-action 'self'; object-src 'none';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; script-src 'self' 'unsafe-inline' https://www.gstatic.com; connect-src 'self' https://api.open-meteo.com https://firestore.googleapis.com; base-uri 'self'; form-action 'self'; object-src 'none';">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta http-equiv="X-Content-Type-Options" content="nosniff">
 <meta name="robots" content="noindex, nofollow">
@@ -16,6 +16,7 @@
 <meta name="theme-color" content="#091E4A">
 
 <title>GG IT Toolbox</title>
+<link rel="icon" type="image/svg+xml" href="/logo.svg?v=3">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -329,6 +330,194 @@ svg { image-rendering: pixelated; shape-rendering: crispEdges; }
 .app-icon[data-app="qr-generator"]:hover .qr-piece,
 .app-icon[data-app="qr-generator"]:focus-visible .qr-piece {
   animation-play-state: running;
+}
+
+/* ── PDF MERGGER HOVER — hydraulic press, simple and satisfying:
+   plates breathe out (anticipation), slam in with a slight overshoot,
+   the sheets compress under them and become ONE block that lands with
+   a jelly squash-pop, holds, then everything springs back. 1.8s. ── */
+@keyframes pm-plate-l {
+  0%   { transform: translate(0, 0); opacity: 1; }
+  10%  { transform: translate(-0.8px, 0); }
+  26%  { transform: translate(5.6px, 0); opacity: 1; }
+  28%  { transform: translate(5.6px, 0); opacity: 0; }
+  60%  { transform: translate(5.6px, 0); opacity: 0; }
+  64%  { transform: translate(5.6px, 0); opacity: 1; }
+  84%  { transform: translate(-0.3px, 0); }
+  100% { transform: translate(0, 0); opacity: 1; }
+}
+@keyframes pm-plate-r {
+  0%   { transform: translate(0, 0); opacity: 1; }
+  10%  { transform: translate(0.8px, 0); }
+  26%  { transform: translate(-5.6px, 0); opacity: 1; }
+  28%  { transform: translate(-5.6px, 0); opacity: 0; }
+  60%  { transform: translate(-5.6px, 0); opacity: 0; }
+  64%  { transform: translate(-5.6px, 0); opacity: 1; }
+  84%  { transform: translate(0.3px, 0); }
+  100% { transform: translate(0, 0); opacity: 1; }
+}
+@keyframes pm-docs {
+  0%   { opacity: 1; }
+  26%  { opacity: 1; }
+  28%  { opacity: 0; }
+  86%  { opacity: 0; }
+  94%  { opacity: 1; }
+  100% { opacity: 1; }
+}
+/* each blob squashes on its own: flat in X, BULGING in Y, pushed toward
+   the center column — outer blobs get hit by the plates first */
+@keyframes pm-b1 {
+  0%, 10% { transform: none; }
+  18%  { transform: translate(1.2px, -1px) scale(0.82, 1.1); }
+  26%  { transform: translate(3px, -2.6px) scale(0.24, 1.6); }
+  86%  { transform: translate(3px, -2.6px) scale(0.24, 1.6); }
+  94%  { transform: scale(1.05, 0.95); }
+  100% { transform: none; }
+}
+@keyframes pm-b2 {
+  0%, 12% { transform: none; }
+  19%  { transform: translate(0, 1.1px) scale(0.86, 1.08); }
+  26%  { transform: translate(-0.1px, 2.6px) scale(0.26, 1.65); }
+  86%  { transform: translate(-0.1px, 2.6px) scale(0.26, 1.65); }
+  94%  { transform: scale(1.05, 0.95); }
+  100% { transform: none; }
+}
+@keyframes pm-b3 {
+  0%, 10% { transform: none; }
+  18%  { transform: translate(-1.3px, -0.3px) scale(0.82, 1.1); }
+  26%  { transform: translate(-3.1px, -0.6px) scale(0.24, 1.6); }
+  86%  { transform: translate(-3.1px, -0.6px) scale(0.24, 1.6); }
+  94%  { transform: scale(1.05, 0.95); }
+  100% { transform: none; }
+}
+@keyframes pm-merged {
+  0%   { transform: scale(1.35, 0.45); opacity: 0; }
+  26%  { transform: scale(1.35, 0.45); opacity: 0; }
+  28%  { transform: scale(1.35, 0.45); opacity: 1; }
+  36%  { transform: scale(0.88, 1.12); opacity: 1; }
+  44%  { transform: scale(1.05, 0.96); opacity: 1; }
+  50%  { transform: scale(1, 1); opacity: 1; }
+  60%  { transform: scale(1, 1); opacity: 1; }
+  66%  { transform: scale(0.7, 0.7); opacity: 0; }
+  100% { transform: scale(0.7, 0.7); opacity: 0; }
+}
+.app-icon[data-app="pdf-merger"] .pm-plate-l,
+.app-icon[data-app="pdf-merger"] .pm-plate-r,
+.app-icon[data-app="pdf-merger"] .pm-docs,
+.app-icon[data-app="pdf-merger"] .pm-b1,
+.app-icon[data-app="pdf-merger"] .pm-b2,
+.app-icon[data-app="pdf-merger"] .pm-b3,
+.app-icon[data-app="pdf-merger"] .pm-merged {
+  transform-origin: 50% 50%;
+  transform-box: fill-box;
+}
+.app-icon[data-app="pdf-merger"] .pm-merged { opacity: 0; }
+.app-icon[data-app="pdf-merger"]:hover .pm-plate-l,
+.app-icon[data-app="pdf-merger"]:focus-visible .pm-plate-l {
+  animation: pm-plate-l 1.8s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+.app-icon[data-app="pdf-merger"]:hover .pm-plate-r,
+.app-icon[data-app="pdf-merger"]:focus-visible .pm-plate-r {
+  animation: pm-plate-r 1.8s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+.app-icon[data-app="pdf-merger"]:hover .pm-docs,
+.app-icon[data-app="pdf-merger"]:focus-visible .pm-docs {
+  animation: pm-docs 1.8s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+.app-icon[data-app="pdf-merger"]:hover .pm-b1,
+.app-icon[data-app="pdf-merger"]:focus-visible .pm-b1 {
+  animation: pm-b1 1.8s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+.app-icon[data-app="pdf-merger"]:hover .pm-b2,
+.app-icon[data-app="pdf-merger"]:focus-visible .pm-b2 {
+  animation: pm-b2 1.8s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+.app-icon[data-app="pdf-merger"]:hover .pm-b3,
+.app-icon[data-app="pdf-merger"]:focus-visible .pm-b3 {
+  animation: pm-b3 1.8s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+.app-icon[data-app="pdf-merger"]:hover .pm-merged,
+.app-icon[data-app="pdf-merger"]:focus-visible .pm-merged {
+  animation: pm-merged 1.8s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+
+/* ── IMAGGE FORMATTER HOVER — scissors ride down the marked line,
+   the off-cut strip tips over and falls away, and the kept photo
+   re-centers wearing a gold "cut to size" frame. ── */
+@keyframes ifm-scissors {
+  0%   { transform: translateY(0); opacity: 1; }
+  40%  { transform: translateY(10px); opacity: 1; }
+  48%  { transform: translateY(10px); opacity: 0; }
+  100% { transform: translateY(10px); opacity: 0; }
+}
+@keyframes ifm-snip-h1 {
+  0%, 100% { transform: rotate(-30deg); }
+  50%      { transform: rotate(-3deg); }
+}
+@keyframes ifm-snip-h2 {
+  0%, 100% { transform: rotate(30deg); }
+  50%      { transform: rotate(3deg); }
+}
+@keyframes ifm-cutfall {
+  0%, 40% { transform: rotate(0deg) translate(0, 0); opacity: 1; }
+  54%     { transform: rotate(11deg) translate(0.6px, 1.2px); opacity: 1; }
+  72%     { transform: rotate(24deg) translate(1.6px, 7px); opacity: 0; }
+  100%    { transform: rotate(24deg) translate(1.6px, 7px); opacity: 0; }
+}
+@keyframes ifm-line-fade {
+  0%, 44% { opacity: 1; }
+  52%, 92% { opacity: 0; }
+  100% { opacity: 1; }
+}
+@keyframes ifm-keep-center {
+  0%, 52%  { transform: translateX(0); }
+  64%, 90% { transform: translateX(2.5px); }
+  100%     { transform: translateX(0); }
+}
+@keyframes ifm-frame-flash {
+  0%, 56%  { opacity: 0; }
+  64%, 88% { opacity: 1; }
+  96%, 100% { opacity: 0; }
+}
+.app-icon[data-app="image-formatter"] .ifm-frame { opacity: 0; }
+.app-icon[data-app="image-formatter"] .ifm-scissors,
+.app-icon[data-app="image-formatter"] .ifm-h1,
+.app-icon[data-app="image-formatter"] .ifm-h2,
+.app-icon[data-app="image-formatter"] .ifm-cut {
+  transform-box: view-box;
+}
+.app-icon[data-app="image-formatter"] .ifm-h1,
+.app-icon[data-app="image-formatter"] .ifm-h2 { transform-origin: 13px 4.2px; }
+.app-icon[data-app="image-formatter"] .ifm-h1 { transform: rotate(-30deg); }
+.app-icon[data-app="image-formatter"] .ifm-h2 { transform: rotate(30deg); }
+.app-icon[data-app="image-formatter"] .ifm-cut  { transform-origin: 13px 16px; }
+.app-icon[data-app="image-formatter"]:hover .ifm-scissors,
+.app-icon[data-app="image-formatter"]:focus-visible .ifm-scissors {
+  animation: ifm-scissors 2.6s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+.app-icon[data-app="image-formatter"]:hover .ifm-h1,
+.app-icon[data-app="image-formatter"]:focus-visible .ifm-h1 {
+  animation: ifm-snip-h1 0.3s ease-in-out infinite;
+}
+.app-icon[data-app="image-formatter"]:hover .ifm-h2,
+.app-icon[data-app="image-formatter"]:focus-visible .ifm-h2 {
+  animation: ifm-snip-h2 0.3s ease-in-out infinite;
+}
+.app-icon[data-app="image-formatter"]:hover .ifm-cut,
+.app-icon[data-app="image-formatter"]:focus-visible .ifm-cut {
+  animation: ifm-cutfall 2.6s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+.app-icon[data-app="image-formatter"]:hover .ifm-line,
+.app-icon[data-app="image-formatter"]:focus-visible .ifm-line {
+  animation: ifm-line-fade 2.6s linear infinite;
+}
+.app-icon[data-app="image-formatter"]:hover .ifm-keep,
+.app-icon[data-app="image-formatter"]:focus-visible .ifm-keep {
+  animation: ifm-keep-center 2.6s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+.app-icon[data-app="image-formatter"]:hover .ifm-frame,
+.app-icon[data-app="image-formatter"]:focus-visible .ifm-frame {
+  animation: ifm-frame-flash 2.6s linear infinite;
 }
 
 /* ── PLACEHOLDER (suggest a tool) ── */
@@ -735,6 +924,11 @@ svg { image-rendering: pixelated; shape-rendering: crispEdges; }
   padding: 0; margin: -1px; overflow: hidden;
   clip: rect(0,0,0,0); white-space: nowrap; border: 0;
 }
+/* ── LIVE STATS in the console: highlighted line + dot ping on a bump ── */
+.console-text.stat-flash{color:var(--flame-yellow);}
+.statusbar.stat-ping .status-dot{animation:gg-stat-ping .9s ease-out;}
+@keyframes gg-stat-ping{0%{box-shadow:0 0 0 0 rgba(255,201,60,.85);}100%{box-shadow:0 0 0 10px rgba(255,201,60,0);}}
+@media (prefers-reduced-motion: reduce){.statusbar.stat-ping .status-dot{animation:none;}}
 </style>
 </head>
 <body>
@@ -850,6 +1044,107 @@ svg { image-rendering: pixelated; shape-rendering: crispEdges; }
         </svg>
       </div>
       <span class="app-label">QR<br>GGenerator</span>
+    </a>
+
+    <!-- APP: PDF MERGGER -->
+    <a
+      class="app-icon"
+      data-app="pdf-merger"
+      href="/merger"
+      role="listitem"
+      aria-label="PDF Merger, new tool. Open."
+    >
+      <div class="app-box" aria-hidden="true">
+        <span class="new-badge" aria-hidden="true">NEW</span>
+        <svg width="68" height="68" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <!-- STATIC press frame: top beam + floor -->
+          <rect x="1" y="1" width="18" height="2" fill="#D4B254"/>
+          <rect x="1" y="17" width="18" height="2" fill="#D4B254"/>
+          <!-- ANIMATED plates: plain bars, one gold -->
+          <g class="pm-plate-l">
+            <rect x="2" y="5" width="2.4" height="10" fill="#D4B254"/>
+          </g>
+          <g class="pm-plate-r">
+            <rect x="15.6" y="5" width="2.4" height="10" fill="#D4B254"/>
+          </g>
+          <!-- ANIMATED three goo blobs at different heights; each squashes
+               individually (flat in X, bulging in Y) as the plates crush it -->
+          <g class="pm-docs">
+            <g transform="translate(7 12.6)"><g class="pm-b1">
+              <path d="M-1.9 0.2 C-1.8 -1.2 -0.9 -1.8 0.1 -1.7 C1.2 -1.9 1.9 -1 1.8 0.1 C1.9 1.1 1 1.7 0 1.6 C-1 1.8 -1.9 1.2 -1.9 0.2 Z" fill="#0A5089"/>
+              <circle cx="-0.55" cy="-0.6" r="0.38" fill="#4D86C6"/>
+            </g></g>
+            <g transform="translate(10.1 7.4)"><g class="pm-b2">
+              <path d="M-2 0.1 C-2.1 -1.1 -1.1 -1.9 0 -1.8 C1.1 -2 2.1 -1.1 2 0 C2.1 1.2 1.1 1.9 0.1 1.8 C-1 2 -2 1.2 -2 0.1 Z" fill="#0A5089"/>
+              <circle cx="-0.6" cy="-0.65" r="0.4" fill="#4D86C6"/>
+            </g></g>
+            <g transform="translate(13.1 10.6)"><g class="pm-b3">
+              <path d="M-1.8 0.1 C-1.9 -1.1 -1 -1.7 0 -1.6 C1.1 -1.8 1.8 -1 1.8 0 C1.9 1.1 1.1 1.7 0.1 1.6 C-0.9 1.8 -1.8 1.1 -1.8 0.1 Z" fill="#0A5089"/>
+              <circle cx="-0.5" cy="-0.55" r="0.36" fill="#4D86C6"/>
+            </g></g>
+          </g>
+          <!-- ANIMATED result: the whole press becomes one big PDF doc -->
+          <g class="pm-merged">
+            <rect x="6" y="4.4" width="8" height="11.6" rx="1" fill="#D4B254"/>
+            <rect x="7.6" y="7" width="4.8" height="1" fill="#0A5089"/>
+            <rect x="7.6" y="9" width="4.8" height="1" fill="#0A5089"/>
+            <rect x="7.6" y="11" width="4.8" height="1" fill="#0A5089"/>
+            <rect x="7.6" y="13" width="4.8" height="1" fill="#0A5089"/>
+          </g>
+        </svg>
+      </div>
+      <span class="app-label">PDF<br>MERGGER</span>
+    </a>
+
+    <!-- APP: IMAGGE FORMATTER -->
+    <a
+      class="app-icon"
+      data-app="image-formatter"
+      href="/formatter"
+      role="listitem"
+      aria-label="Image Formatter, new tool. Open."
+    >
+      <div class="app-box" aria-hidden="true">
+        <span class="new-badge" aria-hidden="true">NEW</span>
+        <svg width="68" height="68" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <clipPath id="ifmKeep"><rect x="2" y="4" width="11" height="12"/></clipPath>
+          <clipPath id="ifmCut"><rect x="13" y="4" width="5" height="12"/></clipPath>
+          <!-- the part we keep (gold frame flashes once the cut is made) -->
+          <g class="ifm-keep">
+            <g clip-path="url(#ifmKeep)">
+              <rect x="2" y="4" width="16" height="12" fill="#001A33"/>
+              <polygon points="2,16 6,9 9,12 12,7 16,13.5 18,16" fill="#0A5089"/>
+              <rect x="9.5" y="6" width="2" height="2" fill="#D4B254"/>
+            </g>
+            <rect class="ifm-frame" x="2.5" y="4.5" width="10" height="11" fill="none" stroke="#F0D078" stroke-width="1"/>
+          </g>
+          <!-- ANIMATED off-cut strip: tips over and falls once it's snipped free -->
+          <g class="ifm-cut">
+            <g clip-path="url(#ifmCut)">
+              <rect x="2" y="4" width="16" height="12" fill="#001A33"/>
+              <polygon points="2,16 6,9 9,12 12,7 16,13.5 18,16" fill="#0A5089"/>
+            </g>
+          </g>
+          <!-- the marked cut line -->
+          <line class="ifm-line" x1="13" y1="3" x2="13" y2="17" stroke="#F0D078" stroke-width="0.8" stroke-dasharray="1.6 1.2"/>
+          <!-- ANIMATED scissors: two halves hinged at the pivot, snipping
+               open and closed as they ride down the line -->
+          <g class="ifm-scissors">
+            <g class="ifm-h1">
+              <path d="M13 4.2 L13 8.7" stroke="#F0D078" stroke-width="0.75" stroke-linecap="round"/>
+              <path d="M13 4.2 L13 2.6" stroke="#F0D078" stroke-width="0.6" stroke-linecap="round"/>
+              <circle cx="13" cy="1.8" r="0.85" fill="none" stroke="#F0D078" stroke-width="0.6"/>
+            </g>
+            <g class="ifm-h2">
+              <path d="M13 4.2 L13 8.7" stroke="#F0D078" stroke-width="0.75" stroke-linecap="round"/>
+              <path d="M13 4.2 L13 2.6" stroke="#F0D078" stroke-width="0.6" stroke-linecap="round"/>
+              <circle cx="13" cy="1.8" r="0.85" fill="none" stroke="#F0D078" stroke-width="0.6"/>
+            </g>
+            <circle cx="13" cy="4.2" r="0.45" fill="#F0D078"/>
+          </g>
+        </svg>
+      </div>
+      <span class="app-label">Imagge<br>Formatter</span>
     </a>
 
     <!-- PLACEHOLDER -->
@@ -1113,8 +1408,27 @@ const consoleLine = document.getElementById('consoleLine');
 let msgIndex = 0;
 let charIndex = 0;
 
+/* Live toolbox totals (see the stats module at the end of the page) join the
+   rotation via ggStatsLines; a counter bump jumps the queue via ggStatsInject
+   and is typed highlighted. */
+window.ggStatsLines = [];
+window.ggStatsInject = null;
+let currentMsg = null;
+
 function typeNextChar() {
-  const msg = CONSOLE_MESSAGES[msgIndex];
+  if (currentMsg === null) {
+    if (window.ggStatsInject) {
+      currentMsg = window.ggStatsInject;
+      window.ggStatsInject = null;
+      consoleLine.classList.add('stat-flash');
+    } else {
+      const all = CONSOLE_MESSAGES.concat(window.ggStatsLines);
+      currentMsg = all[msgIndex % all.length];
+      msgIndex++;
+      consoleLine.classList.remove('stat-flash');
+    }
+  }
+  const msg = currentMsg;
   if (charIndex < msg.length) {
     consoleLine.textContent = '> ' + msg.slice(0, charIndex + 1);
     charIndex++;
@@ -1122,10 +1436,10 @@ function typeNextChar() {
   } else {
     setTimeout(() => {
       charIndex = 0;
-      msgIndex = (msgIndex + 1) % CONSOLE_MESSAGES.length;
+      currentMsg = null;
       consoleLine.textContent = '';
       setTimeout(typeNextChar, 200);
-    }, 3200);
+    }, window.ggStatsInject ? 1200 : 3200);   // a pending stat line shortens the hold
   }
 }
 
@@ -1410,6 +1724,70 @@ document.querySelectorAll('.app-icon:not(.placeholder)').forEach(icon => {
   else wxMq.addEventListener('change', function once(e) {
     if (e.matches) { wxMq.removeEventListener('change', once); wxLoad(); }
   });
+})();
+</script>
+
+<script>
+/* ── LIVE TOOLBOX STATS — feeds the console ticker ──────────────────────
+   Subscribes to the same Firestore stats/counters doc the tools display
+   (public read-only; writes only via the Cloud Function). Totals rotate
+   through the console messages; a live bump jumps the queue as a
+   highlighted "+N …" line and pings the status dot. Purely decorative.
+   Test hook: localStorage.ggstats_fs_emu = "host:port" → Firestore emulator. */
+(function () {
+  'use strict';
+  var LABELS = {
+    imagesCompressed: 'images compressed',
+    imagesFormatted: 'images formatted',
+    pdfsMerged: 'PDFs merged',
+    qrGenerated: 'QR codes generated',
+    dynamicQrCreated: 'dynamic QRs created',
+    dynamicQrScans: 'dynamic QR scans'
+  };
+  var last = null;
+  var fmt = function (n) { return Number(n || 0).toLocaleString('en-US'); };
+  function onData(d) {
+    window.ggStatsLines = Object.keys(LABELS).map(function (f) {
+      return fmt(d[f]) + ' ' + LABELS[f] + ' all-time';
+    });
+    if (last) {
+      Object.keys(LABELS).forEach(function (f) {
+        var delta = Number(d[f] || 0) - Number(last[f] || 0);
+        if (delta > 0) {
+          window.ggStatsInject = '+' + delta + ' ' + LABELS[f] + ' — ' + fmt(d[f]) + ' all-time';
+          var bar = document.querySelector('.statusbar');
+          if (bar) {
+            bar.classList.remove('stat-ping');
+            void bar.offsetWidth;               /* restart the ping */
+            bar.classList.add('stat-ping');
+          }
+        }
+      });
+    }
+    last = d;
+  }
+  function init() {
+    var SDK = 'https://www.gstatic.com/firebasejs/12.9.0/';
+    Promise.all([import(SDK + 'firebase-app.js'), import(SDK + 'firebase-firestore.js')])
+      .then(function (mods) {
+        var app = mods[0].initializeApp({
+          apiKey: 'AIzaSyAqwcFPilYLIrVIu1-BprkC08hOAhWQikg',
+          authDomain: 'ggapp-d2bae.firebaseapp.com',
+          projectId: 'ggapp-d2bae',
+          appId: '1:614262062561:web:4def07426bd52832e8a6a0'
+        }, 'gg-live-stats');
+        var fs = mods[1];
+        var db = fs.getFirestore(app);
+        var emu = localStorage.getItem('ggstats_fs_emu');
+        if (emu) fs.connectFirestoreEmulator(db, emu.split(':')[0], Number(emu.split(':')[1]));
+        fs.onSnapshot(fs.doc(db, 'stats', 'counters'),
+          function (snap) { onData(snap.data() || {}); },
+          function () { /* stream failed — the default messages carry on */ });
+      })
+      .catch(function () { /* offline / CDN blocked — no stats lines */ });
+  }
+  if (document.readyState === 'complete') init();
+  else window.addEventListener('load', init, { once: true });
 })();
 </script>
 </body>

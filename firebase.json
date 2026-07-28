@@ -8,12 +8,17 @@
       "rewrites": [
         { "source": "/qr", "destination": "/QR GGENERATOR/index.html" },
         { "source": "/compressor", "destination": "/IMAGGE COMPRESSOR/index.html" },
+        { "source": "/merger", "destination": "/PDF MERGGER/index.html" },
+        { "source": "/formatter", "destination": "/IMAGGE FORMATTER/index.html" },
         { "source": "/ggnator", "destination": "/ggnator/index.html" },
         { "source": "/haiku", "destination": "/daily haiku/index.html" },
         { "source": "/api/qr", "function": "qr", "region": "us-central1", "pinTag": true },
+        { "source": "/api/stats", "function": "qr", "region": "us-central1", "pinTag": true },
         { "source": "/q/**", "function": "qr", "region": "us-central1", "pinTag": true },
         { "source": "/s/**", "function": "qr", "region": "us-central1", "pinTag": true },
-        { "source": "/qradmin", "function": "qr", "region": "us-central1", "pinTag": true }
+        { "source": "/qradmin", "function": "qr", "region": "us-central1", "pinTag": true },
+        { "source": "/qradmin/logout", "function": "qr", "region": "us-central1", "pinTag": true },
+        { "source": "/oauth2-callback", "function": "qr", "region": "us-central1", "pinTag": true }
       ],
       "headers": [
         {

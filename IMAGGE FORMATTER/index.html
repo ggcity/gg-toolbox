@@ -3,992 +3,1607 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Bulk Image Formatter</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta http-equiv="X-Content-Type-Options" content="nosniff">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#2A1C10">
+
+<title>IMAGGE FORMATTER · GG IT Toolbox</title>
+<link rel="icon" type="image/svg+xml" href="/logo.svg?v=3">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@400;500;700&family=Press+Start+2P&display=swap" rel="stylesheet">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"
+        integrity="sha384-+mbV2IY1Zk/X1p/nWllGySJSUN8uMs+gUAN10Or95UBH0fpj6GfKgPmgC5EXieXG"
+        crossorigin="anonymous"></script>
+
 <style>
+/* ────────────────────────────────────────────────────────────────
+   IMAGGE FORMATTER · the tailor's atelier
+   Images come in as bolts of cloth, get measured with a yellow
+   tape, pinned, chalked, and cut to one pattern on the mat.
+   Family markup kept (--navy* names now carry walnut & linen).
+   ──────────────────────────────────────────────────────────────── */
+
+/* ── DAYLIGHT ATELIER: linen, muslin, walnut, brass, thread ── */
 :root {
-  --bg:        #0e0e0e;
-  --surface:   #161616;
-  --surface-2: #1a1a1a;
-  --border:    #2a2a2a;
-  --border-hi: #3a3a3a;
-  --text:      #c8c8b4;
-  --text-dim:  #6a6a58;
-  --text-hi:   #e8e8d0;
-  --accent:    #8aaa6a;
-  --accent-lo: #4a6a3a;
-  --accent-hi: #a8c888;
-  --warn:      #aa6a4a;
-  --blue:      #6a8aaa;
-  --canvas-bg: #080808;
+  --navy:        #4A351E;   /* aged oak */
+  --navy-deep:   #2A1C10;   /* walnut workbench header */
+  --steel:       #8A7350;   /* worn brass hardware */
+  --ice:         #F3EDDD;   /* pattern paper */
+  --chalk-dark:  #C8B890;   /* tailor's chalk lines */
+  --gold:        #A8843C;   /* brass */
+  --gold-deep:   #6E5518;
+  --thread:      #B0443A;   /* crimson thread */
+  --gg-navy:     #0D2F6E;   /* Garden Grove G-mark, back layer */
+  --gg-steel:    #3A6EA8;   /* Garden Grove G-mark, front layer */
+  --text-primary:#3A2A18;
+  --text-body:   #56432C;
+  --text-muted:  #8C7A5C;
+  --text-navy:   #F0E6CC;   /* cream on walnut */
+  --success:     #3A6E3A;   /* green thread */
+  --error:       #A03A2E;
+  --radius:      2px;
+  --page-bg:     #EFE7D5;   /* linen */
+  --card-bg:     #FAF5E9;   /* muslin patch */
+  --card-border: #D6C8A8;
+  --row-hover:   #F3EDDD;
+  --stage-bg:    #2E4A3C;   /* self-healing cutting mat */
+  --mat-line:    rgba(255,255,255,0.07);
+  --pin-metal:   #9AA0A8;
+
+  /* FLAMING CHEETOS — shared family accent; here it's the tape measure */
+  --flame-yellow: #FFD23F;
+  --flame-orange: #FF7A18;
+  --flame-deep:   #7A2408;
+  --flame-ink:    #1A0E06;
+}
+
+/* ── AFTER HOURS: the atelier by lamplight ── */
+[data-theme="dark"] {
+  --navy:        #C8A870;
+  --navy-deep:   #120C06;
+  --steel:       #7A6544;
+  --ice:         #1A140B;
+  --chalk-dark:  #4A3C24;
+  --gold:        #C89A4A;
+  --gold-deep:   #E2C078;
+  --thread:      #E06A5A;
+  --gg-navy:     #5480B8;
+  --gg-steel:    #8FB8E8;
+  --text-primary:#EFE2C2;
+  --text-body:   #CCBB96;
+  --text-muted:  #8E7C5C;
+  --text-navy:   #EFE2C2;
+  --success:     #58B058;
+  --error:       #E0684E;
+  --page-bg:     #171209;
+  --card-bg:     #211A0F;
+  --card-border: #3A2F1C;
+  --row-hover:   #281F12;
+  --stage-bg:    #182A20;
+  --mat-line:    rgba(255,255,255,0.055);
+  --pin-metal:   #B8BEC6;
+  --flame-yellow: #FFDD66;
+  --flame-orange: #FF9A3A;
+  --flame-deep:   #4A2408;
+  --flame-ink:    #000000;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-html, body { height: 100%; }
+html, body { overflow-x: clip; }
 
 body {
-  font-family: 'VT323', monospace;
-  font-size: 20px;
-  background: var(--bg);
-  color: var(--text);
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  overflow: hidden;
-  user-select: none;
-  background-image: repeating-linear-gradient(
-    0deg,
-    transparent,
-    transparent 3px,
-    rgba(0,0,0,0.18) 3px,
-    rgba(0,0,0,0.18) 4px
-  );
+  font-family: 'Barlow', sans-serif;
+  font-size: 15px;
+  background: var(--page-bg);
+  color: var(--text-body);
+  min-height: 100vh;
+  padding-bottom: 48px;
+  transition: background 0.2s, color 0.2s;
 }
 
-/* =========================
-   UPLOAD VIEW
-   ========================= */
-#upload {
-  display: flex;
-  flex-direction: column;
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+}
+.skip-link {
+  position: absolute; top: -52px; left: 0;
+  background: var(--navy-deep); color: var(--flame-yellow);
+  border: 2px solid var(--flame-yellow);
+  padding: 0.75rem 1rem; z-index: 1000; text-decoration: none; font-weight: 700;
+}
+.skip-link:focus { top: 0; }
+
+/* ── HEADER — the walnut workbench, same bar as the family ── */
+.app-header {
+  background: var(--navy-deep);
+  background-image:
+    linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(0,0,0,0) 30%, rgba(0,0,0,0.4) 100%);
+  border-bottom: 1px solid rgba(0,0,0,0.55);
+  box-shadow:
+    inset 0 -1px 0 rgba(255,210,63,0.08),
+    inset 0 -4px 12px rgba(0,0,0,0.55);
+  padding: 12px 24px;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  justify-content: center;
-  flex: 1;
-  padding: 20px;
+  gap: 16px;
+  min-height: 64px;
 }
-#upload .frame {
-  width: 100%;
-  max-width: 520px;
+.header-left   { display: flex; align-items: center; gap: 10px; position: relative; }
+.header-right  { display: flex; align-items: center; justify-content: flex-end; }
+
+/* BACK TO TOOLBOX — bare pixel arrow hugging the top-left corner */
+.back-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 36px; height: 36px;
+  margin-left: -14px;
+  color: rgba(255, 210, 63, 0.6);
+  text-decoration: none; flex-shrink: 0;
+  transition: color 0.12s, transform 0.08s, filter 0.12s;
 }
-#upload h1 {
-  font-size: 30px;
-  letter-spacing: 4px;
-  color: var(--text-hi);
-  margin-bottom: 2px;
-  font-weight: 400;
-  text-align: center;
+.back-btn:hover, .back-btn:focus-visible {
+  color: var(--flame-yellow);
+  transform: translate(-1px, -1px);
+  filter: drop-shadow(0 0 8px rgba(255, 210, 63, 0.45));
 }
-#upload .subtitle {
-  font-size: 18px;
-  color: var(--text-dim);
-  letter-spacing: 1px;
-  text-align: center;
-  margin-bottom: 22px;
+.back-btn:active { transform: translate(1px, 1px); }
+.back-btn:focus-visible { outline: 2px solid var(--flame-yellow); outline-offset: 2px; }
+.back-btn svg { width: 22px; height: 22px; shape-rendering: crispEdges; }
+.back-btn:hover svg, .back-btn:focus-visible svg { animation: back-nudge 0.6s ease-in-out infinite; }
+@keyframes back-nudge {
+  0%, 100% { transform: translate(0, 0); }
+  50%      { transform: translate(-2px, -2px); }
 }
-#dz {
-  border: 1px solid var(--border);
-  background: var(--surface);
-  padding: 40px 24px;
-  text-align: center;
+
+/* EMAIL CONTACT BUTTON + tooltip */
+.brand-email-wrap { position: relative; display: inline-flex; }
+.brand-email-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px;
+  background: transparent;
+  border: 2px solid rgba(255, 210, 63, 0.35);
+  color: rgba(255, 210, 63, 0.65);
+  box-shadow: 2px 2px 0 rgba(0,0,0,0.5);
+  text-decoration: none; flex-shrink: 0;
+  transition: border-color 0.12s, color 0.12s, background 0.12s, transform 0.08s, box-shadow 0.08s;
+}
+.brand-email-btn:hover, .brand-email-btn:focus-visible {
+  border-color: var(--flame-yellow);
+  color: var(--flame-yellow);
+  background: rgba(255, 210, 63, 0.08);
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0 var(--flame-deep), 0 0 10px rgba(255,210,63,0.2);
+}
+.brand-email-btn:active { transform: translate(1px, 1px); box-shadow: 1px 1px 0 var(--flame-deep); }
+.brand-email-btn:focus-visible { outline: 2px solid var(--flame-yellow); outline-offset: 3px; }
+.brand-email-btn svg { width: 16px; height: 12px; shape-rendering: crispEdges; }
+
+.brand-email-tooltip {
+  position: absolute; top: calc(100% + 10px); left: -8px;
+  opacity: 0; visibility: hidden; transform: translateY(-4px);
+  transition: opacity 0.15s, transform 0.15s, visibility 0.15s;
+  z-index: 200; pointer-events: none; width: 240px;
+}
+.brand-email-wrap:hover .brand-email-tooltip,
+.brand-email-btn:focus-visible ~ .brand-email-tooltip {
+  opacity: 1; visibility: visible; transform: translateY(0); pointer-events: auto;
+}
+.brand-email-tooltip-inner {
+  background: var(--navy-deep);
+  border: 2px solid var(--flame-yellow);
+  box-shadow: 3px 3px 0 var(--flame-deep);
+  padding: 10px 12px;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.brand-email-tooltip-label {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px; letter-spacing: 1px;
+  color: var(--flame-yellow); text-transform: uppercase;
+}
+.brand-email-tooltip-body { font-size: 12.5px; color: var(--text-navy); line-height: 1.45; }
+.brand-email-tooltip-body a { color: var(--flame-yellow); text-decoration: none; font-weight: 700; }
+.brand-email-tooltip-body a:hover { text-decoration: underline; }
+
+/* THEME TOGGLE — chunky pixel light switch (same as QR GGenerator) */
+.theme-toggle {
+  display: inline-flex; align-items: center;
   cursor: pointer;
-  transition: border-color 0.1s, background 0.1s;
+  background: var(--flame-ink);
+  border: 3px solid var(--flame-yellow);
+  box-shadow: 3px 3px 0 var(--flame-deep), inset 0 0 0 1px var(--flame-ink);
+  padding: 4px;
+  image-rendering: pixelated;
+  transition: transform 0.08s, box-shadow 0.08s, border-color 0.15s;
+}
+.theme-toggle:hover {
+  border-color: var(--flame-orange);
+  transform: translate(1px, 1px);
+  box-shadow: 2px 2px 0 var(--flame-deep), inset 0 0 0 1px var(--flame-ink);
+}
+.theme-toggle:active {
+  transform: translate(3px, 3px);
+  box-shadow: 0 0 0 var(--flame-deep), inset 0 0 0 1px var(--flame-ink);
+}
+.theme-toggle:focus-visible { outline: 3px solid var(--flame-yellow); outline-offset: 3px; }
+.theme-switch-track {
   position: relative;
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.03);
+  width: 64px; height: 32px;
+  background:
+    linear-gradient(90deg,
+      var(--flame-orange) 0%, var(--flame-orange) 50%,
+      #1A120B 50%, #1A120B 100%);
+  border: 3px solid var(--flame-yellow);
+  box-shadow: inset 2px 2px 0 rgba(0,0,0,0.4);
+  display: flex; align-items: center;
 }
-#dz:hover { border-color: var(--border-hi); }
-#dz.over {
-  border-color: var(--accent-lo);
-  background: #161a12;
+.theme-switch-side {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  height: 100%; position: relative; z-index: 1;
 }
-#dz .icon { font-size: 28px; color: var(--text-dim); display: block; margin-bottom: 8px; }
-#dz h2 {
-  font-size: 22px;
-  font-weight: 400;
-  color: var(--text-hi);
-  letter-spacing: 1.5px;
-  margin-bottom: 4px;
+.theme-switch-side svg {
+  width: 16px; height: 16px;
+  shape-rendering: crispEdges;
+  filter: drop-shadow(1px 1px 0 rgba(0,0,0,0.7));
 }
-#dz p {
-  font-size: 16px;
-  color: var(--text-dim);
-  letter-spacing: 1px;
+.theme-switch-side.sun svg  { color: #FFF2A8; }
+.theme-switch-side.moon svg { color: #D8E8FF; }
+.theme-switch-thumb {
+  position: absolute;
+  top: -3px; left: -3px;
+  width: 32px; height: 32px;
+  background: var(--flame-yellow);
+  border: 3px solid var(--flame-ink);
+  box-shadow:
+    inset 3px 3px 0 #FFF2A8,
+    inset -3px -3px 0 var(--flame-orange),
+    2px 2px 0 var(--flame-deep);
+  transition: left 0.12s steps(4, end), background 0.15s, box-shadow 0.15s;
+  z-index: 2;
 }
-#dz p.tag {
-  margin-top: 10px;
-  font-size: 14px;
-  color: var(--accent-lo);
-  letter-spacing: 1.5px;
+[data-theme="dark"] .theme-switch-thumb {
+  left: 32px;
+  background: #6FA8E8;
+  box-shadow:
+    inset 3px 3px 0 #C8DEF8,
+    inset -3px -3px 0 #2A5A98,
+    2px 2px 0 var(--flame-deep);
+}
+
+/* ── HERO — an embroidered label patch pinned over the workbench ── */
+.hero {
+  text-align: center;
+  margin-top: -34px;
+  padding: 0 12px;
+  position: relative;
+  z-index: 2;
+  pointer-events: none;
+}
+.hero-title {
+  display: inline-block;
+  position: relative;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  padding: 16px 42px 14px;
+  transform: rotate(-1.4deg);
+  box-shadow: 4px 5px 0 rgba(0,0,0,0.28);
+  transition: background 0.2s, border-color 0.2s;
+}
+/* running stitch around the patch */
+.hero-title::before {
+  content: '';
+  position: absolute;
+  inset: 6px;
+  border: 2px dashed var(--thread);
+  opacity: 0.8;
+  pointer-events: none;
+}
+.hero-label {
+  display: inline-block;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 800;
+  font-size: clamp(34px, 7.2vw, 72px);
+  line-height: 0.95;
+  letter-spacing: 0.02em;
   text-transform: uppercase;
+  color: var(--thread);
 }
-#file-input { display: none; }
-
-/* =========================
-   EDITOR VIEW
-   ========================= */
-#editor {
-  display: none;
-  flex-direction: column;
-  height: 100vh;
+/* appliqué letters — each one sewn on at its own slight angle */
+.hero-label > span {
+  display: inline-block;
+  position: relative;
 }
+.hero-label > .sp { width: 0.55em; }
+/* chenille patch letters: felt base, plush fill, stitched outline */
+.hero-label > span > svg {
+  display: block;
+  height: 0.94em;
+  overflow: visible;
+  filter: drop-shadow(0 1.5px 2.5px rgba(0,0,0,0.16));
+}
+.pl-svg text {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 800;
+  font-size: 100px;
+}
+.pl-base {
+  fill: color-mix(in srgb, currentColor 78%, #241209);
+  stroke: color-mix(in srgb, currentColor 78%, #241209);
+  stroke-width: 13;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  filter: url(#pl-fuzz);
+}
+.pl-fill {
+  fill: currentColor;
+  stroke: currentColor;
+  stroke-width: 6;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  filter: url(#pl-fuzz);
+}
+.pl-stitch {
+  fill: none;
+  stroke: #F7F1DE;
+  stroke-width: 2.4;
+  stroke-dasharray: 5.5 4.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.95;
+}
+.hero-label > span:nth-child(3n)   { transform: rotate(2deg)    translateY(1.5px); }
+.hero-label > span:nth-child(3n+1) { transform: rotate(-2.2deg) translateY(-2px); }
+.hero-label > span:nth-child(4n+2) { transform: rotate(1.4deg)  translateY(2.5px); }
+/* the double G — Garden Grove's civic blues, layered like the city G-mark */
+.hero-label > .g1 {
+  color: var(--gg-navy);
+  z-index: 1;
+}
+.hero-label > .g2 {
+  color: var(--gg-steel);
+  margin-left: -0.13em;
+  z-index: 2;
+}
+/* pins holding the patch to the header */
+.hero-pin {
+  position: absolute;
+  width: 26px; height: 26px;
+  pointer-events: none;
+}
+.hero-pin.tl { top: -10px; left: 14px; transform: rotate(-24deg); }
+.hero-pin.tr { top: -11px; right: 18px; transform: rotate(31deg); }
 
-/* HEADER STRIP */
-#header {
+/* ── LAYOUT ── */
+main {
+  max-width: 1080px;
+  margin: 22px auto 0;
+  padding: 0 20px;
   display: flex;
-  align-items: center;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  padding: 6px 14px;
-  flex-shrink: 0;
+  flex-direction: column;
   gap: 14px;
 }
-#header .brand {
-  font-size: 20px;
-  letter-spacing: 3px;
-  color: var(--text-hi);
-  text-transform: uppercase;
-}
-#header .stamp {
-  font-size: 14px;
-  color: var(--accent-lo);
-  letter-spacing: 1.5px;
-  border: 1px solid var(--accent-lo);
-  padding: 1px 8px;
-  text-transform: uppercase;
-}
-#fname {
-  font-size: 18px;
-  color: var(--text);
-  letter-spacing: 1px;
-  max-width: 280px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-#pinfo {
-  font-size: 16px;
-  color: var(--text-dim);
-  letter-spacing: 1px;
-  margin-left: auto;
-}
-
-/* CONTROLS BAR (frame + mode) */
-#topbar {
-  display: grid;
-  grid-template-columns: minmax(220px, 1.4fr) auto auto auto auto;
-  gap: 1px;
-  background: var(--border);
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-}
-.cell {
-  background: var(--surface);
-  padding: 6px 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-height: 50px;
-  justify-content: center;
-}
-.cell-label {
-  font-size: 13px;
-  color: var(--text-dim);
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-}
-.cell-row { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; }
-
-select {
-  font-family: 'VT323', monospace;
-  font-size: 18px;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  color: var(--text);
-  padding: 2px 6px;
-  cursor: pointer;
-  outline: none;
-  letter-spacing: 1px;
-  flex: 1;
-  min-width: 0;
-}
-select:focus, select:hover { border-color: var(--border-hi); }
-
-input[type=number] {
-  font-family: 'VT323', monospace;
-  font-size: 18px;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  color: var(--text);
-  padding: 2px 6px;
-  outline: none;
-  letter-spacing: 1px;
-  width: 70px;
-  -moz-appearance: textfield;
-}
-input[type=number]::-webkit-outer-spin-button,
-input[type=number]::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-input[type=number]:focus, input[type=number]:hover { border-color: var(--border-hi); }
-.x-sep { color: var(--text-dim); font-size: 18px; }
-
-#custom-dims { display: none; align-items: center; gap: 6px; }
-#custom-dims.on { display: flex; }
-
-/* mode pills */
-.pill {
-  font-family: 'VT323', monospace;
-  font-size: 16px;
-  letter-spacing: 1.5px;
-  padding: 3px 12px;
-  border: 1px solid var(--border);
-  background: var(--bg);
-  color: var(--text-dim);
-  cursor: pointer;
-  text-transform: uppercase;
-  transition: border-color 0.1s, color 0.1s;
-}
-.pill:hover { border-color: var(--border-hi); color: var(--text); }
-.pill.on {
-  border-color: var(--accent-lo);
-  color: var(--accent);
-  background: #111a0e;
-}
-.pill-row { display: flex; gap: 4px; }
-
-/* WORKSPACE */
-#workspace {
-  display: flex;
-  flex: 1;
-  overflow: hidden;
-  min-height: 0;
-}
-
-/* SIDEBAR */
-#sidebar {
-  width: 168px;
-  background: var(--surface);
-  border-right: 1px solid var(--border);
-  overflow-y: auto;
-  flex-shrink: 0;
-  padding: 6px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  scrollbar-width: thin;
-  scrollbar-color: var(--border-hi) var(--bg);
-}
-#sidebar::-webkit-scrollbar { width: 6px; }
-#sidebar::-webkit-scrollbar-track { background: transparent; }
-#sidebar::-webkit-scrollbar-thumb { background: var(--border-hi); }
-
-.th {
-  border: 1px solid var(--border);
-  background: var(--bg);
-  cursor: pointer;
+.card {
   position: relative;
-  transition: border-color 0.1s;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius);
+  transition: background 0.2s, border-color 0.2s;
+}
+
+/* views */
+body[data-view="upload"] .editor-only { display: none !important; }
+body[data-view="editor"] .upload-only { display: none !important; }
+
+/* ── DROPZONE — the cutting table, cut along the dotted line ── */
+.drop-card { max-width: 560px; width: 100%; margin: 26px auto 0; }
+#dz {
+  border: 2.5px dashed var(--thread);
+  border-radius: 8px;
+  padding: 40px 22px 34px;
+  text-align: center;
+  cursor: pointer;
+  background: var(--ice);
+  transition: border-color 0.15s, background-color 0.15s;
+}
+#dz:hover, #dz:focus-visible, #dz.drag-over {
+  border-color: var(--gold);
+  outline: none;
+}
+#dz .dz-icon { display: block; margin: 0 auto 12px; overflow: visible; }
+/* both halves hinge on the pivot screw at (62,34) — right on the cut line */
+.sc-half {
+  transform-box: view-box;
+  transform-origin: 62px 34px;
+}
+.sc-h1 { transform: rotate(-8deg); }
+.sc-h2 { transform: rotate(8deg); }
+#dz:hover .dz-scissors, #dz.drag-over .dz-scissors { animation: shear-slide 2.4s linear infinite; }
+#dz:hover .sc-h1, #dz.drag-over .sc-h1 { animation: snip-h1 0.4s ease-in-out infinite; }
+#dz:hover .sc-h2, #dz.drag-over .sc-h2 { animation: snip-h2 0.4s ease-in-out infinite; }
+/* glide down the cut line, snipping as they go */
+@keyframes shear-slide {
+  0%   { transform: translateX(-40px); opacity: 0; }
+  6%   { opacity: 1; }
+  94%  { opacity: 1; }
+  100% { transform: translateX(48px); opacity: 0; }
+}
+@keyframes snip-h1 { 0%, 100% { transform: rotate(-13deg); } 55% { transform: rotate(-1deg); } }
+@keyframes snip-h2 { 0%, 100% { transform: rotate(13deg); }  55% { transform: rotate(1deg); } }
+#dz .dz-big {
+  display: block;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 21px; font-weight: 700;
+  letter-spacing: 3px; text-transform: uppercase;
+  color: var(--text-primary);
+}
+#dz .dz-small {
+  display: block;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 14px; font-weight: 600;
+  letter-spacing: 2px; text-transform: uppercase;
+  color: var(--text-muted);
+  margin-top: 6px;
+  animation: dz-breathe 2.4s ease-in-out infinite;
+}
+#dz .dz-formats {
+  display: block;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 12.5px; font-weight: 600;
+  letter-spacing: 2px;
+  color: var(--text-muted);
+  margin-top: 14px;
+}
+@keyframes dz-breathe { 50% { opacity: 0.5; } }
+#fileInput { display: none; }
+
+/* ── TOOLBAR ── */
+.toolbar {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 14px 22px;
+  padding: 14px 16px;
+}
+.field { display: flex; flex-direction: column; gap: 4px; }
+.field-label {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 12px; font-weight: 700;
+  letter-spacing: 2px; text-transform: uppercase;
+  color: var(--text-muted);
+}
+select, input[type="number"] {
+  font-family: 'Barlow', sans-serif;
+  font-size: 14px; font-weight: 500;
+  background: var(--ice);
+  color: var(--text-primary);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius);
+  padding: 6px 8px;
+  outline: none;
+  transition: border-color 0.12s, box-shadow 0.12s;
+}
+select:hover, input[type="number"]:hover { border-color: var(--steel); }
+select:focus-visible, input[type="number"]:focus-visible {
+  border-color: var(--gold);
+  box-shadow: 2px 2px 0 var(--gold);
+}
+input[type="number"] { width: 74px; }
+.dims-row { display: flex; align-items: center; gap: 6px; }
+.dims-row .x { color: var(--text-muted); font-size: 13px; }
+#customDims[hidden] { display: none; }
+
+.toolbar-spacer { flex: 1; }
+
+/* ── WORKSPACE — swatch rail + cutting mat ── */
+.workspace {
+  display: flex;
+  overflow: hidden;
+  height: min(60vh, 540px);
+}
+#rail {
+  width: 158px;
+  flex-shrink: 0;
+  overflow-y: auto;
+  padding: 12px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border-right: 1px dashed var(--chalk-dark);
+  scrollbar-width: thin;
+}
+/* fabric swatches */
+.th {
+  position: relative;
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius);
+  background: var(--card-bg);
+  padding: 4px;
+  cursor: pointer;
+  flex-shrink: 0;
+  box-shadow: 2px 2px 0 rgba(0,0,0,0.12);
+  transition: border-color 0.12s;
 }
 .th img {
-  width: 100%;
-  display: block;
-  aspect-ratio: 16/9;
-  object-fit: cover;
-  opacity: 0.55;
-  transition: opacity 0.1s;
-  image-rendering: pixelated;
+  width: 100%; aspect-ratio: 4/3; object-fit: cover;
+  display: block; opacity: 0.62; transition: opacity 0.12s;
 }
-.th:hover img { opacity: 0.85; }
+.th:hover img { opacity: 0.9; }
+.th:focus-visible { outline: 2px solid var(--flame-orange); outline-offset: 2px; }
+.th.active { border-color: var(--thread); }
 .th.active img { opacity: 1; }
-.th.active { border-color: var(--blue); }
-.th.done { border-color: var(--accent-lo); }
-.th.done.active { border-color: var(--accent); }
-.th .tl {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: linear-gradient(transparent, rgba(0,0,0,0.85));
-  font-size: 14px;
-  letter-spacing: 0.5px;
-  padding: 14px 5px 3px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--text);
-}
+/* reviewed — a stitched green patch with a check */
 .th .ck {
-  position: absolute;
-  top: 3px;
-  right: 3px;
-  background: var(--accent);
-  color: var(--bg);
-  width: 16px;
-  height: 16px;
-  font-size: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: 'VT323', monospace;
+  position: absolute; top: 7px; right: 7px;
+  width: 17px; height: 17px;
+  display: none; place-items: center;
+  background: var(--success); color: #fff;
+  font-size: 10px; line-height: 1;
+  outline: 1px dashed rgba(255,255,255,0.75);
+  outline-offset: -3px;
 }
-.th .idx {
-  position: absolute;
-  top: 3px;
-  left: 3px;
-  background: rgba(0,0,0,0.7);
-  color: var(--text-dim);
-  font-size: 12px;
-  letter-spacing: 1px;
-  padding: 0 4px;
+.th.done .ck { display: grid; }
+.th .nm {
+  display: block;
+  font-size: 10.5px; color: var(--text-muted);
+  padding: 4px 2px 1px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  text-align: center;
 }
 
-/* CANVAS */
-#canvasWrap {
+/* the cutting mat */
+.stage-wrap {
   flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--canvas-bg);
   position: relative;
-  overflow: hidden;
+  background:
+    repeating-linear-gradient(0deg,  var(--mat-line) 0 1px, transparent 1px 30px),
+    repeating-linear-gradient(90deg, var(--mat-line) 0 1px, transparent 1px 30px),
+    var(--stage-bg);
+  box-shadow: inset 0 0 0 2px rgba(255,255,255,0.06), inset 0 0 42px rgba(0,0,0,0.35);
   min-width: 0;
-  border-left: none;
 }
-#cvs { position: absolute; touch-action: none; image-rendering: pixelated; }
-
-#cropinfo {
+#stage { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; }
+/* the measurement label */
+#cropInfo {
   position: absolute;
-  bottom: 12px;
-  left: 50%;
+  bottom: 10px; left: 50%;
   transform: translateX(-50%);
-  background: rgba(0,0,0,0.85);
-  border: 1px solid var(--border);
-  color: var(--text);
-  font-size: 16px;
-  letter-spacing: 1px;
-  padding: 3px 12px;
+  background: var(--flame-ink);
+  border: 1px dashed rgba(255,210,63,0.55);
+  color: #F0E6CC;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 13.5px; font-weight: 600;
+  letter-spacing: 1.5px;
+  padding: 6px 13px;
   pointer-events: none;
   white-space: nowrap;
 }
-#cropinfo .k { color: var(--text-dim); }
-#cropinfo .v { color: var(--accent); }
-
-/* BOTTOM BAR */
-#bottombar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  background: var(--surface);
-  border-top: 1px solid var(--border);
-  flex-shrink: 0;
-  flex-wrap: wrap;
+#cropInfo .k { color: rgba(240,230,204,0.5); }
+#cropInfo .v { color: var(--flame-yellow); }
+/* masking-tape name tag */
+#curName {
+  position: absolute;
+  top: 10px; left: 12px;
+  max-width: 60%;
+  background: rgba(250,245,233,0.88);
+  color: #56432C;
+  font-size: 12px; font-weight: 500;
+  padding: 4px 12px;
+  transform: rotate(-1deg);
+  box-shadow: 1px 2px 3px rgba(0,0,0,0.3);
+  pointer-events: none;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 
+/* ── BUTTONS ── */
 .btn {
-  font-family: 'VT323', monospace;
-  font-size: 18px;
-  letter-spacing: 2px;
-  padding: 5px 14px;
-  border: 1px solid var(--border);
-  background: var(--surface-2);
-  color: var(--text);
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 15px; font-weight: 700;
+  letter-spacing: 2px; text-transform: uppercase;
+  padding: 8px 14px;
+  background: var(--card-bg);
+  color: var(--text-primary);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius);
   cursor: pointer;
-  transition: border-color 0.1s, color 0.1s, background 0.1s;
-  white-space: nowrap;
+  transition: border-color 0.12s, background 0.12s, transform 0.08s, box-shadow 0.08s;
 }
-.btn:hover:not(:disabled) {
-  border-color: var(--border-hi);
-  color: var(--text-hi);
+.btn:hover:not(:disabled), .btn:focus-visible {
+  border-color: var(--gold);
+  background: var(--row-hover);
 }
-.btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.btn:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.btn:disabled { opacity: 0.35; cursor: not-allowed; }
 
 .btn-primary {
-  color: var(--accent);
-  border-color: var(--accent-lo);
-  background: #111a0e;
+  background: var(--flame-yellow);
+  color: var(--flame-ink);
+  border: 2px solid var(--flame-ink);
+  box-shadow: 3px 3px 0 var(--flame-deep);
+  padding: 8px 18px;
+}
+/* running-stitch edging — only the primary patch buttons earn it */
+.btn-primary::after {
+  content: '';
+  position: absolute;
+  inset: 3px;
+  border: 1px dashed currentColor;
+  opacity: 0.45;
+  pointer-events: none;
 }
 .btn-primary:hover:not(:disabled) {
-  border-color: var(--accent);
-  color: var(--accent-hi);
+  background: #FFDD66;
+  border-color: var(--flame-ink);
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0 var(--flame-deep);
+}
+.btn-primary:active:not(:disabled) { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--flame-deep); }
+.btn-primary:focus-visible { outline: 2px solid var(--flame-orange); outline-offset: 3px; }
+
+/* status — a woven selvage label */
+#status {
+  font-size: 13px; font-weight: 500;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  display: none;
+  line-height: 1.45;
+}
+#status.info    { display: block; background: rgba(138,115,80,0.12);  border: 1px dashed var(--steel);   color: var(--text-body); }
+#status.success { display: block; background: rgba(58,110,58,0.10);   border: 1px dashed var(--success); color: var(--success); }
+#status.error   { display: block; background: rgba(160,58,46,0.09);   border: 1px dashed var(--error);   color: var(--error); }
+[data-theme="dark"] #status.success { color: #8AD98A; }
+[data-theme="dark"] #status.error   { color: #F09080; }
+
+@media (max-width: 720px) {
+  .hero { margin-top: -16px; }
+  .hero-label { font-size: clamp(28px, 8.5vw, 52px); }
+  .hero-title { padding: 12px 26px 11px; }
+  main { padding: 0 12px; }
+  .workspace { flex-direction: column; height: auto; }
+  .stage-wrap { flex: none; height: 52vh; }
+  #rail {
+    width: auto; height: 104px;
+    flex-direction: row;
+    overflow-x: auto; overflow-y: hidden;
+    border-right: none; border-top: 1px dashed var(--chalk-dark);
+    order: 2;
+    padding: 10px;
+  }
+  .th { width: 106px; }
 }
 
-.btn-warn {
-  color: var(--warn);
-  border-color: #6a3a20;
-  background: #1a120e;
+@media (prefers-reduced-motion: reduce) {
+  .back-btn svg { animation: none !important; }
+  #dz .dz-small { animation: none; }
+  #dz .dz-scissors, #dz .sc-half { animation: none !important; }
 }
-.btn-warn:hover:not(:disabled) {
-  border-color: var(--warn);
-}
-
-#done-lbl {
-  font-size: 16px;
-  color: var(--text-dim);
-  letter-spacing: 1px;
-  padding: 0 8px;
-}
-#done-lbl .v { color: var(--accent); }
-
-#hint {
-  font-size: 14px;
-  color: var(--text-dim);
-  letter-spacing: 1px;
-  margin-left: auto;
-}
-#hint kbd {
-  font-family: 'VT323', monospace;
-  font-size: 14px;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  padding: 0 4px;
-  color: var(--text);
-}
-
-@media (max-width: 760px) {
-  #topbar { grid-template-columns: 1fr 1fr; }
-  #header .stamp { display: none; }
-  #sidebar { width: 110px; }
-  #hint { display: none; }
-}
+/* ── LIVE USAGE COUNTER — toolbox-wide totals streamed from Firestore ── */
+.gg-live{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px 26px;margin:0 auto 18px;padding:0 16px;position:relative;z-index:2;}
+.gg-live[hidden]{display:none;}
+.gg-live-dot{width:7px;height:7px;border-radius:50%;background:#2FA84F;animation:gg-live-pulse 2.4s ease-out infinite;}
+.gg-live-item{display:flex;align-items:baseline;gap:7px;font-family:'Barlow Condensed',sans-serif;}
+.gg-live-num{display:inline-block;font-weight:800;font-size:21px;letter-spacing:.5px;font-variant-numeric:tabular-nums;color:var(--flame-deep);}
+[data-theme="dark"] .gg-live-num{color:var(--flame-yellow);}
+.gg-live-label{font-size:12.5px;font-weight:600;letter-spacing:1.6px;text-transform:uppercase;opacity:.66;}
+.gg-live-item.bump .gg-live-num{animation:gg-live-bump .85s cubic-bezier(.25,1.2,.35,1);}
+@keyframes gg-live-bump{0%{transform:scale(1);}25%{transform:scale(1.32);color:var(--flame-orange);text-shadow:0 0 14px var(--flame-glow,rgba(255,170,0,.55));}100%{transform:scale(1);}}
+@keyframes gg-live-pulse{0%{box-shadow:0 0 0 0 rgba(47,168,79,.5);}70%{box-shadow:0 0 0 7px rgba(47,168,79,0);}100%{box-shadow:0 0 0 0 rgba(47,168,79,0);}}
+@media (prefers-reduced-motion: reduce){.gg-live-item.bump .gg-live-num,.gg-live-dot{animation:none;}}
 </style>
 </head>
-<body>
+<body data-view="upload">
 
-<!-- UPLOAD VIEW -->
-<div id="upload">
-  <div class="frame">
-    <h1>BULK IMAGE FORMATTER</h1>
-    <p class="subtitle">crop / frame / batch export</p>
-    <div id="dz" onclick="document.getElementById('file-input').click()">
-      <span class="icon">▤</span>
-      <h2>DROP IMAGES HERE</h2>
-      <p>click or drop files / jpg, png, webp</p>
-      <p class="tag">[ batch crop with resizable frame ]</p>
-    </div>
-    <input type="file" id="file-input" multiple accept="image/*">
-  </div>
-</div>
+<a href="#main" class="skip-link">Skip to content</a>
+<div id="liveRegion" aria-live="polite" aria-atomic="true" class="sr-only"></div>
 
-<!-- EDITOR VIEW -->
-<div id="editor">
+<!-- shared defs: the fuzzy chenille edge for the patch letters -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <filter id="pl-fuzz" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="0.7"/>
+    </filter>
+  </defs>
+</svg>
 
-  <!-- HEADER -->
-  <div id="header">
-    <span class="brand">IMG.FORMATTER</span>
-    <span class="stamp">processing</span>
-    <span id="fname"></span>
-    <span id="pinfo"></span>
-  </div>
-
-  <!-- TOP CONTROL BAR -->
-  <div id="topbar">
-    <div class="cell">
-      <span class="cell-label">Frame</span>
-      <div class="cell-row">
-        <select id="ratio-sel">
-          <option value="2:1">2:1 / banner (924x462)</option>
-          <option value="16:9">16:9 / widescreen</option>
-          <option value="4:3">4:3 / standard</option>
-          <option value="3:2">3:2 / photo</option>
-          <option value="1:1">1:1 / square</option>
-          <option value="21:9">21:9 / ultrawide</option>
-          <option value="9:16">9:16 / portrait</option>
-          <option value="custom">custom...</option>
-        </select>
-        <div id="custom-dims">
-          <input type="number" id="custom-w" min="1" max="20000" value="1080" title="output width">
-          <span class="x-sep">x</span>
-          <input type="number" id="custom-h" min="1" max="20000" value="1080" title="output height">
-          <span class="x-sep" style="font-size:14px;letter-spacing:1px;">PX</span>
+<!-- HEADER — family bar -->
+<header class="app-header" role="banner">
+  <div class="header-left">
+    <a class="back-btn" href="../index.html" aria-label="Back to the GG IT Toolbox">
+      <svg viewBox="0 0 12 12" aria-hidden="true">
+        <rect x="0" y="0" width="6" height="2" fill="currentColor"/>
+        <rect x="0" y="0" width="2" height="6" fill="currentColor"/>
+        <rect x="2" y="2" width="2" height="2" fill="currentColor"/>
+        <rect x="4" y="4" width="2" height="2" fill="currentColor"/>
+        <rect x="6" y="6" width="2" height="2" fill="currentColor"/>
+        <rect x="8" y="8" width="2" height="2" fill="currentColor"/>
+      </svg>
+    </a>
+    <div class="brand-email-wrap">
+      <a
+        class="brand-email-btn"
+        href="mailto:nikitas@ggcity.org?subject=IMAGGE%20FORMATTER%20Feedback"
+        aria-label="Contact nikitas@ggcity.org for troubleshooting and feedback"
+      >
+        <svg viewBox="0 0 16 12" aria-hidden="true">
+          <rect x="0" y="0" width="16" height="12" fill="currentColor"/>
+          <rect x="1" y="1" width="14" height="10" fill="var(--navy-deep)"/>
+          <rect x="1" y="1" width="2" height="2" fill="currentColor"/>
+          <rect x="3" y="2" width="2" height="2" fill="currentColor"/>
+          <rect x="5" y="3" width="2" height="2" fill="currentColor"/>
+          <rect x="7" y="4" width="2" height="2" fill="currentColor"/>
+          <rect x="13" y="1" width="2" height="2" fill="currentColor"/>
+          <rect x="11" y="2" width="2" height="2" fill="currentColor"/>
+          <rect x="9" y="3" width="2" height="2" fill="currentColor"/>
+          <rect x="1" y="9" width="2" height="2" fill="currentColor"/>
+          <rect x="13" y="9" width="2" height="2" fill="currentColor"/>
+        </svg>
+      </a>
+      <div class="brand-email-tooltip" role="tooltip">
+        <div class="brand-email-tooltip-inner">
+          <span class="brand-email-tooltip-label">Feedback &amp; Suggestions</span>
+          <span class="brand-email-tooltip-body">
+            For troubleshooting and feedback contact
+            <a href="mailto:nikitas@ggcity.org">nikitas@ggcity.org</a>
+          </span>
         </div>
       </div>
     </div>
-    <div class="cell">
-      <span class="cell-label">Mode</span>
-      <div class="pill-row">
-        <button class="pill on" id="pill-cover" onclick="setMode('cover')">Cover</button>
-        <button class="pill" id="pill-fit" onclick="setMode('fit')">Fit</button>
-        <button class="pill" id="pill-manual" onclick="setMode('manual')">Manual</button>
+  </div>
+  <div class="header-center"></div>
+  <div class="header-right">
+    <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode" aria-pressed="false">
+      <div class="theme-switch-track" aria-hidden="true">
+        <div class="theme-switch-side sun">
+          <svg viewBox="0 0 10 10" shape-rendering="crispEdges">
+            <rect x="4" y="0" width="2" height="2" fill="currentColor"/>
+            <rect x="4" y="8" width="2" height="2" fill="currentColor"/>
+            <rect x="0" y="4" width="2" height="2" fill="currentColor"/>
+            <rect x="8" y="4" width="2" height="2" fill="currentColor"/>
+            <rect x="1" y="1" width="2" height="2" fill="currentColor"/>
+            <rect x="7" y="1" width="2" height="2" fill="currentColor"/>
+            <rect x="1" y="7" width="2" height="2" fill="currentColor"/>
+            <rect x="7" y="7" width="2" height="2" fill="currentColor"/>
+            <rect x="3" y="3" width="4" height="4" fill="currentColor"/>
+          </svg>
+        </div>
+        <div class="theme-switch-side moon">
+          <svg viewBox="0 0 10 10" shape-rendering="crispEdges">
+            <rect x="3" y="1" width="4" height="1" fill="currentColor"/>
+            <rect x="2" y="2" width="4" height="1" fill="currentColor"/>
+            <rect x="1" y="3" width="4" height="1" fill="currentColor"/>
+            <rect x="1" y="4" width="4" height="2" fill="currentColor"/>
+            <rect x="1" y="6" width="4" height="1" fill="currentColor"/>
+            <rect x="2" y="7" width="4" height="1" fill="currentColor"/>
+            <rect x="3" y="8" width="4" height="1" fill="currentColor"/>
+          </svg>
+        </div>
+        <div class="theme-switch-thumb"></div>
       </div>
-    </div>
-    <div class="cell">
-      <span class="cell-label">Output</span>
-      <span id="outinfo" style="font-size:18px;color:var(--accent);letter-spacing:1px;">924 x 462</span>
-    </div>
-    <div class="cell">
-      <span class="cell-label">Format</span>
-      <select id="fmt-sel" style="width:130px;">
-        <option value="auto">auto / keep ext</option>
-        <option value="image/jpeg">jpeg</option>
-        <option value="image/webp">webp</option>
-        <option value="image/png">png</option>
-      </select>
-    </div>
-    <div class="cell">
-      <span class="cell-label">Quality</span>
-      <div class="cell-row">
-        <input type="range" id="quality" min="50" max="100" value="95" style="width:90px;accent-color:var(--accent);">
-        <span id="qval" style="font-size:18px;color:var(--accent);min-width:40px;">95%</span>
-      </div>
-    </div>
+    </button>
   </div>
+</header>
 
-  <!-- WORKSPACE -->
-  <div id="workspace">
-    <div id="sidebar"></div>
-    <div id="canvasWrap">
-      <canvas id="cvs"></canvas>
-      <div id="cropinfo"></div>
-    </div>
-  </div>
-
-  <!-- BOTTOM BAR -->
-  <div id="bottombar">
-    <button class="btn" onclick="nav(-1)">[ &lt; prev ]</button>
-    <button class="btn btn-primary" onclick="commitAndNext()">[ crop &amp; next &gt; ]</button>
-    <button class="btn" onclick="nav(1)">[ skip ]</button>
-    <span id="done-lbl"><span class="v">0</span> / 0 done</span>
-    <span id="hint"><kbd>enter</kbd> crop &amp; next / <kbd>&larr;</kbd> <kbd>&rarr;</kbd> navigate / shift = free resize</span>
-    <button class="btn btn-primary" onclick="buildZip()" style="margin-left:auto">[ download zip ]</button>
-    <button class="btn btn-warn" onclick="resetAll()">[ reset ]</button>
-  </div>
-
+<!-- HERO — the atelier's label patch, pinned to the workbench -->
+<div class="hero">
+  <h1 class="hero-title">
+    <svg class="hero-pin tl" viewBox="0 0 26 26" aria-hidden="true">
+      <line x1="12" y1="12" x2="22" y2="22" stroke="var(--pin-metal)" stroke-width="2.4"/>
+      <circle cx="8" cy="8" r="5.5" fill="#D85545" stroke="rgba(0,0,0,0.4)" stroke-width="1.4"/>
+      <circle cx="6.2" cy="6.2" r="1.7" fill="rgba(255,255,255,0.55)"/>
+    </svg>
+    <svg class="hero-pin tr" viewBox="0 0 26 26" aria-hidden="true">
+      <line x1="14" y1="12" x2="4" y2="22" stroke="var(--pin-metal)" stroke-width="2.4"/>
+      <circle cx="18" cy="8" r="5.5" fill="#4A80D8" stroke="rgba(0,0,0,0.4)" stroke-width="1.4"/>
+      <circle cx="16.2" cy="6.2" r="1.7" fill="rgba(255,255,255,0.55)"/>
+    </svg>
+    <span class="sr-only">Imagge Formatter</span>
+    <span class="hero-label" aria-hidden="true"><span>I</span><span>M</span><span>A</span><span class="g1">G</span><span class="g2">G</span><span>E</span><span class="sp"></span><span>F</span><span>O</span><span>R</span><span>M</span><span>A</span><span>T</span><span>T</span><span>E</span><span>R</span></span>
+  </h1>
 </div>
 
+<main id="main" role="main">
+
+<section class="gg-live" id="ggLive" hidden aria-label="Live toolbox usage">
+  <span class="gg-live-dot" aria-hidden="true"></span>
+  <span class="gg-live-item" title="Total across everyone using this tool — updates live">
+    <span class="gg-live-num" data-stat="imagesFormatted">0</span>
+    <span class="gg-live-label">images formatted</span>
+  </span>
+</section>
+
+
+  <!-- UPLOAD VIEW -->
+  <section class="drop-card card upload-only" aria-label="Add images">
+    <div id="dz" role="button" tabindex="0" aria-label="Drop images here or press Enter to browse">
+      <svg class="dz-icon" width="150" height="52" viewBox="0 0 150 52" fill="none" aria-hidden="true">
+        <!-- the cut line -->
+        <line x1="4" y1="34" x2="146" y2="34" stroke="var(--thread)" stroke-width="2" stroke-dasharray="7 6"/>
+        <!-- shears riding the line: two halves hinged at the pivot screw,
+             each half = blade forward + the opposite handle behind -->
+        <g class="dz-scissors">
+          <g class="sc-half sc-h1">
+            <path d="M62 34 L94 33" stroke="var(--text-primary)" stroke-width="2.8" stroke-linecap="round"/>
+            <path d="M62 34 L50 39" stroke="var(--text-primary)" stroke-width="2.4" stroke-linecap="round"/>
+            <circle cx="45.5" cy="41" r="4.6" stroke="var(--text-primary)" stroke-width="2.6"/>
+          </g>
+          <g class="sc-half sc-h2">
+            <path d="M62 34 L94 35" stroke="var(--text-primary)" stroke-width="2.8" stroke-linecap="round"/>
+            <path d="M62 34 L50 29" stroke="var(--text-primary)" stroke-width="2.4" stroke-linecap="round"/>
+            <circle cx="45.5" cy="27" r="4.6" stroke="var(--text-primary)" stroke-width="2.6"/>
+          </g>
+          <circle cx="62" cy="34" r="2" fill="var(--gold)"/>
+        </g>
+      </svg>
+      <span class="dz-big">Drop images here</span>
+      <span class="dz-small">or click to browse — the table takes many at once</span>
+      <span class="dz-formats">JPEG &middot; PNG &middot; WebP &middot; GIF &middot; HEIC</span>
+    </div>
+    <input type="file" id="fileInput" accept="image/*,.heic,.heif" multiple>
+  </section>
+
+  <!-- EDITOR VIEW -->
+  <section class="card toolbar editor-only" aria-label="Frame and export settings">
+    <div class="field">
+      <label class="field-label" for="frameSel">Frame</label>
+      <select id="frameSel"></select>
+    </div>
+    <div class="field" id="customDims" hidden>
+      <span class="field-label" id="customDimsLabel">Size&nbsp;(px)</span>
+      <div class="dims-row" role="group" aria-labelledby="customDimsLabel">
+        <input type="number" id="customW" min="16" max="20000" value="1080" aria-label="Output width in pixels">
+        <span class="x" aria-hidden="true">&times;</span>
+        <input type="number" id="customH" min="16" max="20000" value="1080" aria-label="Output height in pixels">
+      </div>
+    </div>
+    <div class="field">
+      <label class="field-label" for="fmtSel">Format</label>
+      <select id="fmtSel">
+        <option value="auto">Keep original</option>
+        <option value="image/jpeg">JPEG</option>
+        <option value="image/png">PNG</option>
+        <option value="image/webp">WebP</option>
+      </select>
+    </div>
+    <div class="toolbar-spacer"></div>
+    <button class="btn btn-primary" id="dlBtn" type="button">Download all</button>
+  </section>
+
+  <section class="card workspace editor-only" aria-label="Crop workspace">
+    <div id="rail" role="listbox" aria-label="Loaded images"></div>
+    <div class="stage-wrap">
+      <canvas id="stage"></canvas>
+      <div id="curName" aria-hidden="true"></div>
+      <div id="cropInfo" aria-hidden="true"></div>
+    </div>
+  </section>
+
+  <div id="status" role="status"></div>
+
+</main>
+
 <script>
-let imgs = [], cur = 0, ratio = 2/1, mode = 'cover';
-let customW = 1080, customH = 1080, useCustom = false;
-let C, X, W, H;
-let iW, iH, scl;
-let dX, dY;
-let cX, cY, cW, cH;
-let drag = null;
+'use strict';
 
-const dz = document.getElementById('dz');
-dz.addEventListener('dragover', e=>{e.preventDefault();dz.classList.add('over')});
-dz.addEventListener('dragleave', ()=>dz.classList.remove('over'));
-dz.addEventListener('drop', e=>{e.preventDefault();dz.classList.remove('over');loadFiles(e.dataTransfer.files)});
-document.getElementById('file-input').addEventListener('change', e=>loadFiles(e.target.files));
+/* ═══════════════════════════════════════════════════════════════
+   THEME (shared family behavior)
+   ═══════════════════════════════════════════════════════════════ */
+(function initTheme() {
+  const saved = localStorage.getItem('ggfmt_theme');
+  if (saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+    document.documentElement.setAttribute('data-theme', 'dark');
+  }
+  const btn = document.getElementById('themeToggle');
+  const sync = () => btn.setAttribute('aria-pressed', String(document.documentElement.getAttribute('data-theme') === 'dark'));
+  btn.addEventListener('click', () => {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    if (isDark) document.documentElement.removeAttribute('data-theme');
+    else document.documentElement.setAttribute('data-theme', 'dark');
+    localStorage.setItem('ggfmt_theme', isDark ? 'light' : 'dark');
+    sync();
+  });
+  sync();
+})();
 
-function loadFiles(files){
-  const arr = [...files].filter(f=>f.type.startsWith('image/'));
-  if(!arr.length) return;
-  imgs=[]; let done=0;
-  arr.forEach(f=>{
-    const img=new Image(), url=URL.createObjectURL(f);
-    img.onload=()=>{
-      imgs.push({f,name:f.name,img,url,
-        cX:0,cY:0,cW:img.width,cH:img.height,done:false,_init:false});
-      if(++done===arr.length){
-        imgs.sort((a,b)=>a.name.localeCompare(b.name));
-        startEditor();
+/* ═══════════════════════════════════════════════════════════════
+   TITLE — rebuild each letter as a chenille patch: felt base,
+   plush fill, running-stitch outline tracing the glyph.
+   Falls back to plain text if anything goes sideways.
+   ═══════════════════════════════════════════════════════════════ */
+document.fonts.ready.then(() => {
+  const NS = 'http://www.w3.org/2000/svg';
+  const PAD = 9, TOP = -82, VH = 92;   // shared vertical range so every letter scales alike
+  document.querySelectorAll('.hero-label > span:not(.sp)').forEach(sp => {
+    const ch = sp.textContent;
+    try {
+      const svg = document.createElementNS(NS, 'svg');
+      svg.setAttribute('class', 'pl-svg');
+      svg.setAttribute('aria-hidden', 'true');
+      for (const cls of ['pl-base', 'pl-fill', 'pl-stitch']) {
+        const t = document.createElementNS(NS, 'text');
+        t.setAttribute('class', cls);
+        t.setAttribute('x', '0'); t.setAttribute('y', '0');
+        t.textContent = ch;
+        svg.appendChild(t);
       }
+      sp.appendChild(svg);
+      const bb = svg.querySelector('.pl-fill').getBBox();
+      svg.setAttribute('viewBox', `${bb.x - PAD} ${TOP} ${bb.width + PAD * 2} ${VH}`);
+      sp.removeChild(sp.firstChild);   // drop the plain-text glyph
+    } catch (e) {
+      sp.querySelector('svg')?.remove();   // keep the plain letter
+    }
+  });
+});
+
+/* ═══════════════════════════════════════════════════════════════
+   FRAME PRESETS — add GG-specific presets here.
+   `w`/`h` = exact output pixels; `r` = ratio only (exports at the
+   crop's native resolution, no rescale).
+   ═══════════════════════════════════════════════════════════════ */
+const PRESETS = [
+  { id: 'gg-banner', group: 'GG presets',      label: 'GG web banner — 924 × 462', w: 924, h: 462 },
+
+  { id: 'sq',        group: 'Standard ratios', label: '1:1 — square',              r: 1 },
+  { id: '4x3',       group: 'Standard ratios', label: '4:3 — standard',            r: 4 / 3 },
+  { id: '3x2',       group: 'Standard ratios', label: '3:2 — photo',               r: 3 / 2 },
+  { id: '16x9',      group: 'Standard ratios', label: '16:9 — widescreen',         r: 16 / 9 },
+  { id: '2x1',       group: 'Standard ratios', label: '2:1 — banner',              r: 2 },
+  { id: '9x16',      group: 'Standard ratios', label: '9:16 — portrait',           r: 9 / 16 },
+
+  { id: 'custom',    group: 'Custom',          label: 'Custom size (px)…' },
+];
+const DEFAULT_PRESET = 'gg-banner';
+const MIN_CROP = 16; // px, in image space
+
+/* ═══════════════════════════════════════════════════════════════
+   STATE
+   ═══════════════════════════════════════════════════════════════ */
+const $ = id => document.getElementById(id);
+const els = {
+  dz: $('dz'), fileInput: $('fileInput'),
+  frameSel: $('frameSel'), customDims: $('customDims'), customW: $('customW'), customH: $('customH'),
+  fmtSel: $('fmtSel'), rail: $('rail'), stage: $('stage'),
+  curName: $('curName'), cropInfo: $('cropInfo'), status: $('status'),
+  dlBtn: $('dlBtn'),
+  live: $('liveRegion'),
+};
+const QUALITY = 0.92;   // lossy encode quality — fixed, one less dial
+const ctx = els.stage.getContext('2d');
+
+let imgs = [];        // { file, name, img, url, w, h, crop:{x,y,w,h}, done }
+let cur = 0;
+let preset = PRESETS.find(p => p.id === DEFAULT_PRESET);
+let custom = { w: 1080, h: 1080 };
+let view = 'upload';
+// stage layout for the current image (CSS px)
+let stW = 0, stH = 0, scale = 1, offX = 0, offY = 0;
+let drag = null;
+let busy = false;
+
+const isFree = () => preset.id === 'custom';   // custom = freeform crop, no ratio lock
+const ratio = () => isFree() ? custom.w / custom.h
+             : preset.w ? preset.w / preset.h : preset.r;
+const fixedOut = () => preset.w ? { w: preset.w, h: preset.h } : null;
+const outDims = im => fixedOut() || { w: Math.round(im.crop.w), h: Math.round(im.crop.h) };
+
+function setStatus(msg, kind) {
+  els.status.textContent = msg || '';
+  els.status.className = msg ? kind : '';
+  if (msg) els.live.textContent = msg;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   LOADING — any format the browser can decode, plus HEIC via a
+   lazily loaded libheif (only fetched when a HEIC file shows up).
+   ═══════════════════════════════════════════════════════════════ */
+const isHeic = f => ['image/heic', 'image/heif'].includes(f.type) || /\.(heic|heif)$/i.test(f.name);
+
+let heifPromise = null;
+function loadHeif() {
+  heifPromise ??= new Promise((res, rej) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/libheif-js@1.18.2/libheif-wasm/libheif-bundle.js';
+    s.integrity = 'sha384-tLy8T9fQEbFqGjC3ZYyRb5S+qhtywfU6rsjUf3nN1g4q2cvTmV43XN0xdtDYp1tx';
+    s.crossOrigin = 'anonymous';
+    s.onload = () => {
+      if (typeof libheif === 'undefined') return rej(new Error('HEIC decoder failed to load'));
+      libheif().then(res, rej);
     };
-    img.src=url;
+    s.onerror = () => rej(new Error('HEIC decoder failed to load'));
+    document.head.appendChild(s);
+  });
+  return heifPromise;
+}
+
+async function decodeHeic(file) {
+  const lib = await loadHeif();
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const data = new lib.HeifDecoder().decode(bytes);
+  if (!data?.length) throw new Error('No image in HEIC file');
+  const hi = data[0];
+  const w = hi.get_width(), h = hi.get_height();
+  return new Promise((res, rej) => {
+    const buf = new Uint8ClampedArray(w * h * 4);
+    hi.display({ data: buf, width: w, height: h }, result => {
+      if (!result) return rej(new Error('HEIC decode failed'));
+      const c = document.createElement('canvas');
+      c.width = w; c.height = h;
+      c.getContext('2d').putImageData(new ImageData(result.data, w, h), 0, 0);
+      c.toBlob(b => b ? res(b) : rej(new Error('HEIC convert failed')), 'image/jpeg', 0.98);
+    });
   });
 }
 
-function startEditor(){
-  document.getElementById('upload').style.display='none';
-  document.getElementById('editor').style.display='flex';
-  C=document.getElementById('cvs');
-  X=C.getContext('2d');
-  C.addEventListener('mousedown',onDown);
-  C.addEventListener('mousemove',onMove);
-  C.addEventListener('mouseup',onUp);
-  C.addEventListener('mouseleave',onUp);
-  C.addEventListener('touchstart',e=>{e.preventDefault();onDown(e.touches[0])},{passive:false});
-  C.addEventListener('touchmove',e=>{e.preventDefault();onMove(e.touches[0])},{passive:false});
-  C.addEventListener('touchend',e=>{e.preventDefault();onUp()},{passive:false});
+function loadOne(file) {
+  return (isHeic(file) ? decodeHeic(file) : Promise.resolve(file)).then(src => new Promise((res, rej) => {
+    const url = URL.createObjectURL(src);
+    const img = new Image();
+    img.onload = () => res({ file, name: file.name, img, url, w: img.naturalWidth, h: img.naturalHeight, crop: null });
+    img.onerror = () => { URL.revokeObjectURL(url); rej(new Error('undecodable')); };
+    img.src = url;
+  }));
+}
 
-  document.getElementById('ratio-sel').addEventListener('change',e=>{
-    const v=e.target.value;
-    if(v==='custom'){
-      useCustom = true;
-      document.getElementById('custom-dims').classList.add('on');
-      applyCustomRatio();
-    } else {
-      useCustom = false;
-      document.getElementById('custom-dims').classList.remove('on');
-      const p=v.split(':');
-      ratio=parseFloat(p[0])/parseFloat(p[1]);
-    }
-    initCrop(cur); updateOutInfo(); draw();
-  });
+async function loadFiles(fileList) {
+  const files = [...fileList].filter(f => f.type.startsWith('image/') || isHeic(f));
+  if (!files.length) { setStatus('No supported image files found in that drop.', 'error'); return; }
 
-  document.getElementById('custom-w').addEventListener('input', applyCustomRatio);
-  document.getElementById('custom-h').addEventListener('input', applyCustomRatio);
+  els.dz.querySelector('.dz-big').textContent = `Laying out ${files.length} image${files.length > 1 ? 's' : ''}…`;
+  const results = await Promise.allSettled(files.map(loadOne));
+  els.dz.querySelector('.dz-big').textContent = 'Drop images here';
+  els.fileInput.value = '';
 
-  document.getElementById('quality').addEventListener('input',e=>{
-    document.getElementById('qval').textContent = e.target.value + '%';
-  });
+  imgs = results.filter(r => r.status === 'fulfilled').map(r => r.value);
+  const failed = results.length - imgs.length;
+  if (!imgs.length) { setStatus('None of those files could be read as images.', 'error'); return; }
 
-  window.addEventListener('keydown',onKey);
-  window.addEventListener('resize',()=>{setupCanvas();draw()});
-
-  buildSidebar();
-  updateOutInfo();
+  imgs.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+  imgs.forEach(initCrop);
+  cur = 0;
+  view = 'editor';
+  document.body.dataset.view = 'editor';
+  buildRail();
+  setStatus(failed ? `${failed} file${failed > 1 ? 's' : ''} skipped (couldn't be decoded).` : '', failed ? 'error' : '');
   goTo(0);
 }
 
-function applyCustomRatio(){
-  const w = parseInt(document.getElementById('custom-w').value)||1;
-  const h = parseInt(document.getElementById('custom-h').value)||1;
-  customW = Math.max(1, w);
-  customH = Math.max(1, h);
-  ratio = customW / customH;
-  if(useCustom){
-    initCrop(cur);
-    updateOutInfo();
-    draw();
-  }
+/* ═══════════════════════════════════════════════════════════════
+   CROP MODEL — one ratio-locked rect per image, always valid.
+   ═══════════════════════════════════════════════════════════════ */
+function initCrop(im) {
+  const r = ratio();
+  let w, h;
+  if (im.w / im.h > r) { h = im.h; w = h * r; }
+  else                 { w = im.w; h = w / r; }
+  im.crop = { x: (im.w - w) / 2, y: (im.h - h) / 2, w, h };
 }
 
-function getOutputDims(){
-  if(useCustom) return { outW: customW, outH: customH };
-  const outW = 924;
-  return { outW, outH: Math.round(outW / ratio) };
+function applyFrameChange() {
+  imgs.forEach(initCrop);
+  draw();
 }
 
-function updateOutInfo(){
-  const { outW, outH } = getOutputDims();
-  document.getElementById('outinfo').textContent = outW + ' x ' + outH;
+/* ═══════════════════════════════════════════════════════════════
+   STAGE — layout, drawing, pointer interaction
+   ═══════════════════════════════════════════════════════════════ */
+function layout() {
+  const wrap = els.stage.parentElement;
+  stW = wrap.clientWidth; stH = wrap.clientHeight;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  els.stage.width = Math.round(stW * dpr);
+  els.stage.height = Math.round(stH * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const im = imgs[cur];
+  if (!im) return;
+  scale = Math.min(stW * 0.9 / im.w, stH * 0.86 / im.h);
+  offX = (stW - im.w * scale) / 2;
+  offY = (stH - im.h * scale) / 2;
 }
 
-function setupCanvas(){
-  const wrap=document.getElementById('canvasWrap');
-  W=wrap.clientWidth; H=wrap.clientHeight;
-  C.width=W; C.height=H;
-  C.style.left='0'; C.style.top='0';
-  C.style.width=W+'px'; C.style.height=H+'px';
-  const e=imgs[cur];
-  iW=e.img.width; iH=e.img.height;
-  scl=Math.min((W*0.88)/iW,(H*0.86)/iH);
-  dX=(W-iW*scl)/2; dY=(H-iH*scl)/2;
-}
-
-function initCrop(i){
-  const e=imgs[i];
-  iW=e.img.width; iH=e.img.height;
-  if(mode==='fit'){
-    if(iW/iH>ratio){cW=iW;cH=iW/ratio;if(cH>iH){cH=iH;cW=iH*ratio}}
-    else{cH=iH;cW=iH*ratio;if(cW>iW){cW=iW;cH=iW/ratio}}
-  } else {
-    // cover (and manual reset)
-    if(iW/iH>ratio){cH=iH;cW=iH*ratio}
-    else{cW=iW;cH=iW/ratio}
-  }
-  cX=(iW-cW)/2; cY=(iH-cH)/2;
-  clamp();
-}
-
-function clamp(){
-  cW=Math.max(10,Math.min(iW,cW));
-  cH=Math.max(10,Math.min(iH,cH));
-  cX=Math.max(0,Math.min(iW-cW,cX));
-  cY=Math.max(0,Math.min(iH-cH,cY));
-}
-
-function draw(){
-  if(!C||!imgs.length) return;
-  const e=imgs[cur];
-  X.clearRect(0,0,W,H);
-
-  // dim full image
-  X.globalAlpha=0.22;
-  X.drawImage(e.img,dX,dY,iW*scl,iH*scl);
-  X.globalAlpha=1;
-
-  const rx=dX+cX*scl, ry=dY+cY*scl, rw=cW*scl, rh=cH*scl;
-
-  // bright crop region
-  X.save();
-  X.beginPath(); X.rect(rx,ry,rw,rh); X.clip();
-  X.drawImage(e.img,dX,dY,iW*scl,iH*scl);
-  X.restore();
-
-  // mask outside the image (fill canvas darker)
-  X.fillStyle='rgba(0,0,0,0.35)';
-  X.fillRect(dX,dY,iW*scl,cY*scl);
-  X.fillRect(dX,ry+rh,iW*scl,(iH-cY-cH)*scl);
-  X.fillRect(dX,ry,cX*scl,rh);
-  X.fillRect(rx+rw,ry,(iW-cX-cW)*scl,rh);
-
-  // crop border (Papers Please green)
-  X.strokeStyle='#a8c888';
-  X.lineWidth=1;
-  X.strokeRect(rx+0.5,ry+0.5,rw-1,rh-1);
-
-  // thirds grid
-  X.strokeStyle='rgba(168,200,136,0.22)';
-  X.lineWidth=1;
-  for(let i=1;i<3;i++){
-    line(rx+rw*i/3,ry,rx+rw*i/3,ry+rh);
-    line(rx,ry+rh*i/3,rx+rw,ry+rh*i/3);
-  }
-
-  // handles
-  const handles=getHandles(rx,ry,rw,rh);
-  handles.forEach(h=>{
-    if(h.corner){
-      drawCornerHandle(h.x,h.y,h.edge,11,3);
-    } else {
-      X.fillStyle='#8aaa6a';
-      X.fillRect(h.x-3,h.y-3,6,6);
-    }
-  });
-
-  // info readout
-  const { outW, outH } = getOutputDims();
-  const info = document.getElementById('cropinfo');
-  info.innerHTML =
-    '<span class="k">CROP</span> <span class="v">'+Math.round(cW)+' x '+Math.round(cH)+'</span>'+
-    ' <span class="k">/ OUT</span> <span class="v">'+outW+' x '+outH+'</span>'+
-    ' <span class="k">/ RATIO</span> <span class="v">'+(Math.round(ratio*1000)/1000)+'</span>';
-}
-
-function line(x1,y1,x2,y2){X.beginPath();X.moveTo(x1,y1);X.lineTo(x2,y2);X.stroke()}
-
-function drawCornerHandle(x,y,edge,sz,th){
-  const L=edge.includes('w'), R=edge.includes('e');
-  const T=edge.includes('n'), B=edge.includes('s');
-  const ox=R?-sz:0, oy=B?-sz:0;
-  X.fillStyle='#a8c888';
-  X.fillRect(x+ox,y+(B?-th:0)+(T?sz-th:0),sz,th);
-  X.fillRect(x+(R?-th:0)+(L?sz-th:0),y+oy,th,sz);
-}
-
-function getHandles(rx,ry,rw,rh){
+function corners(rx, ry, rw, rh) {
   return [
-    {x:rx,y:ry,edge:'nw',corner:true},{x:rx+rw,y:ry,edge:'ne',corner:true},
-    {x:rx,y:ry+rh,edge:'sw',corner:true},{x:rx+rw,y:ry+rh,edge:'se',corner:true},
-    {x:rx+rw/2,y:ry,edge:'n',corner:false},{x:rx+rw/2,y:ry+rh,edge:'s',corner:false},
-    {x:rx,y:ry+rh/2,edge:'w',corner:false},{x:rx+rw,y:ry+rh/2,edge:'e',corner:false},
+    { id: 'nw', x: rx,      y: ry },
+    { id: 'ne', x: rx + rw, y: ry },
+    { id: 'sw', x: rx,      y: ry + rh },
+    { id: 'se', x: rx + rw, y: ry + rh },
   ];
 }
 
-const HIT=14;
-function hitHandle(px,py){
-  const rx=dX+cX*scl,ry=dY+cY*scl,rw=cW*scl,rh=cH*scl;
-  const handles=getHandles(rx,ry,rw,rh);
-  for(const h of handles){
-    if(Math.abs(px-h.x)<HIT&&Math.abs(py-h.y)<HIT) return h.edge;
+/* pick a tape tick step (image px) that reads well at this zoom */
+function tickStep() {
+  for (const s of [10, 20, 25, 50, 100, 200, 250, 500, 1000, 2000])
+    if (s * scale >= 9) return s;
+  return 5000;
+}
+
+const PIN_COLORS = { nw: '#D85545', ne: '#4A80D8', sw: '#E8B93A', se: '#58A868' };
+
+function drawPin(x, y, dirX, dirY, color) {
+  // needle stem pointing out of the fabric, glass head at the end
+  const ex = x + dirX * 13, ey = y + dirY * 13;
+  ctx.strokeStyle = 'rgba(0,0,0,0.45)';
+  ctx.lineWidth = 3.5;
+  ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(ex, ey); ctx.stroke();
+  ctx.strokeStyle = '#C8CCD2';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(ex, ey); ctx.stroke();
+  ctx.beginPath(); ctx.arc(ex, ey, 5.5, 0, 7);
+  ctx.fillStyle = color; ctx.fill();
+  ctx.strokeStyle = 'rgba(0,0,0,0.45)'; ctx.lineWidth = 1.4; ctx.stroke();
+  ctx.beginPath(); ctx.arc(ex - 1.8, ey - 1.8, 1.6, 0, 7);
+  ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.fill();
+}
+
+function draw() {
+  const im = imgs[cur];
+  if (!im || view !== 'editor') return;
+  const c = im.crop;
+  ctx.clearRect(0, 0, stW, stH);
+
+  // the bolt of cloth, laid flat and dimmed outside the pattern
+  ctx.globalAlpha = 0.28;
+  ctx.drawImage(im.img, offX, offY, im.w * scale, im.h * scale);
+  ctx.globalAlpha = 1;
+
+  const rx = offX + c.x * scale, ry = offY + c.y * scale;
+  const rw = c.w * scale, rh = c.h * scale;
+
+  // the piece being cut, full brightness
+  ctx.save();
+  ctx.beginPath(); ctx.rect(rx, ry, rw, rh); ctx.clip();
+  ctx.drawImage(im.img, offX, offY, im.w * scale, im.h * scale);
+  ctx.restore();
+
+  // seam lines (rule of thirds, chalked)
+  ctx.strokeStyle = 'rgba(248,242,224,0.28)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([4, 6]);
+  ctx.beginPath();
+  for (let i = 1; i < 3; i++) {
+    ctx.moveTo(rx + rw * i / 3, ry); ctx.lineTo(rx + rw * i / 3, ry + rh);
+    ctx.moveTo(rx, ry + rh * i / 3); ctx.lineTo(rx + rw, ry + rh * i / 3);
+  }
+  ctx.stroke();
+
+  // measuring tapes laid OUTSIDE the cut, along its top and left edges
+  const TAPE = 15;
+  if (rw > 120 && rh > 90 && ry - TAPE >= 0 && rx - TAPE >= 0) {
+    const step = tickStep();
+
+    // horizontal tape above the cut (extended left to join the vertical one)
+    ctx.fillStyle = 'rgba(255,210,63,0.92)';
+    ctx.fillRect(rx - TAPE, ry - TAPE, rw + TAPE, TAPE);
+    ctx.fillStyle = '#1A0E06';
+    ctx.strokeStyle = '#1A0E06';
+    ctx.lineWidth = 1;
+    ctx.font = '600 9px Barlow, sans-serif';
+    ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+    for (let v = 0; v <= c.w; v += step) {
+      const tx = Math.round(rx + v * scale) + 0.5;
+      const major = (v / step) % 5 === 0;
+      ctx.beginPath(); ctx.moveTo(tx, ry); ctx.lineTo(tx, ry - (major ? 10 : 5.5)); ctx.stroke();
+      if (major && v > 0 && (v + step * 2) * scale < c.w * scale) ctx.fillText(String(v), tx + 2.5, ry - TAPE + 1);
+    }
+    ctx.fillRect(rx - TAPE, ry - TAPE, rw + TAPE, 1);
+
+    // vertical tape left of the cut — ticks only; the horizontal tape carries the numbers
+    ctx.fillStyle = 'rgba(255,210,63,0.92)';
+    ctx.fillRect(rx - TAPE, ry, TAPE, rh);
+    ctx.fillStyle = '#1A0E06';
+    for (let v = 0; v <= c.h; v += step) {
+      const ty = Math.round(ry + v * scale) + 0.5;
+      const major = (v / step) % 5 === 0;
+      ctx.beginPath(); ctx.moveTo(rx, ty); ctx.lineTo(rx - (major ? 10 : 5.5), ty); ctx.stroke();
+    }
+    ctx.fillRect(rx - TAPE, ry, 1, rh);
+  }
+
+  // the cut line — tailor's chalk, dashed
+  ctx.strokeStyle = 'rgba(248,242,224,0.95)';
+  ctx.lineWidth = 1.8;
+  ctx.setLineDash([8, 6]);
+  ctx.strokeRect(rx, ry, rw, rh);
+  ctx.setLineDash([]);
+
+  // pins in the four corners
+  for (const h of corners(rx, ry, rw, rh)) {
+    drawPin(h.x, h.y, h.id.includes('e') ? 1 : -1, h.id.includes('s') ? 1 : -1, PIN_COLORS[h.id]);
+  }
+
+  const out = outDims(im);
+  els.cropInfo.innerHTML =
+    '<span class="k">CUT</span> <span class="v">' + Math.round(c.w) + 'x' + Math.round(c.h) + '</span>' +
+    ' <span class="k">&gt; OUT</span> <span class="v">' + out.w + 'x' + out.h + '</span>' +
+    (fixedOut() ? '' : ' <span class="k">(native)</span>');
+  syncCustomInputs();
+}
+
+/* freeform mode: the pixel inputs mirror the crop as it's dragged */
+function syncCustomInputs() {
+  if (!isFree() || !imgs.length) return;
+  const c = imgs[cur].crop;
+  custom.w = Math.round(c.w);
+  custom.h = Math.round(c.h);
+  if (document.activeElement !== els.customW) els.customW.value = custom.w;
+  if (document.activeElement !== els.customH) els.customH.value = custom.h;
+}
+
+const toImg = e => {
+  const r = els.stage.getBoundingClientRect();
+  const im = imgs[cur];
+  return {
+    x: Math.max(0, Math.min(im.w, (e.clientX - r.left - offX) / scale)),
+    y: Math.max(0, Math.min(im.h, (e.clientY - r.top - offY) / scale)),
+  };
+};
+
+function hitCorner(e) {
+  const r = els.stage.getBoundingClientRect();
+  const px = e.clientX - r.left, py = e.clientY - r.top;
+  const c = imgs[cur].crop;
+  const rx = offX + c.x * scale, ry = offY + c.y * scale;
+  for (const h of corners(rx, ry, c.w * scale, c.h * scale)) {
+    if (Math.abs(px - h.x) < 16 && Math.abs(py - h.y) < 16) return h.id;
   }
   return null;
 }
-function insideCrop(px,py){
-  const rx=dX+cX*scl,ry=dY+cY*scl;
-  return px>=rx&&px<=rx+cW*scl&&py>=ry&&py<=ry+cH*scl;
-}
-function cursorFor(edge){
-  if(!edge) return 'default';
-  const map={nw:'nw-resize',ne:'ne-resize',sw:'sw-resize',se:'se-resize',
-             n:'n-resize',s:'s-resize',w:'w-resize',e:'e-resize',move:'move'};
-  return map[edge]||'default';
+function insideCrop(e) {
+  const p = toImg(e), c = imgs[cur].crop;
+  return p.x >= c.x && p.x <= c.x + c.w && p.y >= c.y && p.y <= c.y + c.h;
 }
 
-function pt(e){const r=C.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top}}
+els.stage.addEventListener('pointerdown', e => {
+  if (!imgs.length) return;
+  const c = imgs[cur].crop;
+  const corner = hitCorner(e);
+  if (corner) {
+    // anchor = the opposite corner; it stays put while we resize
+    drag = {
+      mode: 'resize',
+      sx: corner.includes('e') ? 1 : -1,
+      sy: corner.includes('s') ? 1 : -1,
+      ax: corner.includes('e') ? c.x : c.x + c.w,
+      ay: corner.includes('s') ? c.y : c.y + c.h,
+    };
+  } else if (insideCrop(e)) {
+    const p = toImg(e);
+    drag = { mode: 'move', dx: p.x - c.x, dy: p.y - c.y };
+  } else return;
+  els.stage.setPointerCapture(e.pointerId);
+  e.preventDefault();
+});
 
-function onDown(e){
-  if(mode!=='manual') setMode('manual');
-  const {x,y}=pt(e);
-  const edge=hitHandle(x,y);
-  if(edge){
-    drag={type:'resize',edge,sx:x,sy:y,ocX:cX,ocY:cY,ocW:cW,ocH:cH};
-  } else if(insideCrop(x,y)){
-    drag={type:'move',sx:x,sy:y,ocX:cX,ocY:cY};
-  } else {
-    const ix=(x-dX)/scl, iy=(y-dY)/scl;
-    if(ix>=0&&ix<=iW&&iy>=0&&iy<=iH){
-      cX=ix; cY=iy; cW=1; cH=1;
-      drag={type:'resize',edge:'se',sx:x,sy:y,ocX:cX,ocY:cY,ocW:0,ocH:0};
-    }
-  }
-  C.style.cursor=drag?cursorFor(drag.type==='move'?'move':drag.edge):'default';
-}
-
-function onMove(e){
-  const {x,y}=pt(e);
-  if(!drag){
-    const edge=hitHandle(x,y);
-    C.style.cursor=edge?cursorFor(edge):insideCrop(x,y)?'move':'crosshair';
+els.stage.addEventListener('pointermove', e => {
+  if (!imgs.length || view !== 'editor') return;
+  const im = imgs[cur], c = im.crop, r = ratio();
+  if (!drag) {
+    const corner = hitCorner(e);
+    els.stage.style.cursor = corner ? corner + '-resize' : insideCrop(e) ? 'move' : 'default';
     return;
   }
-  const dx=(x-drag.sx)/scl, dy=(y-drag.sy)/scl;
-  if(drag.type==='move'){
-    cX=drag.ocX+dx; cY=drag.ocY+dy; clamp(); draw(); return;
-  }
-  let nx=drag.ocX, ny=drag.ocY, nw=drag.ocW, nh=drag.ocH;
-  const {edge}=drag;
-  const fixRatio=!e.shiftKey;
-  if(edge.includes('e')) nw=Math.max(20,drag.ocW+dx);
-  if(edge.includes('s')) nh=Math.max(20,drag.ocH+dy);
-  if(edge.includes('w')){nw=Math.max(20,drag.ocW-dx);nx=drag.ocX+drag.ocW-nw;}
-  if(edge.includes('n')){nh=Math.max(20,drag.ocH-dy);ny=drag.ocY+drag.ocH-nh;}
-  if(fixRatio){
-    if(edge==='n'||edge==='s') nw=nh*ratio;
-    else if(edge==='e'||edge==='w') nh=nw/ratio;
-    else {
-      if(Math.abs(nw-drag.ocW)>=Math.abs(nh-drag.ocH)){nh=nw/ratio}
-      else{nw=nh*ratio}
-    }
-    if(edge.includes('w')) nx=drag.ocX+drag.ocW-nw;
-    if(edge.includes('n')) ny=drag.ocY+drag.ocH-nh;
-  }
-  cX=nx; cY=ny; cW=nw; cH=nh; clamp(); draw();
-}
-
-function onUp(){drag=null; C.style.cursor='crosshair';}
-
-function setMode(m){
-  mode=m;
-  ['cover','fit','manual'].forEach(id=>{
-    document.getElementById('pill-'+id).classList.toggle('on',id===m);
-  });
-  if(m!=='manual'){initCrop(cur);draw();}
-}
-
-function commitCurrent(){
-  const e=imgs[cur];
-  e.cX=cX;e.cY=cY;e.cW=cW;e.cH=cH;e.done=true;
-}
-function commitAndNext(){commitCurrent();
-  // visually flag done immediately, then advance
-  updateSidebar();
-  if(cur < imgs.length - 1) nav(1);
-  else draw();
-}
-
-function nav(d){
-  const e=imgs[cur];
-  e.cX=cX;e.cY=cY;e.cW=cW;e.cH=cH;
-  const n=cur+d;
-  if(n<0||n>=imgs.length) return;
-  goTo(n);
-}
-
-function goTo(i){
-  cur=i;
-  setupCanvas();
-  const e=imgs[i];
-  iW=e.img.width;iH=e.img.height;
-  if(!e._init||Math.abs(e.cW/e.cH-ratio)>0.02){
-    initCrop(i);e._init=true;
+  const p = toImg(e);
+  if (drag.mode === 'move') {
+    c.x = Math.max(0, Math.min(im.w - c.w, p.x - drag.dx));
+    c.y = Math.max(0, Math.min(im.h - c.h, p.y - drag.dy));
+  } else if (isFree()) {
+    // freeform: width and height follow the pointer independently
+    const maxW = drag.sx > 0 ? im.w - drag.ax : drag.ax;
+    const maxH = drag.sy > 0 ? im.h - drag.ay : drag.ay;
+    const w = Math.max(Math.min(MIN_CROP, maxW), Math.min(Math.abs(p.x - drag.ax), maxW));
+    const h = Math.max(Math.min(MIN_CROP, maxH), Math.min(Math.abs(p.y - drag.ay), maxH));
+    c.w = w; c.h = h;
+    c.x = drag.sx > 0 ? drag.ax : drag.ax - w;
+    c.y = drag.sy > 0 ? drag.ay : drag.ay - h;
   } else {
-    cX=e.cX;cY=e.cY;cW=e.cW;cH=e.cH;
+    // pointer-driven size, ratio-locked, clamped to the image
+    const maxW = Math.min(
+      drag.sx > 0 ? im.w - drag.ax : drag.ax,
+      (drag.sy > 0 ? im.h - drag.ay : drag.ay) * r
+    );
+    const minW = Math.min(Math.max(MIN_CROP, MIN_CROP * r), maxW);
+    let w = Math.max(Math.abs(p.x - drag.ax), Math.abs(p.y - drag.ay) * r);
+    w = Math.max(minW, Math.min(w, maxW));
+    const h = w / r;
+    c.w = w; c.h = h;
+    c.x = drag.sx > 0 ? drag.ax : drag.ax - w;
+    c.y = drag.sy > 0 ? drag.ay : drag.ay - h;
   }
-  document.getElementById('fname').textContent=e.name;
-  document.getElementById('pinfo').textContent=`FILE ${String(i+1).padStart(3,'0')} / ${String(imgs.length).padStart(3,'0')}`;
-  updateSidebar();draw();
-  document.getElementById('sidebar').children[i]?.scrollIntoView({block:'nearest'});
-}
+  draw();
+});
 
-function onKey(e){
-  if(e.target.tagName==='SELECT'||e.target.tagName==='INPUT') return;
-  if(e.key==='Enter'){commitAndNext();}
-  else if(e.key==='ArrowRight'||e.key==='ArrowDown'){e.preventDefault();nav(1);}
-  else if(e.key==='ArrowLeft'||e.key==='ArrowUp'){e.preventDefault();nav(-1);}
-}
+const endDrag = () => { drag = null; };
+els.stage.addEventListener('pointerup', endDrag);
+els.stage.addEventListener('pointercancel', endDrag);
 
-function buildSidebar(){
-  const sb=document.getElementById('sidebar');
-  sb.innerHTML='';
-  imgs.forEach((im,i)=>{
-    const d=document.createElement('div');
-    d.className='th'+(i===cur?' active':'')+(im.done?' done':'');
-    d.id='th'+i;
-    d.onclick=()=>{
-      const e=imgs[cur];e.cX=cX;e.cY=cY;e.cW=cW;e.cH=cH;
-      goTo(i);
-    };
-    d.innerHTML=`<span class="idx">${String(i+1).padStart(2,'0')}</span><img src="${im.url}"><span class="tl">${im.name}</span>`+
-      (im.done?`<span class="ck">&#10003;</span>`:'');
-    sb.appendChild(d);
+window.addEventListener('resize', () => {
+  if (view !== 'editor' || !imgs.length) return;
+  layout(); draw();
+});
+
+/* ═══════════════════════════════════════════════════════════════
+   NAVIGATION + SWATCH RAIL
+   ═══════════════════════════════════════════════════════════════ */
+const railEl = i => els.rail.children[i];
+
+function buildRail() {
+  els.rail.innerHTML = '';
+  imgs.forEach((im, i) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'th';
+    b.setAttribute('role', 'option');
+    b.setAttribute('aria-label', im.name);
+    const thumb = document.createElement('img');
+    thumb.src = im.url; thumb.alt = ''; thumb.draggable = false;
+    const ck = document.createElement('span');
+    ck.className = 'ck'; ck.textContent = '✓'; ck.setAttribute('aria-hidden', 'true');
+    const nm = document.createElement('span');
+    nm.className = 'nm'; nm.textContent = im.name;
+    b.append(thumb, ck, nm);
+    b.addEventListener('click', () => goTo(i));
+    els.rail.append(b);
   });
 }
-function updateSidebar(){
-  imgs.forEach((im,i)=>{
-    const el=document.getElementById('th'+i);
-    if(!el) return;
-    el.className='th'+(i===cur?' active':'')+(im.done?' done':'');
-    el.innerHTML=`<span class="idx">${String(i+1).padStart(2,'0')}</span><img src="${im.url}"><span class="tl">${im.name}</span>`+
-      (im.done?`<span class="ck">&#10003;</span>`:'');
-    el.onclick=()=>{
-      const e=imgs[cur];e.cX=cX;e.cY=cY;e.cW=cW;e.cH=cH;
-      goTo(i);
-    };
-  });
-  const done=imgs.filter(x=>x.done).length;
-  document.getElementById('done-lbl').innerHTML=`<span class="v">${done}</span> / ${imgs.length} done`;
-}
 
-async function buildZip(){
-  const zip=new JSZip();
-  const { outW, outH } = getOutputDims();
-  const fmtSel = document.getElementById('fmt-sel').value;
-  const quality = parseInt(document.getElementById('quality').value)/100;
-
-  for(const e of imgs){
-    const oc=document.createElement('canvas');
-    oc.width=outW;oc.height=outH;
-    const ox=oc.getContext('2d');
-    let sx=e.cX,sy=e.cY,sw=e.cW,sh=e.cH;
-    if(!e.done){
-      if(e.img.width/e.img.height>ratio){
-        sh=e.img.height;sw=sh*ratio;sx=(e.img.width-sw)/2;sy=0;
-      } else {
-        sw=e.img.width;sh=sw/ratio;sy=(e.img.height-sh)/2;sx=0;
-      }
-    }
-    const srcW=Math.round(sw), srcH=Math.round(sh);
-    if(srcW>outW*2){
-      // step-down resampling for sharper big-to-small downscales
-      let tmp=document.createElement('canvas');
-      tmp.width=srcW;tmp.height=srcH;
-      tmp.getContext('2d').drawImage(e.img,sx,sy,sw,sh,0,0,srcW,srcH);
-      let w=srcW,h=srcH;
-      while(w>outW*2){
-        const t2=document.createElement('canvas');
-        t2.width=Math.floor(w/2);t2.height=Math.floor(h/2);
-        const tc=t2.getContext('2d');
-        tc.imageSmoothingEnabled=true;
-        tc.imageSmoothingQuality='high';
-        tc.drawImage(tmp,0,0,t2.width,t2.height);
-        tmp=t2;w=t2.width;h=t2.height;
-      }
-      ox.imageSmoothingEnabled=true;
-      ox.imageSmoothingQuality='high';
-      ox.drawImage(tmp,0,0,outW,outH);
-    } else {
-      ox.imageSmoothingEnabled=true;
-      ox.imageSmoothingQuality='high';
-      ox.drawImage(e.img,sx,sy,sw,sh,0,0,outW,outH);
-    }
-
-    let mime, ext;
-    if(fmtSel==='auto'){
-      const origExt=e.name.split('.').pop().toLowerCase();
-      mime=origExt==='png'?'image/png':origExt==='webp'?'image/webp':'image/jpeg';
-      ext=origExt==='png'?'png':origExt==='webp'?'webp':'jpg';
-    } else {
-      mime=fmtSel;
-      ext=fmtSel==='image/png'?'png':fmtSel==='image/webp'?'webp':'jpg';
-    }
-    const q = mime==='image/png' ? undefined : quality;
-    const baseName = e.name.replace(/\.[^.]+$/,'');
-    const outName = baseName + '.' + ext;
-    const blob=await new Promise(r=>oc.toBlob(r,mime,q));
-    zip.file(outName,blob);
+function goTo(i) {
+  if (i < 0 || i >= imgs.length) return;
+  if (i !== cur && imgs[cur]) {
+    // moving on — the image we just left is done
+    railEl(cur)?.classList.add('done');
   }
-
-  const zb=await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}});
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(zb);
-  a.download='formatted-images.zip';
-  a.click();
+  cur = i;
+  layout();
+  els.curName.textContent = `${i + 1}/${imgs.length} — ${imgs[i].name}`;
+  imgs.forEach((_, j) => {
+    const el = railEl(j);
+    el.classList.toggle('active', j === i);
+    el.setAttribute('aria-selected', String(j === i));
+  });
+  railEl(i)?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  draw();
 }
 
-function resetAll(){
-  if(!confirm('Clear all images and start over?')) return;
-  imgs.forEach(im=>URL.revokeObjectURL(im.url));
-  imgs=[]; cur=0;
-  document.getElementById('upload').style.display='flex';
-  document.getElementById('editor').style.display='none';
-  document.getElementById('file-input').value='';
+/* arrow keys still flip between images — no UI needed */
+window.addEventListener('keydown', e => {
+  if (view !== 'editor') return;
+  if (/^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName)) return;
+  if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); goTo(cur + 1); }
+  else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); goTo(cur - 1); }
+});
+
+/* ═══════════════════════════════════════════════════════════════
+   TOOLBAR
+   ═══════════════════════════════════════════════════════════════ */
+(function buildFrameSelect() {
+  let group = null, og = null;
+  for (const p of PRESETS) {
+    if (p.group !== group) {
+      group = p.group;
+      og = document.createElement('optgroup');
+      og.label = group;
+      els.frameSel.append(og);
+    }
+    const o = document.createElement('option');
+    o.value = p.id; o.textContent = p.label;
+    og.append(o);
+  }
+  els.frameSel.value = DEFAULT_PRESET;
+})();
+
+els.frameSel.addEventListener('change', () => {
+  preset = PRESETS.find(p => p.id === els.frameSel.value);
+  els.customDims.hidden = !isFree();
+  if (isFree()) draw();       // keep the crops as they are — just unlock them
+  else applyFrameChange();    // presets re-pin every crop to the new shape
+});
+
+/* typing exact numbers resizes the current image's crop to match */
+function readCustom() {
+  if (!imgs.length) return;
+  const im = imgs[cur], c = im.crop;
+  const w = Math.max(MIN_CROP, parseInt(els.customW.value, 10) || Math.round(c.w));
+  const h = Math.max(MIN_CROP, parseInt(els.customH.value, 10) || Math.round(c.h));
+  c.w = Math.min(w, im.w);
+  c.h = Math.min(h, im.h);
+  c.x = Math.min(c.x, im.w - c.w);
+  c.y = Math.min(c.y, im.h - c.h);
+  draw();
 }
+els.customW.addEventListener('change', readCustom);
+els.customH.addEventListener('change', readCustom);
+
+/* ═══════════════════════════════════════════════════════════════
+   EXPORT — every image is exported with its current crop
+   (unvisited images keep the centered default).
+   ═══════════════════════════════════════════════════════════════ */
+const EXT = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
+
+function autoMime(name) {
+  const ext = (name.split('.').pop() || '').toLowerCase();
+  if (ext === 'png' || ext === 'gif') return 'image/png';   // keep transparency
+  if (ext === 'webp') return 'image/webp';
+  return 'image/jpeg';
+}
+
+function renderCrop(im, outW, outH) {
+  const { x, y, w, h } = im.crop;
+  let src = im.img, sx = x, sy = y, sw = w, sh = h;
+  // step-down for big downscales: sharper than a single drawImage
+  if (w > outW * 2) {
+    let c = document.createElement('canvas');
+    c.width = Math.round(w); c.height = Math.round(h);
+    c.getContext('2d').drawImage(im.img, x, y, w, h, 0, 0, c.width, c.height);
+    while (c.width > outW * 2) {
+      const half = document.createElement('canvas');
+      half.width = Math.max(outW, Math.floor(c.width / 2));
+      half.height = Math.max(outH, Math.floor(c.height / 2));
+      const hx = half.getContext('2d');
+      hx.imageSmoothingQuality = 'high';
+      hx.drawImage(c, 0, 0, half.width, half.height);
+      c = half;
+    }
+    src = c; sx = 0; sy = 0; sw = c.width; sh = c.height;
+  }
+  const out = document.createElement('canvas');
+  out.width = outW; out.height = outH;
+  const ox = out.getContext('2d');
+  ox.imageSmoothingQuality = 'high';
+  ox.drawImage(src, sx, sy, sw, sh, 0, 0, outW, outH);
+  return out;
+}
+
+const toBlob = (canvas, mime, q) => new Promise((res, rej) =>
+  canvas.toBlob(b => b ? res(b) : rej(new Error('Encoding failed')), mime, q));
+
+async function download() {
+  if (busy || !imgs.length) return;
+  busy = true;
+  els.dlBtn.disabled = true;
+  setStatus(`Cutting ${imgs.length} image${imgs.length > 1 ? 's' : ''} to size…`, 'info');
+  try {
+    const usedNames = new Set();
+    const files = [];
+
+    for (const im of imgs) {
+      const { w: outW, h: outH } = outDims(im);
+      const mime = els.fmtSel.value === 'auto' ? autoMime(im.name) : els.fmtSel.value;
+      const blob = await toBlob(renderCrop(im, outW, outH), mime, mime === 'image/png' ? undefined : QUALITY);
+      const ext = EXT[blob.type] || 'jpg';   // browser may substitute a type it can encode
+      const base = im.name.replace(/\.[^.]+$/, '');
+      let name = `${base}.${ext}`;
+      for (let n = 2; usedNames.has(name); n++) name = `${base}-${n}.${ext}`;
+      usedNames.add(name);
+      files.push({ name, blob });
+    }
+
+    let href, dlName;
+    if (files.length === 1) {
+      href = URL.createObjectURL(files[0].blob);
+      dlName = files[0].name;
+    } else {
+      if (typeof JSZip === 'undefined') throw new Error('ZIP library failed to load — check your connection and reload.');
+      const zip = new JSZip();
+      for (const f of files) zip.file(f.name, f.blob);
+      const zb = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } });
+      href = URL.createObjectURL(zb);
+      dlName = 'formatted-images.zip';
+    }
+    const a = document.createElement('a');
+    a.href = href; a.download = dlName;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(href), 30000);
+    setStatus(files.length === 1 ? 'Downloaded 1 image.' : `Downloaded ${files.length} images as ZIP.`, 'success');
+    window.ggStatReport && window.ggStatReport('formatter', files.length);
+  } catch (err) {
+    setStatus('Export failed: ' + err.message, 'error');
+  } finally {
+    busy = false;
+    els.dlBtn.disabled = false;
+  }
+}
+els.dlBtn.addEventListener('click', download);
+
+/* ═══════════════════════════════════════════════════════════════
+   UPLOAD VIEW + RESET
+   ═══════════════════════════════════════════════════════════════ */
+els.dz.addEventListener('click', () => els.fileInput.click());
+els.dz.addEventListener('keydown', e => {
+  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); els.fileInput.click(); }
+});
+els.dz.addEventListener('dragover', e => { e.preventDefault(); els.dz.classList.add('drag-over'); });
+els.dz.addEventListener('dragleave', () => els.dz.classList.remove('drag-over'));
+els.dz.addEventListener('drop', e => {
+  e.preventDefault();
+  els.dz.classList.remove('drag-over');
+  loadFiles(e.dataTransfer.files);
+});
+els.fileInput.addEventListener('change', () => loadFiles(els.fileInput.files));
 </script>
+<script>
+/* ── LIVE USAGE COUNTERS ─────────────────────────────────────────────────
+   Subscribes to the toolbox-wide stats doc (Firestore stats/counters —
+   public read-only; every increment goes through the /api/stats Cloud
+   Function) and bumps the strip when anyone, anywhere, uses a tool.
+   Purely decorative: any failure leaves the strip hidden.
+   Test hooks: localStorage.ggstats_fs_emu = "host:port" points the listener
+   at a Firestore emulator; localStorage.ggstats_ep overrides the report URL. */
+(function () {
+  'use strict';
+  // Report one tool's finished work to the global counters (fire-and-forget).
+  window.ggStatReport = function (tool, n) {
+    try {
+      var ep = localStorage.getItem('ggstats_ep') ||
+        (location.protocol.indexOf('http') === 0 ? location.origin + '/api/stats' : '');
+      if (!ep || !(n > 0)) return;
+      fetch(ep, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tool: tool, n: n }), keepalive: true }).catch(function () {});
+    } catch (e) { /* stats are best-effort */ }
+  };
+
+  var strip = document.getElementById('ggLive');
+  if (!strip) return;
+  var cells = {};
+  strip.querySelectorAll('.gg-live-num').forEach(function (el) {
+    cells[el.getAttribute('data-stat')] = { num: el, item: el.closest('.gg-live-item'), val: null };
+  });
+  var fmt = function (n) { return Number(n || 0).toLocaleString('en-US'); };
+  function tween(c, to) {
+    var from = c.val, t0 = performance.now(), dur = 500;
+    c.val = to;
+    requestAnimationFrame(function step(t) {
+      var k = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - k, 3);
+      c.num.textContent = fmt(Math.round(from + (to - from) * e));
+      if (k < 1) requestAnimationFrame(step);
+    });
+  }
+  function render(data) {
+    Object.keys(cells).forEach(function (f) {
+      var c = cells[f], v = Number(data[f] || 0);
+      if (c.val === null) { c.val = v; c.num.textContent = fmt(v); return; }
+      if (v === c.val) return;
+      if (document.hidden) {   /* background tab: rAF is paused — set it plainly */
+        c.val = v; c.num.textContent = fmt(v);
+        c.item.classList.remove('bump');
+        return;
+      }
+      tween(c, v);
+      c.item.classList.remove('bump');
+      void c.item.offsetWidth;               /* restart the bump animation */
+      c.item.classList.add('bump');
+    });
+    strip.hidden = false;
+  }
+  function init() {
+    var SDK = 'https://www.gstatic.com/firebasejs/12.9.0/';
+    Promise.all([import(SDK + 'firebase-app.js'), import(SDK + 'firebase-firestore.js')])
+      .then(function (mods) {
+        var app = mods[0].initializeApp({
+          apiKey: 'AIzaSyAqwcFPilYLIrVIu1-BprkC08hOAhWQikg',
+          authDomain: 'ggapp-d2bae.firebaseapp.com',
+          projectId: 'ggapp-d2bae',
+          appId: '1:614262062561:web:4def07426bd52832e8a6a0'
+        }, 'gg-live-stats');
+        var fs = mods[1];
+        var db = fs.getFirestore(app);
+        var emu = localStorage.getItem('ggstats_fs_emu');
+        if (emu) fs.connectFirestoreEmulator(db, emu.split(':')[0], Number(emu.split(':')[1]));
+        fs.onSnapshot(fs.doc(db, 'stats', 'counters'),
+          function (snap) { render(snap.data() || {}); },
+          function () { /* stream failed — freeze whatever is shown */ });
+      })
+      .catch(function () { /* offline / CDN blocked — strip stays hidden */ });
+  }
+  if (document.readyState === 'complete') init();
+  else window.addEventListener('load', init, { once: true });
+})();
+</script>
+
 </body>
 </html>

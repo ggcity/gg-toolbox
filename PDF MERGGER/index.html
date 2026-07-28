@@ -3,407 +3,3076 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PDF Merger</title>
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta http-equiv="X-Content-Type-Options" content="nosniff">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#22382C">
+
+<title>PDF MERGGER · GG IT Toolbox</title>
+<link rel="icon" type="image/svg+xml" href="/logo.svg?v=3">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@400;500;700&family=Press+Start+2P&display=swap" rel="stylesheet">
+
+<!-- pdf-lib: merging · pdf.js: page previews -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+/* ────────────────────────────────────────────────────────────────
+   PDF MERGGER · hydraulic document press
+   Family design language: navy-deep header bar, condensed uppercase,
+   gold hard-offset shadows, chalk-light page, pixel accents.
+   ──────────────────────────────────────────────────────────────── */
 
-  body {
-    font-family: 'Segoe UI', system-ui, sans-serif;
-    background: #0f0f13;
-    color: #e2e2e8;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 40px 20px;
-  }
+/* ── EARTH & GOO PALETTE ─────────────────────────────────────────
+   Light: sun-baked paper + deep-pine chrome, tuned to the machine's
+   dirt, sand, sage piping and candy goo. Dark: forest-night cave.
+   (--navy* names kept for family markup compatibility — they now
+   carry the pine greens.) ── */
+:root {
+  --navy:        #2E4A38;   /* pine — primary chrome accent */
+  --navy-deep:   #22382C;   /* deep pine header, matches the pipe rims */
+  --navy-mid:    #4A6E54;
+  --steel:       #6E8B76;   /* sage, straight off the pipes */
+  --ice:         #F7F1E2;
+  --chalk:       #F0E7D4;
+  --chalk-dark:  #D9CBAA;
+  --gold:        #C8A84B;
+  --gold-deep:   #7A5E10;
+  --text-primary:#3A2A16;   /* deep loam */
+  --text-body:   #57432B;
+  --text-muted:  #8C7657;
+  --text-navy:   #F0E9D2;   /* cream on pine */
+  --text-navy-dim:#9DB49E;
+  --success:     #1A5E38;
+  --error:       #8A3A18;
+  --radius:      2px;
+  --page-bg:     #F0E7D4;
+  --card-bg:     #FFFDF6;
+  --card-border: #D9CBAA;
+  --row-hover:   #F7F1E2;
 
-  h1 {
-    font-size: 2rem;
-    font-weight: 700;
-    margin-bottom: 6px;
-    background: linear-gradient(135deg, #a78bfa, #60a5fa);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-  }
+  /* FLAMING CHEETOS — shared accent, warmed */
+  --flame-yellow: #FFD23F;
+  --flame-orange: #FF7A18;
+  --flame-deep:   #7A2408;
+  --flame-ink:    #1A0E06;
+}
 
-  .subtitle {
-    color: #6b7280;
-    margin-bottom: 36px;
-    font-size: 0.95rem;
-  }
+/* dark: the same world after sundown — warm charcoal loam + embers */
+[data-theme="dark"] {
+  --navy:        #8FB098;
+  --navy-deep:   #10180F;
+  --navy-mid:    #6E9078;
+  --steel:       #7E9C86;
+  --ice:         #191509;
+  --chalk:       #14100B;
+  --chalk-dark:  #3A2F1E;
+  --gold:        #D8B05A;
+  --gold-deep:   #EAC97A;
+  --text-primary:#F0E4C8;
+  --text-body:   #CEBD9C;
+  --text-muted:  #8E7D5F;
+  --text-navy:   #F0E4C8;
+  --text-navy-dim:#94A88E;
+  --success:     #4AC078;
+  --error:       #E06A40;
+  --page-bg:     #14100B;
+  --card-bg:     #1D1810;
+  --card-border: #382D1C;
+  --row-hover:   #241E13;
+  --flame-yellow: #FFDD66;
+  --flame-orange: #FF9A3A;
+  --flame-deep:   #4A2408;
+  --flame-ink:    #000000;
+}
 
-  .card {
-    background: #18181f;
-    border: 1px solid #2a2a35;
-    border-radius: 16px;
-    padding: 28px;
-    width: 100%;
-    max-width: 620px;
-  }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-  /* Drop Zone */
-  #dropZone {
-    border: 2px dashed #3b3b50;
-    border-radius: 12px;
-    padding: 40px 20px;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.2s;
-    background: #111118;
-  }
+html, body { overflow-x: clip; }   /* the layout viewport must never inflate on mobile */
 
-  #dropZone:hover, #dropZone.drag-over {
-    border-color: #7c3aed;
-    background: #1a1025;
-  }
+body {
+  font-family: 'Barlow', sans-serif;
+  font-size: 15px;
+  background: var(--page-bg);
+  color: var(--text-body);
+  min-height: 100vh;
+  padding-bottom: 60px;
+  transition: background 0.2s, color 0.2s;
+}
 
-  #dropZone svg { margin-bottom: 12px; opacity: 0.5; }
-  #dropZone p { color: #9ca3af; font-size: 0.95rem; }
-  #dropZone span { color: #a78bfa; font-weight: 600; cursor: pointer; }
-  #dropZone input { display: none; }
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+}
 
-  /* File List */
-  #fileList {
-    margin-top: 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
+.skip-link {
+  position: absolute; top: -52px; left: 0;
+  background: var(--navy-deep); color: var(--flame-yellow);
+  border: 2px solid var(--flame-yellow);
+  padding: 0.75rem 1rem; z-index: 1000; text-decoration: none; font-weight: 700;
+}
+.skip-link:focus { top: 0; }
 
-  .file-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    background: #111118;
-    border: 1px solid #2a2a35;
-    border-radius: 10px;
-    padding: 10px 14px;
-    cursor: grab;
-    user-select: none;
-    transition: background 0.15s, border-color 0.15s;
-  }
+/* ── HEADER — same bar as the rest of the family ── */
+.app-header {
+  background: var(--navy-deep);
+  background-image:
+    linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(0,0,0,0) 30%, rgba(0,0,0,0.4) 100%);
+  border-bottom: 1px solid rgba(0,0,0,0.55);
+  box-shadow:
+    inset 0 -1px 0 rgba(255,210,63,0.08),
+    inset 0 -4px 12px rgba(0,0,0,0.55);
+  padding: 12px 24px;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 16px;
+  min-height: 64px;
+}
+.header-left   { display: flex; align-items: center; gap: 10px; position: relative; }
+.header-center { display: flex; align-items: center; justify-content: center; }
+.header-right  { display: flex; align-items: center; justify-content: flex-end; }
 
-  .file-item:active { cursor: grabbing; }
-  .file-item.dragging { opacity: 0.4; }
-  .file-item.drag-target { border-color: #7c3aed; background: #1a1025; }
+/* BACK TO TOOLBOX — bare pixel arrow hugging the top-left corner */
+.back-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 36px; height: 36px;
+  margin-left: -14px;
+  color: rgba(255, 210, 63, 0.6);
+  text-decoration: none; flex-shrink: 0;
+  transition: color 0.12s, transform 0.08s, filter 0.12s;
+}
+.back-btn:hover, .back-btn:focus-visible {
+  color: var(--flame-yellow);
+  transform: translate(-1px, -1px);
+  filter: drop-shadow(0 0 8px rgba(255, 210, 63, 0.45));
+}
+.back-btn:active { transform: translate(1px, 1px); }
+.back-btn:focus-visible { outline: 2px solid var(--flame-yellow); outline-offset: 2px; }
+.back-btn svg { width: 22px; height: 22px; shape-rendering: crispEdges; }
+.back-btn:hover svg, .back-btn:focus-visible svg { animation: back-nudge 0.6s ease-in-out infinite; }
+@keyframes back-nudge {
+  0%, 100% { transform: translate(0, 0); }
+  50%      { transform: translate(-2px, -2px); }
+}
 
-  .drag-handle { color: #4b5563; font-size: 1.1rem; cursor: grab; }
-  .file-icon { font-size: 1.3rem; }
+/* EMAIL CONTACT BUTTON + tooltip */
+.brand-email-wrap { position: relative; display: inline-flex; }
+.brand-email-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px;
+  background: transparent;
+  border: 2px solid rgba(255, 210, 63, 0.35);
+  color: rgba(255, 210, 63, 0.65);
+  box-shadow: 2px 2px 0 rgba(0,0,0,0.5);
+  text-decoration: none; flex-shrink: 0;
+  transition: border-color 0.12s, color 0.12s, background 0.12s, transform 0.08s, box-shadow 0.08s;
+}
+.brand-email-btn:hover, .brand-email-btn:focus-visible {
+  border-color: var(--flame-yellow);
+  color: var(--flame-yellow);
+  background: rgba(255, 210, 63, 0.08);
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0 var(--flame-deep), 0 0 10px rgba(255,210,63,0.2);
+}
+.brand-email-btn:active { transform: translate(1px, 1px); box-shadow: 1px 1px 0 var(--flame-deep); }
+.brand-email-btn:focus-visible { outline: 2px solid var(--flame-yellow); outline-offset: 3px; }
+.brand-email-btn svg { width: 16px; height: 12px; shape-rendering: crispEdges; }
 
-  .file-info { flex: 1; min-width: 0; }
-  .file-name { font-size: 0.88rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .file-size { font-size: 0.75rem; color: #6b7280; margin-top: 1px; }
+.brand-email-tooltip {
+  position: absolute; top: calc(100% + 10px); left: -8px;
+  opacity: 0; visibility: hidden; transform: translateY(-4px);
+  transition: opacity 0.15s, transform 0.15s, visibility 0.15s;
+  z-index: 200; pointer-events: none; width: 240px;
+}
+.brand-email-wrap:hover .brand-email-tooltip,
+.brand-email-btn:focus-visible ~ .brand-email-tooltip {
+  opacity: 1; visibility: visible; transform: translateY(0); pointer-events: auto;
+}
+.brand-email-tooltip-inner {
+  background: var(--navy-deep);
+  border: 2px solid var(--flame-yellow);
+  box-shadow: 3px 3px 0 var(--flame-deep);
+  padding: 10px 12px;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.brand-email-tooltip-label {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px; letter-spacing: 1px;
+  color: var(--flame-yellow); text-transform: uppercase;
+}
+.brand-email-tooltip-body { font-size: 12.5px; color: var(--text-navy); line-height: 1.45; }
+.brand-email-tooltip-body a { color: var(--flame-yellow); text-decoration: none; font-weight: 700; }
+.brand-email-tooltip-body a:hover { text-decoration: underline; }
 
-  .file-pages { font-size: 0.75rem; color: #a78bfa; font-weight: 500; }
+/* THEME TOGGLE — chunky pixel light switch (same as QR GGenerator) */
+.theme-toggle {
+  display: inline-flex; align-items: center;
+  cursor: pointer;
+  background: var(--flame-ink);
+  border: 3px solid var(--flame-yellow);
+  box-shadow: 3px 3px 0 var(--flame-deep), inset 0 0 0 1px var(--flame-ink);
+  padding: 4px;
+  image-rendering: pixelated;
+  transition: transform 0.08s, box-shadow 0.08s, border-color 0.15s;
+}
+.theme-toggle:hover {
+  border-color: var(--flame-orange);
+  transform: translate(1px, 1px);
+  box-shadow: 2px 2px 0 var(--flame-deep), inset 0 0 0 1px var(--flame-ink);
+}
+.theme-toggle:active {
+  transform: translate(3px, 3px);
+  box-shadow: 0 0 0 var(--flame-deep), inset 0 0 0 1px var(--flame-ink);
+}
+.theme-toggle:focus-visible { outline: 3px solid var(--flame-yellow); outline-offset: 3px; }
+.theme-switch-track {
+  position: relative;
+  width: 64px; height: 32px;
+  background:
+    linear-gradient(90deg,
+      var(--flame-orange) 0%, var(--flame-orange) 50%,
+      #1A120B 50%, #1A120B 100%);
+  border: 3px solid var(--flame-yellow);
+  box-shadow: inset 2px 2px 0 rgba(0,0,0,0.4);
+  display: flex; align-items: center;
+}
+.theme-switch-side {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  height: 100%; position: relative; z-index: 1;
+}
+.theme-switch-side svg {
+  width: 16px; height: 16px;
+  shape-rendering: crispEdges;
+  filter: drop-shadow(1px 1px 0 rgba(0,0,0,0.7));
+}
+.theme-switch-side.sun svg  { color: #FFF2A8; }
+.theme-switch-side.moon svg { color: #D8E8FF; }
+.theme-switch-thumb {
+  position: absolute;
+  top: -3px; left: -3px;
+  width: 32px; height: 32px;
+  background: var(--flame-yellow);
+  border: 3px solid var(--flame-ink);
+  box-shadow:
+    inset 3px 3px 0 #FFF2A8,
+    inset -3px -3px 0 var(--flame-orange),
+    2px 2px 0 var(--flame-deep);
+  transition: left 0.12s steps(4, end), background 0.15s, box-shadow 0.15s;
+  z-index: 2;
+}
+[data-theme="dark"] .theme-switch-thumb {
+  left: 32px;
+  background: #6FA8E8;
+  box-shadow:
+    inset 3px 3px 0 #C8DEF8,
+    inset -3px -3px 0 #2A5A98,
+    2px 2px 0 var(--flame-deep);
+}
 
-  .remove-btn {
-    background: none;
-    border: none;
-    color: #4b5563;
-    cursor: pointer;
-    font-size: 1.1rem;
-    padding: 2px 6px;
-    border-radius: 6px;
-    transition: color 0.15s, background 0.15s;
-    line-height: 1;
-  }
-  .remove-btn:hover { color: #f87171; background: #2a1a1a; }
+/* ── HERO TITLE — glass letters full of goo, 3D-tilting with the mouse ── */
+.hero {
+  text-align: center;
+  padding: 0 16px 2px;
+  margin-top: -60px;      /* ride up and over the navy header bar */
+  position: relative;
+  z-index: 2;
+  perspective: 850px;
+  pointer-events: none;   /* it overlaps the header — clicks must pass through */
+}
+#titleCanvas {
+  display: block;
+  margin: 0 auto;
+  will-change: transform;
+  pointer-events: none;
+  user-select: none;
+}
 
-  /* Actions */
-  .actions {
-    margin-top: 20px;
-    display: flex;
-    gap: 10px;
-  }
+/* ── WORKBENCH LAYOUT — machine left, controls right ── */
+.workbench {
+  max-width: 1080px;
+  margin: 26px auto 0;
+  padding: 0 20px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(300px, 0.85fr);
+  gap: 20px 44px;   /* wide gutter: the feed pipe rises through it */
+  align-items: start;
+  position: relative;   /* anchors the feed-pipe overlay */
+}
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-width: 0;
+}
 
-  button.primary {
-    flex: 1;
-    padding: 12px;
-    border-radius: 10px;
-    border: none;
-    background: linear-gradient(135deg, #7c3aed, #3b82f6);
-    color: #fff;
-    font-size: 0.95rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: opacity 0.2s, transform 0.1s;
-  }
+/* feed pipe: lives in the BACKGROUND, behind every card */
+#connector {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: visible;
+  z-index: 0;
+}
+.side, .machine-card { z-index: 1; }
+.side { position: relative; }
 
-  button.primary:hover:not(:disabled) { opacity: 0.88; transform: translateY(-1px); }
-  button.primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+.card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius);
+  transition: background 0.2s, border-color 0.2s;
+}
 
-  button.secondary {
-    padding: 12px 18px;
-    border-radius: 10px;
-    border: 1px solid #2a2a35;
-    background: #111118;
-    color: #9ca3af;
-    font-size: 0.95rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: border-color 0.15s, color 0.15s;
-  }
+/* ── DROPBOX ── */
+#dz {
+  border: 2px dashed var(--chalk-dark);
+  border-radius: 10px;
+  padding: 26px 18px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, transform 0.1s, box-shadow 0.12s;
+  background: var(--ice);
+}
+#dz:hover, .drop-card.drag-over #dz {
+  border-color: var(--gold);
+  background: rgba(200,168,75,0.10);
+}
+#dz .dz-icon { display: block; margin: 0 auto 10px; }
+#dz .dz-big {
+  display: block;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 20px; font-weight: 700;
+  letter-spacing: 3px; text-transform: uppercase;
+  color: var(--text-primary);
+}
+#dz .dz-small {
+  display: block;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 14px; font-weight: 600;
+  letter-spacing: 2px; text-transform: uppercase;
+  color: var(--text-muted);
+  margin-top: 6px;
+  animation: dz-breathe 2.4s ease-in-out infinite;
+}
+@keyframes dz-breathe { 50% { opacity: 0.5; } }
 
-  button.secondary:hover { border-color: #4b5563; color: #e2e2e8; }
+/* ── MACHINE ── */
+.machine-card { position: relative; order: -1; }  /* left column; DOM keeps dropzone first */
+.machine-card.drag-over #machine { outline: 3px dashed var(--gold); outline-offset: -3px; }
+.machine-wrap { position: relative; }
+#machine {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 14px;
+  touch-action: none;
+}
 
-  /* Status */
-  #status {
-    margin-top: 16px;
-    padding: 12px 16px;
-    border-radius: 10px;
-    font-size: 0.88rem;
-    display: none;
-  }
+/* floating filename tooltip over the canvas */
+#blobTip {
+  position: absolute;
+  background: var(--navy-deep);
+  border: 2px solid var(--flame-yellow);
+  box-shadow: 3px 3px 0 var(--flame-deep);
+  color: var(--text-navy);
+  font-size: 12.5px;
+  padding: 6px 10px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.1s;
+  z-index: 30;
+  max-width: 260px;
+  line-height: 1.4;
+}
+#blobTip .tip-label {
+  display: block;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px; letter-spacing: 1px;
+  color: var(--flame-yellow);
+  margin-bottom: 3px; text-transform: uppercase;
+}
+#blobTip .tip-name { display: block; word-break: break-all; font-weight: 700; }
+#blobTip .tip-meta { display: block; color: var(--text-navy-dim); font-size: 11.5px; margin-top: 2px; }
+#blobTip.show { opacity: 1; }
 
-  #status.info { background: #1a2035; border: 1px solid #1e3a5f; color: #93c5fd; display: block; }
-  #status.success { background: #0f2a1a; border: 1px solid #166534; color: #86efac; display: block; }
-  #status.error { background: #2a0f0f; border: 1px solid #7f1d1d; color: #fca5a5; display: block; }
+/* ── CONTROL PANEL ── */
+.panel-card { padding: 14px; display: flex; flex-direction: column; gap: 12px; }
+.panel-card[hidden] { display: none; }
 
-  /* Progress bar */
-  #progressWrap { display: none; margin-top: 14px; }
-  #progressBar {
-    height: 6px;
-    border-radius: 99px;
-    background: #2a2a35;
-    overflow: hidden;
-  }
-  #progressFill {
-    height: 100%;
-    width: 0%;
-    border-radius: 99px;
-    background: linear-gradient(90deg, #7c3aed, #3b82f6);
-    transition: width 0.3s;
-  }
+/* file rows */
+#fileList { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.file-row {
+  display: flex; align-items: center; gap: 9px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius);
+  padding: 7px 9px;
+  cursor: grab;
+  user-select: none;
+  transition: border-color 0.12s, background 0.12s, opacity 0.12s;
+}
+.file-row:hover { background: var(--row-hover); }
+.file-row:active { cursor: grabbing; }
+.file-row.dragging { opacity: 0.35; }
+.file-row.drag-target { border-color: var(--gold); box-shadow: 2px 2px 0 var(--gold); }
+.file-row.pressed-row { border-style: dashed; opacity: 0.75; }
 
-  .hint {
-    margin-top: 14px;
-    font-size: 0.78rem;
-    color: #4b5563;
-    text-align: center;
-  }
+.row-chip {
+  width: 18px; height: 18px; flex-shrink: 0;
+  border-radius: 50% 45% 55% 50%;
+  border: 2px solid rgba(0,0,0,0.25);
+  position: relative;
+}
+.row-idx {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: var(--text-muted);
+  width: 16px; text-align: center; flex-shrink: 0;
+}
+.row-info { flex: 1; min-width: 0; }
+.row-name {
+  font-size: 13px; font-weight: 700; color: var(--text-primary);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.row-meta { font-size: 11.5px; color: var(--text-muted); margin-top: 1px; }
 
-  #emptyMsg { color: #4b5563; font-size: 0.85rem; text-align: center; padding: 10px 0; display: none; }
+.row-btns { display: flex; gap: 2px; flex-shrink: 0; }
+.row-btn {
+  background: none; border: 1px solid transparent;
+  color: var(--text-muted);
+  width: 22px; height: 22px;
+  font-size: 11px; line-height: 1;
+  cursor: pointer; border-radius: var(--radius);
+  display: grid; place-items: center;
+  transition: color 0.12s, border-color 0.12s, background 0.12s;
+}
+.row-btn:hover, .row-btn:focus-visible { color: var(--text-primary); border-color: var(--card-border); background: var(--row-hover); }
+.row-btn.rm:hover, .row-btn.rm:focus-visible { color: #C0392B; border-color: #C0392B; }
+.row-btn:disabled { opacity: 0.25; cursor: default; }
+.row-btn:disabled:hover { color: var(--text-muted); border-color: transparent; background: none; }
+
+/* output title */
+.title-box {
+  display: flex; align-items: center;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.title-box:focus-within { border-color: var(--gold); box-shadow: 2px 2px 0 var(--gold); }
+#titleInput {
+  flex: 1; min-width: 0;
+  background: none; border: none; outline: none;
+  padding: 9px 12px;
+  color: var(--text-primary);
+  font-family: 'Barlow', sans-serif;
+  font-size: 14px; font-weight: 500;
+}
+.title-ext { color: var(--text-muted); font-size: 13px; padding-right: 12px; }
+
+/* the big press button */
+.press-btn {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 21px; font-weight: 800;
+  letter-spacing: 4px; text-transform: uppercase;
+  padding: 13px 10px;
+  width: 100%;
+  background: var(--flame-yellow);
+  color: var(--flame-ink);
+  border: 2px solid var(--flame-ink);
+  border-radius: var(--radius);
+  box-shadow: 4px 4px 0 var(--flame-deep);
+  cursor: pointer;
+  transition: transform 0.08s, box-shadow 0.08s, background 0.12s;
+}
+.press-btn:hover:not(:disabled) { background: #FFDD66; transform: translate(-1px, -1px); box-shadow: 5px 5px 0 var(--flame-deep); }
+.press-btn:active:not(:disabled) { transform: translate(3px, 3px); box-shadow: 1px 1px 0 var(--flame-deep); }
+.press-btn:focus-visible { outline: 2px solid var(--flame-orange); outline-offset: 3px; }
+.press-btn:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: 2px 2px 0 rgba(0,0,0,0.25); }
+
+/* the payoff: a glass tank of pressed-document goo — it boils on hover */
+.dl-btn {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  text-align: center;
+  text-decoration: none;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 23px; font-weight: 800;
+  letter-spacing: 3px; text-transform: uppercase;
+  padding: 16px 12px;
+  background: rgba(255, 253, 246, 0.45);
+  color: var(--flame-ink);
+  border: 2px solid var(--flame-ink);
+  border-radius: var(--radius);
+  box-shadow: 4px 4px 0 #3A2A16;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+  animation: dl-pop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: transform 0.08s, box-shadow 0.08s;
+}
+[data-theme="dark"] .dl-btn { background: rgba(0, 0, 0, 0.35); color: #F0E4C8; border-color: #000; }
+.dl-btn:hover { transform: translate(-1px, -1px); box-shadow: 5px 5px 0 #3A2A16; }
+.dl-btn:active { transform: translate(3px, 3px); box-shadow: 1px 1px 0 #3A2A16; }
+.dl-btn:focus-visible { outline: 2px solid var(--gold-deep); outline-offset: 3px; }
+.dl-btn[hidden] { display: none; }
+#dlGooCvs {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.dl-btn span {
+  position: relative;
+  z-index: 1;
+  text-shadow: 0 0 6px rgba(255,255,255,0.85), 0 0 2px rgba(255,255,255,0.95);
+}
+[data-theme="dark"] .dl-btn span {
+  text-shadow: 0 0 6px rgba(0,0,0,0.85), 0 0 2px rgba(0,0,0,0.95);
+}
+@keyframes dl-pop {
+  0%   { transform: scale(0.5); }
+  60%  { transform: scale(1.07); }
+  100% { transform: scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dl-btn { animation: none; }
+}
+
+.clear-btn {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 14px; font-weight: 700;
+  letter-spacing: 2px; text-transform: uppercase;
+  padding: 8px;
+  width: 100%;
+  background: none;
+  color: var(--text-muted);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: color 0.12s, border-color 0.12s;
+}
+.clear-btn:hover, .clear-btn:focus-visible { color: #C0392B; border-color: #C0392B; }
+
+/* status chip */
+#status {
+  font-size: 13px; font-weight: 500;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  display: none;
+  line-height: 1.45;
+}
+#status.info    { display: block; background: rgba(58,110,168,0.12);  border: 1px solid var(--steel);  color: var(--text-body); }
+#status.success { display: block; background: rgba(26,94,56,0.12);   border: 1px solid var(--success); color: var(--success); }
+#status.error   { display: block; background: rgba(138,26,26,0.10);  border: 1px solid var(--error);   color: var(--error); }
+[data-theme="dark"] #status.success { color: #7BD9A0; }
+[data-theme="dark"] #status.error   { color: #F09090; }
+#status a { color: inherit; font-weight: 700; }
+
+#fileInput { display: none; }
+
+@media (max-width: 880px) {
+  .workbench { grid-template-columns: 1fr; }
+  .machine-card { order: 0; }  /* controls first on small screens */
+  .hero { margin-top: -34px; }
+  /* the page must stay scrollable by touch: vertical drags pan,
+     horizontal drags still grab and throw the goo */
+  #machine { touch-action: pan-y; }
+  .press-btn { font-size: 19px; letter-spacing: 3px; }
+  .dl-btn { font-size: 19px; letter-spacing: 2px; }
+}
+@media (max-width: 480px) {
+  .hero { margin-top: -18px; }
+  .workbench { padding: 0 12px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .back-btn svg { transition: none; animation: none !important; }
+  #dz .dz-small { animation: none; }
+}
+/* ── LIVE USAGE COUNTER — toolbox-wide totals streamed from Firestore ── */
+.gg-live{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px 26px;margin:0 auto 18px;padding:0 16px;position:relative;z-index:2;}
+.gg-live[hidden]{display:none;}
+.gg-live-dot{width:7px;height:7px;border-radius:50%;background:#2FA84F;animation:gg-live-pulse 2.4s ease-out infinite;}
+.gg-live-item{display:flex;align-items:baseline;gap:7px;font-family:'Barlow Condensed',sans-serif;}
+.gg-live-num{display:inline-block;font-weight:800;font-size:21px;letter-spacing:.5px;font-variant-numeric:tabular-nums;color:var(--flame-deep);}
+[data-theme="dark"] .gg-live-num{color:var(--flame-yellow);}
+.gg-live-label{font-size:12.5px;font-weight:600;letter-spacing:1.6px;text-transform:uppercase;opacity:.66;}
+.gg-live-item.bump .gg-live-num{animation:gg-live-bump .85s cubic-bezier(.25,1.2,.35,1);}
+@keyframes gg-live-bump{0%{transform:scale(1);}25%{transform:scale(1.32);color:var(--flame-orange);text-shadow:0 0 14px var(--flame-glow,rgba(255,170,0,.55));}100%{transform:scale(1);}}
+@keyframes gg-live-pulse{0%{box-shadow:0 0 0 0 rgba(47,168,79,.5);}70%{box-shadow:0 0 0 7px rgba(47,168,79,0);}100%{box-shadow:0 0 0 0 rgba(47,168,79,0);}}
+@media (prefers-reduced-motion: reduce){.gg-live-item.bump .gg-live-num,.gg-live-dot{animation:none;}}
+/* merger only: extra clearance so the feed pipe's arc stays below the counter */
+.gg-live{margin:2px auto 40px;}
 </style>
 </head>
 <body>
-<h1>PDF Merger</h1>
-<p class="subtitle">Combine multiple PDFs into one -- drag to reorder</p>
 
-<div class="card">
-  <div id="dropZone">
-    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="1.5">
-      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-      <polyline points="14 2 14 8 20 8"/>
-      <line x1="12" y1="18" x2="12" y2="12"/>
-      <line x1="9" y1="15" x2="15" y2="15"/>
-    </svg>
-    <p>Drop PDF files here or <span onclick="document.getElementById('fileInput').click()">browse</span></p>
-    <p style="font-size:0.8rem; margin-top:6px;">Supports multiple files</p>
-    <input type="file" id="fileInput" accept=".pdf" multiple>
-  </div>
+<a href="#main" class="skip-link">Skip to content</a>
+<div id="liveRegion" aria-live="polite" aria-atomic="true" class="sr-only"></div>
 
-  <div id="fileList"></div>
-  <p id="emptyMsg">No files added yet.</p>
-
-  <div id="filenameWrap" style="margin-top:20px; display:none;">
-    <label style="font-size:0.82rem; color:#9ca3af; display:block; margin-bottom:6px;">Output filename</label>
-    <div style="display:flex; align-items:center; background:#111118; border:1px solid #2a2a35; border-radius:10px; overflow:hidden; transition:border-color 0.2s;" id="filenameBox">
-      <input id="filenameInput" type="text" value="merged" placeholder="merged"
-        style="flex:1; background:none; border:none; outline:none; padding:10px 14px; color:#e2e2e8; font-size:0.93rem;"
-        onfocus="document.getElementById('filenameBox').style.borderColor='#7c3aed'"
-        onblur="document.getElementById('filenameBox').style.borderColor='#2a2a35'"
-      />
-      <span style="color:#6b7280; font-size:0.85rem; padding-right:14px;">.pdf</span>
+<!-- HEADER — family bar -->
+<header class="app-header" role="banner">
+  <div class="header-left">
+    <a class="back-btn" href="../index.html" aria-label="Back to the GG IT Toolbox">
+      <svg viewBox="0 0 12 12" aria-hidden="true">
+        <rect x="0" y="0" width="6" height="2" fill="currentColor"/>
+        <rect x="0" y="0" width="2" height="6" fill="currentColor"/>
+        <rect x="2" y="2" width="2" height="2" fill="currentColor"/>
+        <rect x="4" y="4" width="2" height="2" fill="currentColor"/>
+        <rect x="6" y="6" width="2" height="2" fill="currentColor"/>
+        <rect x="8" y="8" width="2" height="2" fill="currentColor"/>
+      </svg>
+    </a>
+    <div class="brand-email-wrap">
+      <a
+        class="brand-email-btn"
+        href="mailto:nikitas@ggcity.org?subject=PDF%20MERGGER%20Feedback"
+        aria-label="Contact nikitas@ggcity.org for troubleshooting and feedback"
+      >
+        <svg viewBox="0 0 16 12" aria-hidden="true">
+          <rect x="0" y="0" width="16" height="12" fill="currentColor"/>
+          <rect x="1" y="1" width="14" height="10" fill="var(--navy-deep)"/>
+          <rect x="1" y="1" width="2" height="2" fill="currentColor"/>
+          <rect x="3" y="2" width="2" height="2" fill="currentColor"/>
+          <rect x="5" y="3" width="2" height="2" fill="currentColor"/>
+          <rect x="7" y="4" width="2" height="2" fill="currentColor"/>
+          <rect x="13" y="1" width="2" height="2" fill="currentColor"/>
+          <rect x="11" y="2" width="2" height="2" fill="currentColor"/>
+          <rect x="9" y="3" width="2" height="2" fill="currentColor"/>
+          <rect x="1" y="9" width="2" height="2" fill="currentColor"/>
+          <rect x="13" y="9" width="2" height="2" fill="currentColor"/>
+        </svg>
+      </a>
+      <div class="brand-email-tooltip" role="tooltip">
+        <div class="brand-email-tooltip-inner">
+          <span class="brand-email-tooltip-label">Feedback &amp; Suggestions</span>
+          <span class="brand-email-tooltip-body">
+            For troubleshooting and feedback contact
+            <a href="mailto:nikitas@ggcity.org">nikitas@ggcity.org</a>
+          </span>
+        </div>
+      </div>
     </div>
   </div>
-
-  <div class="actions">
-    <button class="secondary" onclick="clearAll()">Clear All</button>
-    <button class="primary" id="mergeBtn" onclick="mergePDFs()" disabled>Merge PDFs</button>
+  <div class="header-center"></div>
+  <div class="header-right">
+    <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode" aria-pressed="false">
+      <div class="theme-switch-track" aria-hidden="true">
+        <div class="theme-switch-side sun">
+          <svg viewBox="0 0 10 10" shape-rendering="crispEdges">
+            <rect x="4" y="0" width="2" height="2" fill="currentColor"/>
+            <rect x="4" y="8" width="2" height="2" fill="currentColor"/>
+            <rect x="0" y="4" width="2" height="2" fill="currentColor"/>
+            <rect x="8" y="4" width="2" height="2" fill="currentColor"/>
+            <rect x="1" y="1" width="2" height="2" fill="currentColor"/>
+            <rect x="7" y="1" width="2" height="2" fill="currentColor"/>
+            <rect x="1" y="7" width="2" height="2" fill="currentColor"/>
+            <rect x="7" y="7" width="2" height="2" fill="currentColor"/>
+            <rect x="3" y="3" width="4" height="4" fill="currentColor"/>
+          </svg>
+        </div>
+        <div class="theme-switch-side moon">
+          <svg viewBox="0 0 10 10" shape-rendering="crispEdges">
+            <rect x="3" y="1" width="4" height="1" fill="currentColor"/>
+            <rect x="2" y="2" width="4" height="1" fill="currentColor"/>
+            <rect x="1" y="3" width="4" height="1" fill="currentColor"/>
+            <rect x="1" y="4" width="4" height="2" fill="currentColor"/>
+            <rect x="1" y="6" width="4" height="1" fill="currentColor"/>
+            <rect x="2" y="7" width="4" height="1" fill="currentColor"/>
+            <rect x="3" y="8" width="4" height="1" fill="currentColor"/>
+          </svg>
+        </div>
+        <div class="theme-switch-thumb" id="themeSwitchThumb"></div>
+      </div>
+    </button>
   </div>
+</header>
 
-  <div id="progressWrap">
-    <div id="progressBar"><div id="progressFill"></div></div>
-  </div>
-
-  <div id="status"></div>
-  <p class="hint">Files never leave your device -- everything runs in your browser.</p>
+<!-- HERO -->
+<div class="hero">
+  <h1 class="sr-only">PDF MERGGER</h1>
+  <canvas id="titleCanvas" aria-hidden="true"></canvas>
 </div>
 
+<section class="gg-live" id="ggLive" hidden aria-label="Live toolbox usage">
+  <span class="gg-live-dot" aria-hidden="true"></span>
+  <span class="gg-live-item" title="Total across everyone using this tool — updates live">
+    <span class="gg-live-num" data-stat="pdfsMerged">0</span>
+    <span class="gg-live-label">PDFs merged</span>
+  </span>
+</section>
+
+<!-- MAIN -->
+<main class="workbench" id="main" role="main">
+
+  <!-- FEED PIPE: carries dropped PDFs from the dropbox into the press -->
+  <svg id="connector" aria-hidden="true"></svg>
+
+  <!-- RIGHT COLUMN: dropbox → queue → status -->
+  <div class="side">
+
+  <!-- DROPBOX -->
+  <section class="drop-card" id="dropCard" aria-label="Add PDF documents">
+    <div id="dz" role="button" tabindex="0" aria-label="Drop PDF files here or press Enter to browse">
+      <svg class="dz-icon" width="56" height="42" viewBox="0 0 56 42" fill="none" aria-hidden="true">
+        <!-- tilted paper sheet, cartoon ink outline -->
+        <g transform="rotate(-7 28 18)">
+          <rect x="16" y="3" width="24" height="31" rx="3" fill="#FFFDF6" stroke="#3A2A16" stroke-width="2.5"/>
+          <rect x="21" y="10" width="14" height="2.6" rx="1.3" fill="#C8A84B"/>
+          <rect x="21" y="16" width="14" height="2.6" rx="1.3" fill="#D9CBAA"/>
+          <rect x="21" y="22" width="9" height="2.6" rx="1.3" fill="#D9CBAA"/>
+        </g>
+      </svg>
+      <span class="dz-big">Drop PDFs here</span>
+      <span class="dz-small">or click to browse</span>
+    </div>
+    <input type="file" id="fileInput" accept=".pdf,application/pdf" multiple>
+  </section>
+
+  <!-- QUEUE + CONTROLS (hidden until something is in the press) -->
+  <aside class="card panel-card" id="queuePanel" aria-label="Press queue and controls" hidden>
+    <ol id="fileList" aria-label="Documents in merge order — drag to reorder"></ol>
+
+    <div class="title-box">
+      <input id="titleInput" type="text" value="" placeholder="merged-document" maxlength="120" autocomplete="off" spellcheck="false" aria-label="Output title">
+      <span class="title-ext">.pdf</span>
+    </div>
+
+    <button class="press-btn" id="pressBtn" type="button" disabled>Merge &mdash; Press It</button>
+    <a class="dl-btn" id="dlBtn" hidden><span id="dlLabel">Download</span></a>
+    <button class="clear-btn" id="clearBtn" type="button">Clear</button>
+  </aside>
+
+  <div id="status" role="status"></div>
+
+  </div>
+
+  <!-- THE MACHINE -->
+  <section class="machine-card" id="machineCard" aria-label="Hydraulic press chamber">
+    <div class="machine-wrap">
+      <canvas id="machine" width="600" height="630" aria-hidden="true"></canvas>
+      <div id="blobTip" role="tooltip"></div>
+    </div>
+  </section>
+
+</main>
+
 <script>
-  const { PDFDocument } = PDFLib;
+'use strict';
 
-  let files = []; // { file, name, size, pages }
-  let dragSrcIdx = null;
-
-  // Drop zone events
-  const dz = document.getElementById('dropZone');
-  dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag-over'); });
-  dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
-  dz.addEventListener('drop', e => {
-    e.preventDefault();
-    dz.classList.remove('drag-over');
-    addFiles([...e.dataTransfer.files]);
+/* ═══════════════════════════════════════════════════════════════
+   THEME (shared family behavior)
+   ═══════════════════════════════════════════════════════════════ */
+(function initTheme() {
+  const saved = localStorage.getItem('ggpdf_theme');
+  if (saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+    document.documentElement.setAttribute('data-theme', 'dark');
+  }
+  const btn = document.getElementById('themeToggle');
+  const sync = () => btn.setAttribute('aria-pressed', String(document.documentElement.getAttribute('data-theme') === 'dark'));
+  btn.addEventListener('click', () => {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    if (isDark) document.documentElement.removeAttribute('data-theme');
+    else document.documentElement.setAttribute('data-theme', 'dark');
+    localStorage.setItem('ggpdf_theme', isDark ? 'light' : 'dark');
+    sync();
   });
+  sync();
+})();
 
-  document.getElementById('fileInput').addEventListener('change', e => {
-    addFiles([...e.target.files]);
-    e.target.value = '';
-  });
+/* ═══════════════════════════════════════════════════════════════
+   GLASS GOO TITLE — hollow glass letters, each filled with a
+   different color of sloshing goo. The whole title tilts in 3D
+   toward the mouse; the goo obeys the tilt and gets excited when
+   the mouse moves fast.
+   ═══════════════════════════════════════════════════════════════ */
+(function initTitle() {
+  const cvs = document.getElementById('titleCanvas');
+  const ctx = cvs.getContext('2d');
+  const TEXT = 'PDF MERGGER';
+  const GOO = ['#FF5D5D', '#5DAEFF', '#FFE14D', '#6BE675', '#9D7BFF',
+               '#FFB03A', '#4DE0C4', '#FF7BD5', '#C0F04D', '#FF9E7B'];
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const rnd = (a, b) => a + Math.random() * (b - a);
+  const dark = (hex, f) => {
+    const n = parseInt(hex.slice(1), 16);
+    const ch = v => Math.max(0, Math.min(255, Math.round(v * f)));
+    return `rgb(${ch(n >> 16)},${ch((n >> 8) & 255)},${ch(n & 255)})`;
+  };
 
-  async function addFiles(newFiles) {
-    const pdfs = newFiles.filter(f => f.type === 'application/pdf' || f.name.endsWith('.pdf'));
-    if (!pdfs.length) return setStatus('Please upload PDF files only.', 'error');
+  const PAD = 20;
+  let dpr = 1, LW = 0, LH = 0, fontPx = 80, baseline = 0, fontStr = '';
+  let chars = [], letters = [];
+  let maskC, maskX, inkC, inkX, liqC, liqX;
+  let solidAt = () => false;
+  let built = false;
 
-    for (const f of pdfs) {
-      const entry = { file: f, name: f.name, size: f.size, pages: '...' };
-      files.push(entry);
-      renderList();
-      // Count pages async
-      try {
-        const buf = await f.arrayBuffer();
-        const doc = await PDFDocument.load(buf, { ignoreEncryption: true });
-        entry.pages = doc.getPageCount();
-      } catch {
-        entry.pages = '?';
-      }
-      renderList();
-    }
-    hideStatus();
+  function offscreen() {
+    const c = document.createElement('canvas');
+    c.width = Math.round(LW * dpr); c.height = Math.round(LH * dpr);
+    const x = c.getContext('2d');
+    x.setTransform(dpr, 0, 0, dpr, 0, 0);
+    return [c, x];
   }
 
-  function renderList() {
-    const list = document.getElementById('fileList');
-    const emptyMsg = document.getElementById('emptyMsg');
-    document.getElementById('mergeBtn').disabled = files.length < 2;
-    document.getElementById('filenameWrap').style.display = files.length >= 2 ? 'block' : 'none';
+  function build() {
+    const avail = cvs.parentElement.clientWidth || 600;
+    fontPx = Math.min(avail, 960) / 6.0;
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    fontStr = `800 ${fontPx}px "Barlow Condensed", sans-serif`;
+    ctx.font = fontStr;
 
-    if (!files.length) {
-      list.innerHTML = '';
-      emptyMsg.style.display = 'block';
+    /* manual per-letter layout so every letter is its own goo tank */
+    const layoutChars = () => {
+      const sp = fontPx * 0.10;
+      chars = [];
+      let x = PAD;
+      for (const ch of TEXT) {
+        const w = ch === ' ' ? fontPx * 0.26 : ctx.measureText(ch).width;
+        chars.push({ ch, x, w });
+        x += w + sp;
+      }
+      LW = x - sp + PAD;
+      LH = fontPx * 1.02 + PAD * 2;
+      baseline = PAD + fontPx * 0.80;
+    };
+    layoutChars();
+    /* never overflow the container (small screens): shrink to fit */
+    if (LW > avail) {
+      fontPx *= (avail - 6) / LW;
+      fontStr = `800 ${fontPx}px "Barlow Condensed", sans-serif`;
+      ctx.font = fontStr;
+      layoutChars();
+    }
+
+    cvs.width = Math.round(LW * dpr); cvs.height = Math.round(LH * dpr);
+    cvs.style.width = LW + 'px'; cvs.style.height = LH + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    [maskC, maskX] = offscreen();
+    [inkC, inkX] = offscreen();
+    [liqC, liqX] = offscreen();
+    for (const [g, color] of [[maskX, '#FFFFFF'], [inkX, '#3A1408']]) {
+      g.font = fontStr;
+      g.textBaseline = 'alphabetic';
+      g.fillStyle = color;
+      for (const c of chars) if (c.ch !== ' ') g.fillText(c.ch, c.x, baseline);
+    }
+
+    /* pixel-analyze the glyphs: every column's bottom cavity becomes a
+       water column. Basins in the letterform (like the raised middle of
+       an M) split the goo into independent puddles. */
+    const aW = Math.ceil(LW), aH = Math.ceil(LH);
+    const ana = document.createElement('canvas');
+    ana.width = aW; ana.height = aH;
+    const anaX = ana.getContext('2d', { willReadFrequently: true });
+    anaX.font = fontStr;
+    anaX.textBaseline = 'alphabetic';
+    anaX.fillStyle = '#fff';
+    for (const c of chars) if (c.ch !== ' ') anaX.fillText(c.ch, c.x, baseline);
+    const alpha = anaX.getImageData(0, 0, aW, aH).data;
+    const solidPx = (x, y) => alpha[(y * aW + x) * 4 + 3] > 128;
+    solidAt = solidPx;
+
+    let li = 0, gSeen = 0;
+    letters = chars.filter(c => c.ch !== ' ').map(c => {
+      const x0 = Math.max(0, Math.floor(c.x));
+      const x1 = Math.min(aW - 1, Math.ceil(c.x + c.w));
+      const n = x1 - x0 + 1;
+      const bot = new Float32Array(n);      // inner floor of the cavity
+      const capTop = new Float32Array(n);   // cavity ceiling
+      const cap = new Float32Array(n);      // cavity height = max goo depth
+      const has = new Uint8Array(n);
+      for (let i = 0; i < n; i++) {
+        const x = x0 + i;
+        let y = aH - 1;
+        while (y >= 0 && !solidPx(x, y)) y--;
+        if (y < 0) continue;
+        const b = y;
+        /* the letter is one hollow tank: the cavity runs from the lowest
+           floor to the TOPMOST ceiling. Counters are just windows through
+           it (the glyph clip hides goo there), so rings like G fill all
+           the way up with no trapped air pocket. */
+        let top = 0;
+        while (top < aH && !solidPx(x, top)) top++;
+        has[i] = 1;
+        bot[i] = b + 1;
+        capTop[i] = top + 2;
+        cap[i] = Math.max(bot[i] - capTop[i], 1);
+      }
+      /* goo flows between neighbors only where the cavities connect */
+      const open = new Uint8Array(n);
+      for (let i = 0; i < n - 1; i++) {
+        open[i] = has[i] && has[i + 1] &&
+          capTop[i] <= bot[i + 1] && capTop[i + 1] <= bot[i] ? 1 : 0;
+      }
+      const d = new Float32Array(n), vel = new Float32Array(n);
+      /* the brand GG runs nearly brim-full; everyone else gets a normal pour */
+      const fillFrac = (c.ch === 'G' ? 0.9 : 0.47) + rnd(-0.03, 0.03);
+      /* pour only into basins that are deep enough AND whose floor sits in
+         the lower half of the glyph — goo pools at the bottom of letters,
+         never on high shelves like the tip of an F's top arm */
+      const basins = [];
+      let bStart = 0;
+      for (let i = 0; i < n; i++) {
+        if (i === n - 1 || !open[i]) {
+          let capMax = 0, floorMax = 0;
+          for (let q = bStart; q <= i; q++) {
+            if (cap[q] > capMax) capMax = cap[q];
+            if (bot[q] > floorMax) floorMax = bot[q];
+          }
+          if (capMax >= fontPx * 0.12 && floorMax > baseline - fontPx * 0.34) {
+            for (let q = bStart; q <= i; q++) d[q] = cap[q] * fillFrac;
+            basins.push([bStart, i]);
+          }
+          bStart = i + 1;
+        }
+      }
+      let maxBot = 0;
+      for (let i = 0; i < n; i++) if (bot[i] > maxBot) maxBot = bot[i];
+      const L = {
+        x0: c.x, x1: c.x + c.w, cx: c.x + c.w / 2, colX0: x0, n,
+        bot, capTop, cap, has, open, d, vel, maxBot, basins,
+        /* the double G wears the family GG blues (from the compressor title) */
+        color: c.ch === 'G' ? (gSeen++ ? '#99C1F1' : '#1A5FB4') : GOO[li++ % GOO.length],
+        drops: [],
+        bubbles: Array.from({ length: 2 }, () => ({
+          ci: -1, y: 0, r: rnd(fontPx * 0.014, fontPx * 0.028), v: rnd(0.05, 0.14)
+        }))
+      };
+      relaxToLevel(L, 1);   // start perfectly settled
+      return L;
+    });
+    built = true;
+  }
+
+  /* mouse → visual tilt + SHAKE. The liquid never couples to position:
+     only motion shoves it (inertia), and gravity does the rest. */
+  let tTX = 0, tTY = 0, curTX = 0, curTY = 0, excite = 0, shakeVX = 0, lastP = null;
+  window.addEventListener('pointermove', e => {
+    const nx = e.clientX / window.innerWidth - 0.5;
+    const ny = e.clientY / window.innerHeight - 0.5;
+    tTY = nx * 15;    /* rotateY deg */
+    tTX = -ny * 9;    /* rotateX deg */
+    if (lastP) {
+      excite = Math.min(excite + Math.hypot(e.clientX - lastP[0], e.clientY - lastP[1]) * 0.02, 9);
+      shakeVX = shakeVX * 0.6 + (e.clientX - lastP[0]) * 0.4;
+    }
+    lastP = [e.clientX, e.clientY];
+  }, { passive: true });
+  document.addEventListener('mouseleave', () => { tTX = 0; tTY = 0; shakeVX = 0; });
+
+  /* 1D pipe-model fluid: adjacent columns exchange goo where the cavity
+     is connected. Waves propagate, reflect off the letter's walls, and
+     climb over saddles only when they're tall enough — no fake sines. */
+  function stepFluid(L, slope, kick) {
+    const { d, vel, bot, open, cap, n } = L;
+    const K = 0.13, DAMP = 0.962;   // heavy, viscous — goo, not water
+    /* full conduits don't carry surface waves — the hydrostatic anchor
+       alone equalizes across them, so no phantom circulation can form */
+    const sat = i => d[i] >= cap[i] * 0.96;
+    for (let i = 0; i < n - 1; i++) {
+      if (!open[i] || sat(i) || sat(i + 1)) { vel[i] = 0; continue; }
+      const dh = (bot[i + 1] - d[i + 1]) - (bot[i] - d[i]) + slope;
+      vel[i] = (vel[i] + dh * K) * DAMP;
+    }
+    if (kick) {
+      for (let s = 0; s < 3; s++) {
+        vel[(Math.random() * (n - 1)) | 0] += kick * (Math.random() * 2 - 1);
+      }
+    }
+    for (let i = 0; i < n - 1; i++) {
+      if (!open[i] || !vel[i]) continue;
+      let T = vel[i] * 0.45;
+      if (T > d[i] * 0.45) T = d[i] * 0.45;
+      else if (T < -d[i + 1] * 0.45) T = -d[i + 1] * 0.45;
+      d[i] -= T; d[i + 1] += T;
+    }
+    for (let i = 0; i < n; i++) {
+      if (d[i] > cap[i]) {           // cavity ceiling: spill toward the lower side
+        const ex = d[i] - cap[i];
+        d[i] = cap[i];
+        const lOK = i > 0 && open[i - 1];
+        const rOK = i < n - 1 && open[i];
+        if (lOK && rOK) {
+          (bot[i - 1] - d[i - 1] > bot[i + 1] - d[i + 1]) ? d[i - 1] += ex : d[i + 1] += ex;
+        } else if (lOK) d[i - 1] += ex;
+        else if (rOK) d[i + 1] += ex;
+      } else if (d[i] < 0) d[i] = 0;
+    }
+  }
+
+  /* hydrostatic anchor: solve each basin's true settle level (volume-
+     conserving, ceiling-aware — full conduits saturate and the rest
+     spreads to the walls) and nudge the sim toward it. Waves stay lively,
+     but the calm state is guaranteed flat and side-balanced. */
+  function relaxToLevel(L, f) {
+    for (const [a, b] of L.basins) {
+      let V = 0, lo = 1e9, hi = 0;
+      for (let q = a; q <= b; q++) {
+        V += L.d[q];
+        if (L.capTop[q] < lo) lo = L.capTop[q];
+        if (L.bot[q] > hi) hi = L.bot[q];
+      }
+      if (V < 1) continue;
+      for (let k = 0; k < 12; k++) {
+        const y = (lo + hi) / 2;
+        let vol = 0;
+        for (let q = a; q <= b; q++) {
+          const w = L.bot[q] - y;
+          if (w > 0) vol += Math.min(w, L.cap[q]);
+        }
+        if (vol > V) lo = y; else hi = y;
+      }
+      const y = (lo + hi) / 2;
+      for (let q = a; q <= b; q++) {
+        const w = L.bot[q] - y;
+        const eq = w > 0 ? Math.min(w, L.cap[q]) : 0;
+        L.d[q] += (eq - L.d[q]) * f;
+      }
+    }
+    /* splash residue on dry shelves drips away instead of pooling */
+    if (f < 1) {
+      let q = 0;
+      for (const [a, b] of L.basins) {
+        for (; q < a; q++) L.d[q] *= 0.98;
+        q = b + 1;
+      }
+      for (; q < L.n; q++) L.d[q] *= 0.98;
+    }
+  }
+
+  function frame(now) {
+    if (!built) { requestAnimationFrame(frame); return; }
+    const t = now / 1000;
+    curTX += (tTX - curTX) * 0.09;
+    curTY += (tTY - curTY) * 0.09;
+    excite *= 0.96;
+
+    /* a fast swipe shoves the glass; the goo lags behind with inertia,
+       then gravity slowly levels it. The canvas itself never rattles. */
+    const bias = reduce ? 0 : Math.max(-0.85, Math.min(0.85, -shakeVX * 0.055));
+    shakeVX *= 0.88;
+    cvs.style.transform = reduce ? 'none'
+      : `rotateX(${curTX.toFixed(2)}deg) rotateY(${curTY.toFixed(2)}deg) translateY(${(Math.sin(t * 1.1) * 2).toFixed(2)}px)`;
+
+    /* ── liquid layer (later clipped to the glyphs) ── */
+    liqX.clearRect(0, 0, LW, LH);
+    liqX.lineJoin = 'round';
+    for (const L of letters) {
+      /* two sim substeps; mouse energy shakes random pipes */
+      const kick = excite > 0.5 ? excite * 0.3 * (fontPx / 90) : 0;
+      stepFluid(L, bias, kick);
+      stepFluid(L, bias, kick);
+      /* the anchor yields while the goo is excited, reasserts when calm */
+      relaxToLevel(L, 0.03 / (1 + excite * 1.2));
+
+      const { d, bot, has, open, n, colX0 } = L;
+      /* each basin-connected run of wet columns is its own puddle blob —
+         never smoothed or filled across disconnected shelves */
+      let i = 0;
+      while (i < n) {
+        if (!(has[i] && d[i] > 0.35)) { i++; continue; }
+        let j = i;
+        while (j + 1 < n && has[j + 1] && d[j + 1] > 0.35 && open[j]) j++;
+        if (j - i >= 2) {
+          const m = j - i + 1;
+          const sy = new Float32Array(m);
+          for (let q = 0; q < m; q++) {
+            let s = 0, c = 0;
+            for (let w = Math.max(0, q - 2); w <= Math.min(m - 1, q + 2); w++) {
+              /* clamp to the cavity ceiling: goo never draws over the counter */
+              s += bot[i + w] - Math.min(d[i + w], L.cap[i + w]); c++;
+            }
+            sy[q] = s / c;
+          }
+          /* rounded shoulders: the dome sags into the walls at the edges */
+          for (let q = 0; q < m; q++) {
+            const e = Math.min(q, m - 1 - q);
+            if (e < 4) sy[q] += (4 - e) * (4 - e) * 0.35;
+          }
+          /* chunky bezier surface, sampled sparsely so it rolls, not ripples */
+          const pp = [];
+          for (let q = 0; q < m; q += 4) pp.push([colX0 + i + q, sy[q]]);
+          if ((m - 1) % 4) pp.push([colX0 + j, sy[m - 1]]);
+          const trace = () => {
+            liqX.moveTo(pp[0][0], pp[0][1]);
+            for (let k = 1; k < pp.length - 1; k++) {
+              liqX.quadraticCurveTo(pp[k][0], pp[k][1],
+                (pp[k][0] + pp[k + 1][0]) / 2, (pp[k][1] + pp[k + 1][1]) / 2);
+            }
+            liqX.lineTo(pp[pp.length - 1][0], pp[pp.length - 1][1]);
+          };
+          let minSy = 1e9, maxBot = 0;
+          for (let q = 0; q < m; q++) {
+            if (sy[q] < minSy) minSy = sy[q];
+            if (bot[i + q] > maxBot) maxBot = bot[i + q];
+          }
+          liqX.beginPath();
+          trace();
+          liqX.lineTo(colX0 + j, bot[j] + 2);
+          for (let q = j; q >= i; q--) liqX.lineTo(colX0 + q, bot[q] + 3);
+          liqX.closePath();
+          const g = liqX.createLinearGradient(0, minSy, 0, maxBot + 3);
+          g.addColorStop(0, L.color);
+          g.addColorStop(1, dark(L.color, 0.6));
+          liqX.fillStyle = g;
+          liqX.fill();
+          /* depth: a darker band just under the surface */
+          liqX.save();
+          liqX.translate(0, 3.5);
+          liqX.beginPath();
+          trace();
+          liqX.strokeStyle = dark(L.color, 0.72);
+          liqX.globalAlpha = 0.55;
+          liqX.lineWidth = 3.5;
+          liqX.lineCap = 'round';
+          liqX.stroke();
+          liqX.restore();
+          /* fat glossy meniscus — the chunk */
+          liqX.beginPath();
+          trace();
+          liqX.strokeStyle = 'rgba(255,255,255,0.8)';
+          liqX.lineWidth = 4.5;
+          liqX.lineCap = 'round';
+          liqX.stroke();
+          /* soft belly glow */
+          const runW = colX0 + j - (colX0 + i);
+          liqX.globalAlpha = 0.18;
+          liqX.fillStyle = '#fff';
+          liqX.beginPath();
+          liqX.ellipse(colX0 + i + runW / 2, minSy + 9, runW * 0.3, 4.5, 0, 0, Math.PI * 2);
+          liqX.fill();
+          liqX.globalAlpha = 1;
+        }
+        i = j + 1;
+      }
+      /* fat lazy droplets loll off the surface when the goo is worked up */
+      if (excite > 2.6 && Math.random() < 0.16 && L.drops.length < 4) {
+        let jm = 0, vm = 0;
+        for (let s = 0; s < 8; s++) {
+          const q = (Math.random() * (n - 1)) | 0;
+          if (Math.abs(L.vel[q]) > vm) { vm = Math.abs(L.vel[q]); jm = q; }
+        }
+        if (d[jm] > 2) L.drops.push({
+          x: colX0 + jm, y: bot[jm] - d[jm] - 2,
+          vx: L.vel[jm] * rnd(0.3, 0.7), vy: -rnd(0.8, 1.8) - vm * 0.25,
+          r: rnd(fontPx * 0.02, fontPx * 0.038)
+        });
+      }
+      L.drops = L.drops.filter(p => {
+        p.vy += 0.16; p.x += p.vx; p.y += p.vy;
+        const ci = Math.round(p.x) - colX0;
+        if (ci < 0 || ci >= n || !has[ci] || p.y > L.maxBot) return false;
+        if (p.y >= bot[ci] - d[ci] - p.r) { d[ci] += p.r * 0.6; return false; }
+        liqX.fillStyle = L.color;
+        liqX.beginPath(); liqX.arc(p.x, p.y, p.r, 0, Math.PI * 2); liqX.fill();
+        return true;
+      });
+      /* bubbles rise through whichever puddle they live in */
+      for (const b of L.bubbles) {
+        if (b.ci < 0 || d[b.ci] < b.r * 3 || b.y < bot[b.ci] - d[b.ci] + b.r) {
+          b.ci = -1;
+          for (let tries = 0; tries < 6 && b.ci < 0; tries++) {
+            const q = (Math.random() * n) | 0;
+            if (has[q] && d[q] > b.r * 4) { b.ci = q; b.y = bot[q] - rnd(0, d[q] * 0.4); }
+          }
+          continue;
+        }
+        b.y -= b.v;
+        liqX.fillStyle = 'rgba(255,255,255,0.35)';
+        liqX.beginPath(); liqX.arc(colX0 + b.ci, b.y, b.r, 0, Math.PI * 2); liqX.fill();
+      }
+    }
+    /* gloss streaks sweep opposite the tilt, like a light source */
+    const gx = LW / 2 - curTY * 10;
+    liqX.fillStyle = 'rgba(255,255,255,0.20)';
+    liqX.beginPath();
+    liqX.moveTo(gx - LW * 0.30, 0); liqX.lineTo(gx - LW * 0.16, 0);
+    liqX.lineTo(gx - LW * 0.28, LH); liqX.lineTo(gx - LW * 0.42, LH);
+    liqX.closePath(); liqX.fill();
+    liqX.beginPath();
+    liqX.moveTo(gx - LW * 0.10, 0); liqX.lineTo(gx - LW * 0.06, 0);
+    liqX.lineTo(gx - LW * 0.18, LH); liqX.lineTo(gx - LW * 0.22, LH);
+    liqX.closePath(); liqX.fill();
+    /* clip the whole liquid pass to the letter glyphs */
+    liqX.globalCompositeOperation = 'destination-in';
+    liqX.drawImage(maskC, 0, 0, LW, LH);
+    liqX.globalCompositeOperation = 'source-over';
+
+    /* ── compose ── */
+    ctx.clearRect(0, 0, LW, LH);
+    /* 3D extrusion: dark copies stacked away from the tilt */
+    const exX = -curTY * 0.6, exY = 4.5 + curTX * 0.55;
+    for (let k = 6; k >= 1; k--) {
+      ctx.globalAlpha = 0.14 + 0.03 * k;
+      ctx.drawImage(inkC, exX * k / 6, exY * k / 6, LW, LH);
+    }
+    /* the front face is clear glass — clear the extrusion behind it */
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.drawImage(maskC, 0, 0, LW, LH);
+    ctx.globalCompositeOperation = 'source-over';
+    /* glass body */
+    ctx.globalAlpha = 0.20;
+    ctx.drawImage(maskC, 0, 0, LW, LH);
+    /* the goo */
+    ctx.globalAlpha = 1;
+    ctx.drawImage(liqC, 0, 0, LW, LH);
+    /* glass edge */
+    ctx.font = fontStr;
+    ctx.textBaseline = 'alphabetic';
+    ctx.lineWidth = 2.4;
+    ctx.strokeStyle = 'rgba(26,6,6,0.85)';
+    for (const c of chars) if (c.ch !== ' ') ctx.strokeText(c.ch, c.x, baseline);
+
+    requestAnimationFrame(frame);
+  }
+
+  /* test hooks: goo distribution + per-basin surface levelness */
+  window.__gooTitle = () => letters.map(L => {
+    let l = 0, r = 0;
+    for (let i = 0; i < L.n; i++) (i < L.n / 2 ? l += L.d[i] : r += L.d[i]);
+    return { l: Math.round(l), r: Math.round(r) };
+  });
+  window.__gooCols = idx => {
+    const L = letters[idx];
+    return {
+      bot: [...L.bot].map(Math.round), cap: [...L.cap].map(Math.round),
+      d: [...L.d].map(v => Math.round(v * 10) / 10), open: [...L.open], has: [...L.has]
+    };
+  };
+  window.__gooSurf = () => letters.map(L => {
+    /* max surface spread within any single connected wet basin */
+    let worst = 0, i = 0;
+    while (i < L.n) {
+      if (!(L.has[i] && L.d[i] > 1)) { i++; continue; }
+      let j = i, min = 1e9, max = -1e9;
+      while (j < L.n && L.has[j] && L.d[j] > 1) {
+        /* saturated / boundary columns have no visible free surface — skip */
+        if (L.d[j] < L.cap[j] * 0.85) {
+          const s = L.bot[j] - L.d[j];
+          if (s < min) min = s;
+          if (s > max) max = s;
+        }
+        if (j + 1 < L.n && !L.open[j]) break;
+        j++;
+      }
+      if (max - min > worst) worst = max - min;
+      i = j + 1;
+    }
+    return Math.round(worst * 10) / 10;
+  });
+
+  function start() { build(); requestAnimationFrame(frame); }
+  if (document.fonts && document.fonts.load) {
+    document.fonts.load('800 80px "Barlow Condensed"')
+      .then(() => document.fonts.ready)
+      .then(start)
+      .catch(start);
+  } else start();
+  window.addEventListener('resize', () => { if (built) build(); });
+})();
+
+/* ═══════════════════════════════════════════════════════════════
+   PDF PLUMBING
+   ═══════════════════════════════════════════════════════════════ */
+const { PDFDocument } = PDFLib;
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+/* slime palette — saturated colors that pop on the navy chamber */
+const SLIME_COLORS = [
+  '#FF5D5D', '#5DAEFF', '#FFE14D', '#6BE675', '#9D7BFF',
+  '#FFB03A', '#4DE0C4', '#FF7BD5', '#C0F04D', '#FF9E7B',
+  '#5DFFA8', '#7B8CFF'
+];
+let colorCursor = 0;
+
+let files = [];        // [{id, file, name, size, buf, pages, color, preview}]
+let nextId = 1;
+let merged = null;     // {url, name, pages} after a successful press
+const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+const $ = id => document.getElementById(id);
+const live = msg => { $('liveRegion').textContent = msg; };
+
+function fmtSize(b) {
+  if (b < 1024) return b + ' B';
+  if (b < 1048576) return (b / 1024).toFixed(1) + ' KB';
+  return (b / 1048576).toFixed(1) + ' MB';
+}
+function esc(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function shade(hex, f) { /* f<1 darken, f>1 lighten */
+  const n = parseInt(hex.slice(1), 16);
+  const ch = v => Math.max(0, Math.min(255, Math.round(v * f)));
+  return `rgb(${ch(n >> 16)},${ch((n >> 8) & 255)},${ch(n & 255)})`;
+}
+
+async function addFiles(list) {
+  if (machine.isPressing()) { setStatus('The press is mid-squish — one moment.', 'info'); return; }
+  const pdfs = [...list].filter(f => f.type === 'application/pdf' || /\.pdf$/i.test(f.name));
+  if (!pdfs.length) { setStatus('That machine only eats PDFs. Try again with .pdf files.', 'error'); return; }
+  if (merged) unfuse(); // list changed after a press — break the merged blob apart
+
+  for (const f of pdfs) {
+    const entry = {
+      id: nextId++, file: f, name: f.name, size: f.size,
+      buf: null, pages: null, color: SLIME_COLORS[colorCursor++ % SLIME_COLORS.length],
+      preview: null
+    };
+    files.push(entry);
+    conveyor.send(entry);         // parcel rides the pipe, then the hopper spits a blob
+    loadEntry(entry);             // async: bytes, page count, preview
+  }
+  renderList();
+  hideStatus();
+  live(`${pdfs.length} document${pdfs.length > 1 ? 's' : ''} added — ${files.length} in the press queue.`);
+}
+
+async function loadEntry(entry) {
+  try {
+    entry.buf = await entry.file.arrayBuffer();
+    // pdf.js transfers its buffer to the worker, so hand it a copy
+    const doc = await pdfjsLib.getDocument({ data: entry.buf.slice(0) }).promise;
+    entry.pages = doc.numPages;
+    const page = await doc.getPage(1);
+    const vp = page.getViewport({ scale: 1 });
+    const scale = 260 / vp.width;
+    const svp = page.getViewport({ scale });
+    const cvs = document.createElement('canvas');
+    cvs.width = Math.ceil(svp.width);
+    cvs.height = Math.ceil(svp.height);
+    const cx = cvs.getContext('2d');
+    cx.fillStyle = '#fff';
+    cx.fillRect(0, 0, cvs.width, cvs.height);
+    await page.render({ canvasContext: cx, viewport: svp }).promise;
+    entry.preview = cvs;
+    doc.destroy();
+  } catch (e) {
+    if (!entry.buf) { // completely unreadable
+      removeEntry(entry.id, true);
+      setStatus(`Couldn't read "${entry.name}" — the file may be corrupted.`, 'error');
       return;
     }
-    emptyMsg.style.display = 'none';
+    entry.pages = '?'; // encrypted / preview failed; pdf-lib may still merge it
+  }
+  renderList();
+}
 
-    list.innerHTML = '';
-    files.forEach((f, i) => {
-      const item = document.createElement('div');
-      item.className = 'file-item';
-      item.draggable = true;
-      item.dataset.idx = i;
+function removeEntry(id, silent) {
+  const i = files.findIndex(f => f.id === id);
+  if (i === -1) return;
+  if (merged) unfuse();
+  const [entry] = files.splice(i, 1);
+  machine.pop(entry);
+  renderList();
+  if (!silent) live(`${entry.name} removed. ${files.length} left in the queue.`);
+}
 
-      item.innerHTML = `
-        <span class="drag-handle">&#8942;&#8942;</span>
-        <span class="file-icon">📄</span>
-        <div class="file-info">
-          <div class="file-name" title="${esc(f.name)}">${esc(f.name)}</div>
-          <div class="file-size">${fmtSize(f.size)}</div>
-        </div>
-        <span class="file-pages">${f.pages === '...' ? '...' : f.pages + (f.pages === 1 ? ' page' : ' pages')}</span>
-        <button class="remove-btn" onclick="removeFile(${i})" title="Remove">&#10005;</button>
-      `;
+function moveEntry(from, to) {
+  if (to < 0 || to >= files.length || from === to) return;
+  if (merged) unfuse();
+  const [e] = files.splice(from, 1);
+  files.splice(to, 0, e);
+  renderList();
+}
 
-      item.addEventListener('dragstart', () => { dragSrcIdx = i; item.classList.add('dragging'); });
-      item.addEventListener('dragend', () => item.classList.remove('dragging'));
-      item.addEventListener('dragover', e => { e.preventDefault(); item.classList.add('drag-target'); });
-      item.addEventListener('dragleave', () => item.classList.remove('drag-target'));
-      item.addEventListener('drop', e => {
-        e.preventDefault();
-        item.classList.remove('drag-target');
-        if (dragSrcIdx !== null && dragSrcIdx !== i) {
-          const moved = files.splice(dragSrcIdx, 1)[0];
-          files.splice(i, 0, moved);
-          dragSrcIdx = null;
-          renderList();
-        }
-      });
+function clearAll() {
+  files = [];
+  colorCursor = 0;
+  conveyor.clear();
+  clearMerged();
+  machine.clear();
+  renderList();
+  hideStatus();
+  $('titleInput').value = '';
+  live('Chamber cleared.');
+}
 
-      list.appendChild(item);
+function clearMerged() {
+  if (merged) { URL.revokeObjectURL(merged.url); merged = null; }
+  $('dlBtn').hidden = true;
+  dlGoo.stop();
+}
+function unfuse() {
+  clearMerged();
+  machine.unfuse();
+  hideStatus();
+  renderList();
+}
+
+/* ── file list UI ── */
+let dragSrcIdx = null;
+function renderList() {
+  const list = $('fileList');
+  const n = files.length;
+  $('queuePanel').hidden = n === 0;
+  $('pressBtn').disabled = n < 2 || machine.isPressing();
+  list.innerHTML = '';
+
+  files.forEach((f, i) => {
+    const li = document.createElement('li');
+    li.className = 'file-row' + (merged ? ' pressed-row' : '');
+    li.draggable = true;
+
+    const pages = f.pages == null ? '&hellip;' : (f.pages === '?' ? '? pages' : f.pages + (f.pages === 1 ? ' page' : ' pages'));
+    li.innerHTML = `
+      <span class="row-chip" style="background:${f.color}" aria-hidden="true"></span>
+      <span class="row-idx" aria-hidden="true">${String(i + 1).padStart(2, '0')}</span>
+      <div class="row-info">
+        <div class="row-name" title="${esc(f.name)}">${esc(f.name)}</div>
+        <div class="row-meta">${fmtSize(f.size)} &middot; ${pages}</div>
+      </div>
+      <div class="row-btns">
+        <button class="row-btn up" title="Move up" aria-label="Move ${esc(f.name)} up" ${i === 0 ? 'disabled' : ''}>&#9650;</button>
+        <button class="row-btn dn" title="Move down" aria-label="Move ${esc(f.name)} down" ${i === n - 1 ? 'disabled' : ''}>&#9660;</button>
+        <button class="row-btn rm" title="Remove" aria-label="Remove ${esc(f.name)}">&#10005;</button>
+      </div>`;
+
+    li.querySelector('.up').addEventListener('click', () => moveEntry(i, i - 1));
+    li.querySelector('.dn').addEventListener('click', () => moveEntry(i, i + 1));
+    li.querySelector('.rm').addEventListener('click', () => removeEntry(f.id));
+
+    li.addEventListener('dragstart', () => { dragSrcIdx = i; li.classList.add('dragging'); });
+    li.addEventListener('dragend', () => li.classList.remove('dragging'));
+    li.addEventListener('dragover', e => { e.preventDefault(); li.classList.add('drag-target'); });
+    li.addEventListener('dragleave', () => li.classList.remove('drag-target'));
+    li.addEventListener('drop', e => {
+      e.preventDefault();
+      li.classList.remove('drag-target');
+      if (dragSrcIdx !== null && dragSrcIdx !== i) moveEntry(dragSrcIdx, i);
+      dragSrcIdx = null;
+    });
+
+    list.appendChild(li);
+  });
+}
+
+function setStatus(msg, type, html) {
+  const el = $('status');
+  if (html) el.innerHTML = msg; else el.textContent = msg;
+  el.className = type;
+}
+function hideStatus() { const el = $('status'); el.className = ''; el.textContent = ''; }
+
+function outputName() {
+  const raw = ($('titleInput').value || 'merged-document').trim() || 'merged-document';
+  return raw.replace(/\.pdf$/i, '').replace(/[\\/:*?"<>|]/g, '-');
+}
+
+/* ── the merge itself (runs while the pistons slam) ── */
+async function doMerge() {
+  const out = await PDFDocument.create();
+  const title = outputName();
+  out.setTitle(title);
+  out.setProducer('GG IT Toolbox — PDF MERGGER');
+  for (const f of files) {
+    if (!f.buf) f.buf = await f.file.arrayBuffer();
+    const doc = await PDFDocument.load(f.buf, { ignoreEncryption: true });
+    const pages = await out.copyPages(doc, doc.getPageIndices());
+    pages.forEach(p => out.addPage(p));
+  }
+  const bytes = await out.save();
+  const blob = new Blob([bytes], { type: 'application/pdf' });
+  return { url: URL.createObjectURL(blob), name: title + '.pdf', pages: out.getPageCount() };
+}
+
+async function pressIt() {
+  if (files.length < 2 || machine.isPressing()) return;
+  if (merged) unfuse();
+  hideStatus();
+  $('pressBtn').disabled = true;
+  setStatus('Squishing&hellip;', 'info', true);
+  live('Merging documents.');
+
+  const mergePromise = doMerge();
+  try {
+    const [result] = await Promise.all([mergePromise, machine.press()]);
+    merged = result;
+    machine.fuse(result);
+    renderList();
+    /* no auto-download: let them savor the squish, then smash the button */
+    const dl = $('dlBtn');
+    dl.href = merged.url;
+    dl.download = merged.name;
+    $('dlLabel').textContent = `Download ${merged.name}`;
+    dl.hidden = false;
+    dlGoo.start(files.map(f => f.color));
+    hideStatus();   // the goo button IS the confirmation
+    live(`Merge complete. ${merged.name} is ready to download.`);
+    window.ggStatReport && window.ggStatReport('merger', 1);
+  } catch (err) {
+    machine.abortPress();
+    setStatus('The press jammed: ' + (err && err.message ? err.message : err) + ' — remove the problem file and try again.', 'error');
+    live('Merge failed.');
+  } finally {
+    $('pressBtn').disabled = files.length < 2;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   THE MACHINE — soft-body slime physics in a navy chamber
+   ═══════════════════════════════════════════════════════════════ */
+const machine = (() => {
+  const canvas = $('machine');
+  const ctx = canvas.getContext('2d');
+  const W = 600, H = 630;
+
+  /* geometry */
+  const FLOOR = H - 52;
+  const WALL_L = 50, WALL_R = W - 50;       // resting piston faces
+  const PLATE_TOP = 150;                    // tall plates: no goo escapes over the top
+  const PLATE_W = 18;
+  const DIRT = 26;                          // dirt border thickness around the carved chamber
+  const HOP = { cx: W / 2, topY: 2, topW: 150, neckY: 60, neckW: 96, exitY: 98 };  // rim right on the box's top edge
+
+  /* sim state */
+  let blobs = [];            // live Blob instances
+  const feedQueue = [];      // entries waiting for the hopper
+  let feedTimer = 0;
+  let particles = [];
+  let shake = 0;
+  let flash = 0;
+  let tubeSquish = 0;        // hopper recoil when spitting
+  let hoverBlob = null;
+  let mouse = { x: -1, y: -1 };
+  let grab = null;           // {blob, offx, offy, hist:[{x,y,t}], moved, t0}
+  let lastSdt = 1 / 180;     // most recent physics substep, for throw velocity
+
+  /* Where's My Water scenery: pre-scattered dirt speckles & pebbles */
+  const dirtSpecks = [], sandSpecks = [], pebbles = [];
+  for (let i = 0; i < 90; i++) {
+    const edge = Math.floor(Math.random() * 4);
+    const p = { r: 1 + Math.random() * 2.6, c: Math.random() < 0.5 ? '#4E2E12' : '#96683A' };
+    if (edge === 0)      { p.x = Math.random() * DIRT;           p.y = Math.random() * H; }
+    else if (edge === 1) { p.x = W - Math.random() * DIRT;       p.y = Math.random() * H; }
+    else if (edge === 2) { p.x = Math.random() * W;              p.y = Math.random() * 20; }
+    else                 { p.x = Math.random() * W;              p.y = FLOOR + Math.random() * (H - FLOOR); }
+    dirtSpecks.push(p);
+  }
+  for (let i = 0; i < 34; i++) {
+    sandSpecks.push({
+      x: DIRT + 8 + Math.random() * (W - 2 * DIRT - 16),
+      y: 30 + Math.random() * (FLOOR - 60),
+      r: 1 + Math.random() * 1.8,
+      c: Math.random() < 0.5 ? 'rgba(122,78,38,0.28)' : 'rgba(255,236,190,0.5)'
+    });
+  }
+  for (let i = 0; i < 7; i++) {
+    const k = 6 + (Math.random() * 2 | 0);
+    pebbles.push({
+      x: 26 + Math.random() * (W - 52),
+      y: FLOOR + 20 + Math.random() * 14,
+      rx: 6 + Math.random() * 8,
+      ry: 4.5 + Math.random() * 3.5,
+      /* stable per-stone lumpy silhouette */
+      jit: Array.from({ length: k }, () => 0.8 + Math.random() * 0.4),
+      c: ['#A39A88', '#8F8574', '#B0A48C'][i % 3]
+    });
+  }
+  /* smaller, darker stones embedded in the dirt frame */
+  const frameStones = [];
+  for (let i = 0; i < 7; i++) {
+    const band = i % 3;
+    frameStones.push({
+      x: band === 0 ? 7 + Math.random() * 12 : band === 1 ? W - 19 + Math.random() * 12 : 44 + Math.random() * (W - 88),
+      y: band === 2 ? 5 + Math.random() * 8 : 70 + Math.random() * (FLOOR - 140),
+      rx: 3.5 + Math.random() * 3.5,
+      ry: 2.8 + Math.random() * 2.4,
+      jit: Array.from({ length: 6 }, () => 0.8 + Math.random() * 0.4),
+      c: ['#7A6A52', '#6E5E48', '#86765C'][i % 3],
+      embedded: true
     });
   }
 
-  function removeFile(i) {
-    files.splice(i, 1);
-    renderList();
-    if (!files.length) hideStatus();
+  /* cartoon stone: lumpy silhouette, lit-from-above gradient, ink line */
+  function drawStone(p) {
+    const k = p.jit.length;
+    const stone = () => {
+      ctx.beginPath();
+      for (let i = 0; i <= k; i++) {
+        const a = (i % k) / k * Math.PI * 2 - Math.PI / 2;
+        const b = ((i + 1) % k) / k * Math.PI * 2 - Math.PI / 2;
+        const x1 = p.x + Math.cos(a) * p.rx * p.jit[i % k];
+        const y1 = p.y + Math.sin(a) * p.ry * p.jit[i % k];
+        const x2 = p.x + Math.cos(b) * p.rx * p.jit[(i + 1) % k];
+        const y2 = p.y + Math.sin(b) * p.ry * p.jit[(i + 1) % k];
+        i === 0 ? ctx.moveTo((x1 + x2) / 2, (y1 + y2) / 2)
+                : ctx.quadraticCurveTo(x1, y1, (x1 + x2) / 2, (y1 + y2) / 2);
+      }
+      ctx.closePath();
+    };
+    if (!p.embedded) {
+      ctx.fillStyle = 'rgba(46,24,6,0.3)';
+      ctx.beginPath();
+      ctx.ellipse(p.x + 1, p.y + p.ry * 0.9, p.rx * 1.02, p.ry * 0.4, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    const sg = ctx.createLinearGradient(0, p.y - p.ry, 0, p.y + p.ry);
+    sg.addColorStop(0, shade(p.c, 1.22));
+    sg.addColorStop(0.55, p.c);
+    sg.addColorStop(1, shade(p.c, 0.68));
+    stone();
+    ctx.fillStyle = sg;
+    ctx.fill();
+    ctx.strokeStyle = p.embedded ? '#33220E' : '#3E2E1A';
+    ctx.lineWidth = p.embedded ? 2 : 2.4;
+    ctx.lineJoin = 'round';
+    ctx.stroke();
+    ctx.fillStyle = `rgba(255,250,235,${p.embedded ? 0.3 : 0.5})`;
+    ctx.beginPath();
+    ctx.ellipse(p.x - p.rx * 0.32, p.y - p.ry * 0.42, p.rx * 0.28, p.ry * 0.2, -0.4, 0, Math.PI * 2);
+    ctx.fill();
   }
 
-  function clearAll() {
-    files = [];
-    renderList();
-    hideStatus();
-  }
+  /* press state machine: idle | anticipate | drive | hold | release */
+  let press = { state: 'idle', t: 0, resolve: null, faceL: WALL_L, faceR: WALL_R, gapTarget: 0 };
 
-  async function mergePDFs() {
-    if (files.length < 2) return;
+  const rnd = (a, b) => a + Math.random() * (b - a);
+  const easeOutCubic = t => 1 - Math.pow(1 - t, 3);
+  const easeInCubic = t => t * t * t;
+  const easeOutBack = t => 1 + 2.2 * Math.pow(t - 1, 3) + 1.2 * Math.pow(t - 1, 2);
 
-    setStatus('Merging PDFs...', 'info');
-    setProgress(0);
-    document.getElementById('mergeBtn').disabled = true;
+  /* ── soft-body blob ── */
+  class Blob {
+    constructor(entry, x, y, r, squeezeX) {
+      this.entry = entry;        // null for the merged blob
+      this.segments = null;      // merged blob: [{color, frac}]
+      this.mergedInfo = null;
+      this.r = r;
+      this.restArea = Math.PI * r * r;
+      this.N = 16;
+      this.nodes = [];
+      this.wobble = Math.random() * 6.28;
+      this.dead = false;
+      const rx = squeezeX ? Math.min(squeezeX, r) : r;
+      const ry = this.restArea / (Math.PI * rx);
+      for (let i = 0; i < this.N; i++) {
+        const a = (i / this.N) * Math.PI * 2;
+        const px = x + Math.cos(a) * rx;
+        const py = y + Math.sin(a) * ry;
+        this.nodes.push({ x: px, y: py, px: px, py: py - rnd(1, 3) });
+      }
+      this.chord = 2 * Math.PI * r / this.N;
+      this.pr = Math.max(5, r * 0.22);      // node collision radius
+    }
 
-    try {
-      const merged = await PDFDocument.create();
-      for (let i = 0; i < files.length; i++) {
-        const buf = await files[i].file.arrayBuffer();
-        const doc = await PDFDocument.load(buf, { ignoreEncryption: true });
-        const pages = await merged.copyPages(doc, doc.getPageIndices());
-        pages.forEach(p => merged.addPage(p));
-        setProgress(Math.round(((i + 1) / files.length) * 90));
+    center() {
+      let cx = 0, cy = 0;
+      for (const n of this.nodes) { cx += n.x; cy += n.y; }
+      return { x: cx / this.N, y: cy / this.N };
+    }
+    area() {
+      let a = 0;
+      for (let i = 0; i < this.N; i++) {
+        const p = this.nodes[i], q = this.nodes[(i + 1) % this.N];
+        a += p.x * q.y - q.x * p.y;
+      }
+      return Math.abs(a / 2);
+    }
+    bbox() {
+      let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+      for (const n of this.nodes) {
+        if (n.x < x0) x0 = n.x; if (n.x > x1) x1 = n.x;
+        if (n.y < y0) y0 = n.y; if (n.y > y1) y1 = n.y;
+      }
+      return { x0, y0, x1, y1 };
+    }
+    contains(x, y) {
+      let inside = false;
+      for (let i = 0, j = this.N - 1; i < this.N; j = i++) {
+        const a = this.nodes[i], b = this.nodes[j];
+        if ((a.y > y) !== (b.y > y) && x < (b.x - a.x) * (y - a.y) / (b.y - a.y) + a.x) inside = !inside;
+      }
+      return inside;
+    }
+    impulse(mag) {
+      for (const n of this.nodes) { n.px += rnd(-mag, mag); n.py += rnd(-mag, mag); }
+    }
+
+    integrate(dt) {
+      const g = 1500;
+      const damp = 0.992;
+      for (const n of this.nodes) {
+        const vx = (n.x - n.px) * damp;
+        const vy = (n.y - n.py) * damp;
+        n.px = n.x; n.py = n.y;
+        n.x += vx;
+        n.y += vy + g * dt * dt;
+      }
+    }
+
+    constrain() {
+      const nodes = this.nodes, N = this.N;
+      /* perimeter springs */
+      for (let i = 0; i < N; i++) {
+        const a = nodes[i], b = nodes[(i + 1) % N];
+        let dx = b.x - a.x, dy = b.y - a.y;
+        const d = Math.hypot(dx, dy) || 0.0001;
+        const diff = (d - this.chord) / d * 0.5;
+        dx *= diff; dy *= diff;
+        a.x += dx; a.y += dy;
+        b.x -= dx; b.y -= dy;
+      }
+      /* pressure: nudge nodes along their normals toward rest area */
+      const areaErr = (this.restArea - this.area()) / this.restArea;
+      const k = Math.min(0.6, Math.max(-0.6, areaErr)) * this.r * 0.045;
+      if (Math.abs(k) > 0.0005) {
+        for (let i = 0; i < N; i++) {
+          const prev = nodes[(i - 1 + N) % N], next = nodes[(i + 1) % N], n = nodes[i];
+          let nx = next.y - prev.y, ny = prev.x - next.x; // outward normal
+          const len = Math.hypot(nx, ny) || 0.0001;
+          n.x += nx / len * k;
+          n.y += ny / len * k;
+        }
+      }
+      /* world collision — the goo is sealed in: floor, ceiling, walls and
+         piston faces. While the press runs, the faces act full-height so
+         nothing squirts over the top of the plates. */
+      const fl = press.faceL + PLATE_W / 2 + 2, fr = press.faceR - PLATE_W / 2 - 2;
+      const squeezing = press.state === 'anticipate' || press.state === 'drive' || press.state === 'hold';
+      for (const n of nodes) {
+        if (n.y > FLOOR - 3) {
+          n.y = FLOOR - 3;
+          n.px = n.x + (n.x - n.px) * 0.35; // floor friction
+        }
+        if (n.y < 10) {                      // ceiling: bounce off, damped
+          const vy = n.y - n.py;
+          n.y = 10;
+          n.py = n.y + vy * 0.45;
+        }
+        const inPlateBand = squeezing || n.y > PLATE_TOP;
+        const lb = inPlateBand ? fl : DIRT + 6;
+        const rb = inPlateBand ? fr : W - DIRT - 6;
+        if (n.x < lb) { const vx = n.x - n.px; n.x = lb; n.px = n.x + vx * 0.4; }
+        if (n.x > rb) { const vx = n.x - n.px; n.x = rb; n.px = n.x + vx * 0.4; }
+        /* the feed pipe is a solid obstacle with an open channel down the
+           middle: goo outside bounces off its walls (never gets vacuumed
+           in), goo shoved up inside is free — gravity drains it back out */
+        if (n.y < HOP.exitY + 4 && n.y > HOP.topY - 10) {
+          const funnelT = Math.min(Math.max(n.y - HOP.topY, 0) / (HOP.neckY - HOP.topY), 1);
+          const halfW = HOP.topW / 2 + (HOP.neckW / 2 - HOP.topW / 2) * funnelT;
+          const dx = n.x - HOP.cx, adx = Math.abs(dx);
+          const inner = halfW - 6, outer = halfW + 7;
+          if (adx > inner && adx < outer) {
+            const vx = n.x - n.px;
+            const side = adx < (inner + outer) / 2 ? inner : outer;
+            n.x = HOP.cx + (dx < 0 ? -side : side);
+            n.px = n.x + vx * 0.4;
+          }
+        }
+      }
+    }
+
+    /* ── drawing ── */
+    path() {
+      const nodes = this.nodes, N = this.N;
+      ctx.beginPath();
+      let mx = (nodes[0].x + nodes[N - 1].x) / 2;
+      let my = (nodes[0].y + nodes[N - 1].y) / 2;
+      ctx.moveTo(mx, my);
+      for (let i = 0; i < N; i++) {
+        const a = nodes[i], b = nodes[(i + 1) % N];
+        ctx.quadraticCurveTo(a.x, a.y, (a.x + b.x) / 2, (a.y + b.y) / 2);
+      }
+      ctx.closePath();
+    }
+
+    draw(t, hovered, index) {
+      const c = this.center();
+      const bb = this.bbox();
+
+      /* contact shadow */
+      const shW = (bb.x1 - bb.x0) * 0.44;
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, 0.35 - (FLOOR - bb.y1) / 300);
+      ctx.fillStyle = '#000';
+      ctx.beginPath();
+      ctx.ellipse(c.x, FLOOR - 2, shW, 7, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      /* body — Where's My Water goo: opaque, candy-bright */
+      const fill = this.segments ? 'rgba(247,240,222,0.97)' : this.entry.color;
+      this.path();
+      ctx.save();
+      if (hovered) {
+        ctx.shadowColor = this.segments ? '#FFD23F' : this.entry.color;
+        ctx.shadowBlur = 26;
+      }
+      ctx.globalAlpha = 0.96;
+      ctx.fillStyle = fill;
+      ctx.fill();
+      ctx.restore();
+
+      /* preview paper clipped inside the goo */
+      ctx.save();
+      this.path();
+      ctx.clip();
+      const preview = this.segments ? this.mergedInfo.preview : this.entry.preview;
+      const w = bb.x1 - bb.x0, h = bb.y1 - bb.y0;
+      const tilt = Math.sin(t * 1.4 + this.wobble) * 0.035;
+      if (preview) {
+        const pw = Math.max(34, Math.min(w, h * preview.width / preview.height) * 0.62);
+        const ph = pw * preview.height / preview.width;
+        ctx.translate(c.x, c.y);
+        ctx.rotate(tilt);
+        ctx.fillStyle = 'rgba(9,30,74,0.35)';
+        ctx.fillRect(-pw / 2 + 3, -ph / 2 + 3, pw, ph);
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(-pw / 2 - 2, -ph / 2 - 2, pw + 4, ph + 4);
+        ctx.drawImage(preview, -pw / 2, -ph / 2, pw, ph);
+      } else if (!this.segments) {
+        /* placeholder pixel doc while the preview renders */
+        const s = Math.max(20, Math.min(w, h) * 0.3);
+        ctx.translate(c.x, c.y);
+        ctx.rotate(tilt);
+        ctx.fillStyle = 'rgba(255,255,255,0.85)';
+        ctx.fillRect(-s / 2, -s * 0.62, s, s * 1.24);
+        ctx.fillStyle = shade(this.entry.color, 0.55);
+        for (let i = 0; i < 4; i++) ctx.fillRect(-s / 2 + s * 0.15, -s * 0.42 + i * s * 0.28, s * 0.7, s * 0.09);
+      }
+      ctx.restore();
+
+      /* merged title stamp */
+      if (this.segments && this.mergedInfo) {
+        ctx.save();
+        this.path();
+        ctx.clip();
+        const label = this.mergedInfo.name.replace(/\.pdf$/i, '');
+        ctx.font = '700 15px "Barlow Condensed", sans-serif';
+        const tw = Math.min(ctx.measureText(label.toUpperCase()).width + 18, w * 0.8);
+        const ty = c.y + h * 0.26;
+        ctx.fillStyle = '#C8A84B';
+        ctx.fillRect(c.x - tw / 2, ty - 11, tw, 22);
+        ctx.fillStyle = '#1A0606';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(label.toUpperCase().slice(0, 28), c.x, ty + 1, tw - 12);
+        ctx.restore();
       }
 
-      const bytes = await merged.save();
-      setProgress(100);
+      /* border: single color, or the merged color chunks */
+      ctx.save();
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      if (this.segments) {
+        const nodes = this.nodes, N = this.N;
+        let seg = 0, used = 0;
+        let quota = Math.max(1, Math.round(this.segments[0].frac * N));
+        for (let i = 0; i < N; i++) {
+          const a = nodes[i], b = nodes[(i + 1) % N];
+          const c1 = nodes[(i + 2) % N];
+          ctx.strokeStyle = shade(this.segments[seg].color, 0.9);
+          ctx.lineWidth = 8;
+          ctx.beginPath();
+          ctx.moveTo((a.x + b.x) / 2, (a.y + b.y) / 2);
+          ctx.quadraticCurveTo(b.x, b.y, (b.x + c1.x) / 2, (b.y + c1.y) / 2);
+          ctx.stroke();
+          used++;
+          if (used >= quota && seg < this.segments.length - 1) {
+            seg++; used = 0;
+            quota = Math.max(1, Math.round(this.segments[seg].frac * N));
+          }
+        }
+      } else {
+        this.path();
+        ctx.strokeStyle = shade(this.entry.color, 0.5);
+        ctx.lineWidth = 5.5;
+        ctx.stroke();
+      }
+      ctx.restore();
 
-      const blob = new Blob([bytes], { type: 'application/pdf' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      const fname = (document.getElementById('filenameInput').value.trim() || 'merged').replace(/\.pdf$/i, '');
-      a.download = fname + '.pdf';
-      a.click();
-      URL.revokeObjectURL(url);
+      /* cartoon gloss: one soft sweep + one hard sparkle */
+      ctx.save();
+      this.path();
+      ctx.clip();
+      ctx.globalAlpha = 0.28;
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.ellipse(c.x - w * 0.18, bb.y0 + h * 0.2, w * 0.2, h * 0.11, -0.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 0.6;
+      ctx.beginPath();
+      ctx.ellipse(c.x - w * 0.28, bb.y0 + h * 0.14, Math.max(2.5, w * 0.045), Math.max(2, h * 0.03), -0.5, 0, Math.PI * 2);
+      ctx.fill();
+      /* bottom inner shade for volume */
+      ctx.globalAlpha = 0.12;
+      ctx.fillStyle = '#000';
+      ctx.beginPath();
+      ctx.ellipse(c.x, bb.y1 + h * 0.05, w * 0.42, h * 0.2, 0, Math.PI, 0, true);
+      ctx.fill();
+      ctx.restore();
 
-      const total = merged.getPageCount();
-      setStatus(`Done! Merged ${files.length} files into ${total} page${total !== 1 ? 's' : ''}. Download started.`, 'success');
-    } catch (err) {
-      setStatus('Error merging PDFs: ' + err.message, 'error');
-    } finally {
-      document.getElementById('mergeBtn').disabled = files.length < 2;
-      setTimeout(() => setProgress(0), 1200);
+      /* order badge (only while separate blobs) */
+      if (!this.segments && blobs.length > 1 && index >= 0) {
+        const bx = c.x, by = bb.y0 - 1;
+        ctx.save();
+        ctx.fillStyle = '#5A3A1A';
+        ctx.fillRect(bx - 10, by - 10, 20, 17);
+        ctx.strokeStyle = shade(this.entry.color, 0.9);
+        ctx.lineWidth = 2;
+        ctx.strokeRect(bx - 10, by - 10, 20, 17);
+        ctx.fillStyle = '#FFD23F';
+        ctx.font = '8px "Press Start 2P", monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(String(index + 1), bx, by - 1);
+        ctx.restore();
+      }
     }
   }
 
-  function setProgress(val) {
-    const wrap = document.getElementById('progressWrap');
-    const fill = document.getElementById('progressFill');
-    wrap.style.display = val > 0 ? 'block' : 'none';
-    fill.style.width = val + '%';
+  /* ── blob ↔ blob collisions: node repulsion + polygon ejection ── */
+  function collideBlobs() {
+    for (let i = 0; i < blobs.length; i++) {
+      for (let j = i + 1; j < blobs.length; j++) {
+        const A = blobs[i], B = blobs[j];
+        const ca = A.center(), cb = B.center();
+        const span = (A.r + B.r) * 1.6;
+        if (Math.abs(ca.x - cb.x) > span || Math.abs(ca.y - cb.y) > span) continue;
+        const minD = A.pr + B.pr;
+        for (const na of A.nodes) {
+          for (const nb of B.nodes) {
+            let dx = nb.x - na.x, dy = nb.y - na.y;
+            const d2 = dx * dx + dy * dy;
+            if (d2 > minD * minD || d2 === 0) continue;
+            const d = Math.sqrt(d2);
+            const push = (minD - d) / d * 0.5;
+            dx *= push; dy *= push;
+            na.x -= dx; na.y -= dy;
+            nb.x += dx; nb.y += dy;
+          }
+        }
+        /* eject stray nodes that tunneled inside the other blob */
+        for (const [P, Q, cq] of [[A, B, cb], [B, A, ca]]) {
+          for (const n of P.nodes) {
+            if (Q.contains(n.x, n.y)) {
+              let dx = n.x - cq.x, dy = n.y - cq.y;
+              const d = Math.hypot(dx, dy) || 0.001;
+              n.x += dx / d * 3;
+              n.y += dy / d * 3;
+            }
+          }
+        }
+      }
+    }
   }
 
-  function setStatus(msg, type) {
-    const el = document.getElementById('status');
-    el.textContent = msg;
-    el.className = type;
+  /* ── hopper feed ── */
+  function feed(entry) { feedQueue.push(entry); }
+
+  function radiusFor(entry, crowd) {
+    const kb = Math.max(entry.size / 1024, 8);
+    let r = 30 + Math.min(24, Math.sqrt(kb) * 0.9);
+    r *= Math.max(0.58, Math.min(1, Math.sqrt(7 / Math.max(crowd, 1))));
+    return r;
   }
 
-  function hideStatus() {
-    document.getElementById('status').className = '';
-    document.getElementById('status').style.display = 'none';
+  function spitBlob(entry) {
+    const crowd = files.length;
+    const r = radiusFor(entry, crowd);
+    const b = new Blob(entry, HOP.cx + rnd(-4, 4), HOP.exitY - 26, r, HOP.neckW / 2 - 8);
+    /* give it a spit: downward + slight sideways kick */
+    const kick = rnd(-1.6, 1.6);
+    for (const n of b.nodes) { n.py -= rnd(2.5, 4.5); n.px -= kick; }
+    blobs.push(b);
+    tubeSquish = 1;
+    for (let i = 0; i < 7; i++) {
+      particles.push({
+        x: HOP.cx + rnd(-HOP.neckW / 3, HOP.neckW / 3), y: HOP.exitY + rnd(-4, 10),
+        vx: rnd(-40, 40), vy: rnd(20, 120),
+        r: rnd(2, 4.5), color: entry.color, life: 1
+      });
+    }
   }
 
-  function fmtSize(b) {
-    if (b < 1024) return b + ' B';
-    if (b < 1024 * 1024) return (b / 1024).toFixed(1) + ' KB';
-    return (b / 1024 / 1024).toFixed(1) + ' MB';
+  function pop(entry) {
+    const i = blobs.findIndex(b => b.entry && b.entry.id === entry.id);
+    if (i === -1) return;
+    const b = blobs[i];
+    const c = b.center();
+    splat(c.x, c.y, [entry.color], reduceMotion ? 8 : 22, b.r);
+    blobs.splice(i, 1);
   }
 
-  function esc(s) {
-    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  function splat(x, y, colors, count, spread) {
+    for (let i = 0; i < count; i++) {
+      const a = rnd(0, Math.PI * 2);
+      const sp = rnd(40, 320);
+      particles.push({
+        x: x + rnd(-spread, spread) * 0.4, y: y + rnd(-spread, spread) * 0.4,
+        vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 80,
+        r: rnd(2.5, 6), color: colors[i % colors.length], life: 1
+      });
+    }
   }
 
-  renderList();
+  function clear() {
+    blobs = [];
+    feedQueue.length = 0;
+    particles = [];
+    grab = null;
+    press = { state: 'idle', t: 0, resolve: null, faceL: WALL_L, faceR: WALL_R, gapTarget: 0 };
+  }
+
+  /* ── press sequence ── */
+  function isPressing() { return press.state !== 'idle'; }
+
+  function pressAction() {
+    return new Promise(resolve => {
+      grab = null;  // the press outranks the hand
+      /* squeeze until the goo fills the gap column */
+      const totalArea = blobs.reduce((s, b) => s + b.restArea, 0);
+      const gap = Math.max(110, Math.min(totalArea / 260, WALL_R - WALL_L - 140));
+      press = { state: 'anticipate', t: 0, resolve, faceL: press.faceL, faceR: press.faceR, gapTarget: gap };
+    });
+  }
+
+  function abortPress() {
+    if (press.resolve) press.resolve = null;
+    press.state = 'release';
+    press.t = 0;
+  }
+
+  /* fuse all blobs into one big multi-border blob */
+  function fuse(result) {
+    if (!blobs.length) return;
+    const totalArea = blobs.reduce((s, b) => s + b.area(), 0);
+    let cx = 0, cy = 0;
+    for (const b of blobs) { const c = b.center(); cx += c.x; cy += c.y; }
+    cx /= blobs.length; cy /= blobs.length;
+
+    /* the press compacts documents: merged blob is denser than the sum */
+    const maxR = Math.min((WALL_R - WALL_L) / 2 - 46, 105);
+    const area = Math.min(totalArea * 0.82, Math.PI * maxR * maxR);
+    const r = Math.sqrt(area / Math.PI);
+
+    const colorsInOrder = files.map(f => ({ color: f.color, area: Math.PI * Math.pow(radiusFor(f, files.length), 2) }));
+    const sum = colorsInOrder.reduce((s, c) => s + c.area, 0) || 1;
+
+    const gapHalf = Math.max((press.faceR - press.faceL) / 2 - PLATE_W - 8, 30);
+    const big = new Blob(null, cx, Math.min(cy, FLOOR - 20), r, Math.min(gapHalf, r * 0.6));
+    big.N = big.nodes.length;
+    big.segments = colorsInOrder.map(c => ({ color: c.color, frac: c.area / sum }));
+    big.mergedInfo = { name: result.name, pages: result.pages, preview: files[0].preview };
+
+    splat(cx, cy, files.map(f => f.color), reduceMotion ? 12 : 44, r);
+    flash = reduceMotion ? 0 : 0.85;
+    shake = reduceMotion ? 0 : 16;
+
+    blobs = [big];
+    press.state = 'release';
+    press.t = 0;
+  }
+
+  /* break the merged blob back into per-file blobs (list was edited) */
+  function unfuse() {
+    if (!blobs.some(b => b.segments)) return;
+    blobs = blobs.filter(b => !b.segments);
+    feedQueue.length = 0;
+    for (const f of files) feed(f);
+  }
+
+  function updatePress(dt) {
+    press.t += dt;
+    const t = press.t;
+    switch (press.state) {
+      case 'anticipate': {  /* pull back a touch before the slam */
+        const k = easeOutCubic(Math.min(t / 0.28, 1)) * 16;
+        press.faceL = WALL_L - k;
+        press.faceR = WALL_R + k;
+        if (t >= 0.28) { press.state = 'drive'; press.t = 0; }
+        break;
+      }
+      case 'drive': {       /* accelerate inward — the slam */
+        const D = 1.15;
+        const k = easeInCubic(Math.min(t / D, 1));
+        const startL = WALL_L - 16, startR = WALL_R + 16;
+        const endL = W / 2 - press.gapTarget / 2, endR = W / 2 + press.gapTarget / 2;
+        press.faceL = startL + (endL - startL) * k;
+        press.faceR = startR + (endR - startR) * k;
+        if (!reduceMotion) shake = Math.max(shake, k * 6);
+        if (t >= D) {
+          press.state = 'hold'; press.t = 0;
+          if (!reduceMotion) {
+            shake = 13;
+            /* impact sparks off both faces */
+            for (const fx of [press.faceL, press.faceR]) {
+              for (let i = 0; i < 9; i++) {
+                particles.push({
+                  x: fx, y: rnd(PLATE_TOP + 40, FLOOR - 30),
+                  vx: rnd(-140, 140), vy: rnd(-260, -60),
+                  r: rnd(1.5, 3), color: i % 2 ? '#FFD23F' : '#F0D078', life: rnd(0.5, 0.9)
+                });
+              }
+            }
+          }
+        }
+        break;
+      }
+      case 'hold': {        /* max pressure: vibrate and wait for the merge */
+        const vib = reduceMotion ? 0 : Math.sin(t * 55) * 1.6;
+        press.faceL = W / 2 - press.gapTarget / 2 + vib;
+        press.faceR = W / 2 + press.gapTarget / 2 - vib;
+        if (t >= 0.5 && press.resolve) { const r = press.resolve; press.resolve = null; r(); }
+        /* fuse() or abortPress() moves us on from outside */
+        break;
+      }
+      case 'release': {     /* springy retreat */
+        const D = 0.85;
+        const k = Math.min(t / D, 1);
+        const e = easeOutBack(k);
+        press.faceL = press.faceL + (WALL_L - press.faceL) * (0.08 + e * 0.14);
+        press.faceR = press.faceR + (WALL_R - press.faceR) * (0.08 + e * 0.14);
+        if (k >= 1) { press.state = 'idle'; press.faceL = WALL_L; press.faceR = WALL_R; renderList(); }
+        break;
+      }
+    }
+  }
+
+  /* ── drawing the world: a chamber carved out of warm dirt ── */
+  function drawChamber() {
+    /* raw dirt everywhere */
+    const dirt = ctx.createLinearGradient(0, 0, 0, H);
+    dirt.addColorStop(0, '#7A4E26');
+    dirt.addColorStop(1, '#5E3A1A');
+    ctx.fillStyle = dirt;
+    ctx.fillRect(0, 0, W, H);
+
+    /* the carved cave interior — sandy and bright */
+    const sand = ctx.createLinearGradient(0, 0, 0, FLOOR);
+    sand.addColorStop(0, '#EFCC8F');
+    sand.addColorStop(0.7, '#E2B876');
+    sand.addColorStop(1, '#D4A660');
+    ctx.fillStyle = sand;
+    roundRectPath(DIRT, 18, W - 2 * DIRT, FLOOR - 18, 16);
+    ctx.fill();
+    /* carved edge: dark rim + light lip */
+    ctx.strokeStyle = 'rgba(62,36,12,0.55)';
+    ctx.lineWidth = 5;
+    roundRectPath(DIRT, 18, W - 2 * DIRT, FLOOR - 18, 16);
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,236,190,0.35)';
+    ctx.lineWidth = 2;
+    roundRectPath(DIRT + 4, 22, W - 2 * DIRT - 8, FLOOR - 26, 13);
+    ctx.stroke();
+
+    /* sediment strata — faint wavy bands in the sand */
+    ctx.strokeStyle = 'rgba(122,78,38,0.13)';
+    ctx.lineWidth = 6;
+    for (let i = 1; i <= 4; i++) {
+      const y = 40 + i * (FLOOR - 90) / 5;
+      ctx.beginPath();
+      ctx.moveTo(DIRT + 8, y);
+      for (let x = DIRT + 8; x <= W - DIRT - 8; x += 40) {
+        ctx.quadraticCurveTo(x + 20, y + (i % 2 ? 5 : -5), x + 40, y);
+      }
+      ctx.stroke();
+    }
+
+    /* speckles: dirt border grain + sand grain */
+    for (const p of dirtSpecks) {
+      ctx.fillStyle = p.c;
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill();
+    }
+    for (const p of sandSpecks) {
+      ctx.fillStyle = p.c;
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill();
+    }
+
+    /* packed-earth floor */
+    ctx.fillStyle = '#573516';
+    ctx.fillRect(0, FLOOR, W, H - FLOOR);
+    ctx.fillStyle = '#3E2410';
+    ctx.fillRect(DIRT, FLOOR, W - 2 * DIRT, 4);
+    ctx.fillStyle = 'rgba(255,236,190,0.18)';
+    ctx.fillRect(DIRT, FLOOR + 4, W - 2 * DIRT, 2);
+    for (const p of pebbles) drawStone(p);
+    for (const p of frameStones) drawStone(p);
+
+    /* interior depth: soft shadow cast by the frame onto the sand */
+    const ish = ctx.createLinearGradient(0, 18, 0, 46);
+    ish.addColorStop(0, 'rgba(62,36,12,0.28)');
+    ish.addColorStop(1, 'rgba(62,36,12,0)');
+    ctx.fillStyle = ish;
+    roundRectPath(DIRT + 3, 21, W - 2 * DIRT - 6, 28, 12);
+    ctx.fill();
+
+    /* fat cartoon outline around the whole earth box */
+    ctx.strokeStyle = '#2E1A08';
+    ctx.lineWidth = 5;
+    roundRectPath(2.5, 2.5, W - 5, H - 5, 13);
+    ctx.stroke();
+  }
+
+  function roundRectPath(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  /* the outside pipe plunges down at exactly the funnel's x; this stub
+     carries it through the box wall into the mouth — one seamless line */
+  function drawFeedPipe() {
+    const trace = () => {
+      ctx.beginPath();
+      ctx.moveTo(HOP.cx, -16);
+      ctx.lineTo(HOP.cx, HOP.topY + 12);
+    };
+    ctx.save();
+    ctx.lineCap = 'butt';
+    trace(); ctx.strokeStyle = '#24382C'; ctx.lineWidth = 30; ctx.stroke();
+    trace(); ctx.strokeStyle = '#7E9C86'; ctx.lineWidth = 23; ctx.stroke();
+    trace(); ctx.strokeStyle = '#A9C2AC'; ctx.lineWidth = 12; ctx.stroke();
+    trace(); ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = 4.5; ctx.stroke();
+    /* wall fitting: a flared gold bell clamped onto the box's top edge */
+    ctx.beginPath();
+    ctx.moveTo(HOP.cx - 14, -2);
+    ctx.lineTo(HOP.cx + 14, -2);
+    ctx.lineTo(HOP.cx + 23, 14);
+    ctx.lineTo(HOP.cx - 23, 14);
+    ctx.closePath();
+    ctx.fillStyle = '#C8A84B';
+    ctx.fill();
+    ctx.strokeStyle = '#5A3A1A';
+    ctx.lineWidth = 2.5;
+    ctx.lineJoin = 'round';
+    ctx.stroke();
+    for (const bx of [HOP.cx - 15, HOP.cx + 15]) {
+      ctx.fillStyle = '#F0D078';
+      ctx.beginPath(); ctx.arc(bx, 8, 2.6, 0, 7); ctx.fill();
+      ctx.strokeStyle = '#5A3A1A'; ctx.lineWidth = 1.5; ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function drawHopper(t) {
+    const squish = 1 + tubeSquish * 0.14;
+    ctx.save();
+    ctx.translate(HOP.cx, HOP.topY);
+    ctx.scale(2 - squish, squish);
+    ctx.translate(-HOP.cx, -HOP.topY);
+
+    const cx = HOP.cx, hw = HOP.topW / 2, nw = HOP.neckW / 2;
+
+    /* bell body — concave flared walls, fat cartoon outline */
+    const bell = () => {
+      ctx.beginPath();
+      ctx.moveTo(cx - hw, HOP.topY + 5);
+      ctx.quadraticCurveTo(cx - nw - 12, HOP.topY + 18, cx - nw, HOP.neckY);
+      ctx.lineTo(cx - nw, HOP.exitY);
+      ctx.lineTo(cx + nw, HOP.exitY);
+      ctx.lineTo(cx + nw, HOP.neckY);
+      ctx.quadraticCurveTo(cx + nw + 12, HOP.topY + 18, cx + hw, HOP.topY + 5);
+      ctx.closePath();
+    };
+    const g = ctx.createLinearGradient(cx - hw, 0, cx + hw, 0);
+    g.addColorStop(0, '#8FA894');
+    g.addColorStop(0.42, '#BCD1BB');
+    g.addColorStop(1, '#6E8B76');
+    bell();
+    ctx.fillStyle = g;
+    ctx.fill();
+    ctx.strokeStyle = '#2E4A38';
+    ctx.lineWidth = 5;
+    ctx.lineJoin = 'round';
+    ctx.stroke();
+
+    /* sheen sweeping down the left wall */
+    ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+    ctx.lineWidth = 4;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(cx - hw + 14, HOP.topY + 11);
+    ctx.quadraticCurveTo(cx - nw - 3, HOP.topY + 24, cx - nw + 9, HOP.neckY + 6);
+    ctx.stroke();
+
+    /* rolled rim lip riding the box edge */
+    ctx.beginPath();
+    ctx.roundRect(cx - hw - 8, HOP.topY - 5, HOP.topW + 16, 15, 8);
+    ctx.fillStyle = '#5E7A66';
+    ctx.fill();
+    ctx.strokeStyle = '#2E4A38';
+    ctx.lineWidth = 4;
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.35)';
+    ctx.beginPath();
+    ctx.roundRect(cx - hw - 2, HOP.topY - 2, HOP.topW * 0.55, 4, 2);
+    ctx.fill();
+
+    /* chunky gold exit band with bolt heads */
+    ctx.beginPath();
+    ctx.roundRect(cx - nw - 8, HOP.exitY - 10, HOP.neckW + 16, 13, 5);
+    ctx.fillStyle = '#C8A84B';
+    ctx.fill();
+    ctx.strokeStyle = '#5A3A1A';
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+    for (const bx of [cx - nw - 1, cx + nw + 1]) {
+      ctx.fillStyle = '#F0D078';
+      ctx.beginPath(); ctx.arc(bx, HOP.exitY - 3.5, 3, 0, 7); ctx.fill();
+      ctx.strokeStyle = '#5A3A1A'; ctx.lineWidth = 1.5; ctx.stroke();
+    }
+
+    /* big friendly rivets on the bell */
+    for (const [rx, ry] of [[cx - nw + 10, (HOP.neckY + HOP.exitY) / 2], [cx + nw - 10, (HOP.neckY + HOP.exitY) / 2]]) {
+      ctx.fillStyle = '#F0D078';
+      ctx.beginPath(); ctx.arc(rx, ry, 3.5, 0, 7); ctx.fill();
+      ctx.strokeStyle = '#2E4A38'; ctx.lineWidth = 1.5; ctx.stroke();
+    }
+
+    ctx.restore();
+
+    /* drip: idle goo tease at the nozzle when queue is loading */
+    if (feedQueue.length) {
+      const next = feedQueue[0];
+      const ph = (Math.sin(t * 6) + 1) / 2;
+      ctx.fillStyle = next.color;
+      ctx.beginPath();
+      ctx.ellipse(HOP.cx, HOP.exitY + 3 + ph * 5, 12 + ph * 4, 8 + ph * 5, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  function drawPiston(side, t) {
+    const faceX = side === 'L' ? press.faceL : press.faceR;
+    const dir = side === 'L' ? 1 : -1;
+    const plateX = side === 'L' ? faceX - PLATE_W : faceX;
+    const edgeX = side === 'L' ? 0 : W;
+    const midY = (PLATE_TOP + FLOOR) / 2;
+    const pressing = isPressing();
+
+    /* telescoping main ram + twin guide rods — cartoon cylinders:
+       lit from above, fat ink outline, running shine */
+    const INK = '#3E2216';
+    const armLen = Math.abs(faceX - edgeX);
+    const armX = side === 'L' ? 0 : faceX;
+    const cyl = (x, y, w, h, base, r) => {
+      if (w < 2) return;
+      const g = ctx.createLinearGradient(0, y, 0, y + h);
+      g.addColorStop(0, shade(base, 1.28));
+      g.addColorStop(0.45, base);
+      g.addColorStop(1, shade(base, 0.6));
+      ctx.beginPath();
+      ctx.roundRect(x, y, w, h, r);
+      ctx.fillStyle = g;
+      ctx.fill();
+      ctx.strokeStyle = INK;
+      ctx.lineWidth = 2.4;
+      ctx.lineJoin = 'round';
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(255,250,235,0.35)';
+      ctx.beginPath();
+      ctx.roundRect(x + 4, y + 3, Math.max(w - 8, 3), Math.max(h * 0.14, 3), 2);
+      ctx.fill();
+    };
+    cyl(armX - 6, midY - 26, armLen + 6, 52, '#7A4A2A', 5);
+    cyl(side === 'L' ? -6 : faceX + armLen * 0.45, midY - 15, armLen * 0.55 + 6, 30, '#96603A', 5);
+    for (const ry of [PLATE_TOP + 34, FLOOR - 48]) cyl(armX - 6, ry, armLen + 6, 14, '#6E4224', 4);
+
+    /* wall mount flange with bolt heads */
+    cyl(side === 'L' ? -8 : W - 14, PLATE_TOP + 8, 22, FLOOR - PLATE_TOP - 16, '#8A5430', 5);
+    const fbx = side === 'L' ? 9 : W - 9;
+    for (const fy of [PLATE_TOP + 30, midY, FLOOR - 34]) {
+      ctx.fillStyle = '#F0D078';
+      ctx.beginPath(); ctx.arc(fbx, fy, 3, 0, 7); ctx.fill();
+      ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.stroke();
+    }
+
+    /* plate body */
+    const plateH = FLOOR - PLATE_TOP;
+    const pg = ctx.createLinearGradient(plateX, 0, plateX + PLATE_W, 0);
+    if (side === 'L') { pg.addColorStop(0, shade('#A05A36', 1.18)); pg.addColorStop(1, shade('#A05A36', 0.66)); }
+    else { pg.addColorStop(0, shade('#A05A36', 0.66)); pg.addColorStop(1, shade('#A05A36', 1.18)); }
+    ctx.beginPath();
+    ctx.roundRect(plateX - 1, PLATE_TOP - 2, PLATE_W + 2, plateH + 2, 4);
+    ctx.fillStyle = pg;
+    ctx.fill();
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = 2.6;
+    ctx.stroke();
+
+    /* hazard stripes on the pressing face */
+    const fx = side === 'L' ? faceX - 6 : faceX;
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(fx, PLATE_TOP, 6, FLOOR - PLATE_TOP);
+    ctx.clip();
+    ctx.fillStyle = '#FFD23F';
+    ctx.fillRect(fx, PLATE_TOP, 6, FLOOR - PLATE_TOP);
+    ctx.fillStyle = '#1A0606';
+    for (let y = PLATE_TOP - 12; y < FLOOR; y += 16) {
+      ctx.beginPath();
+      ctx.moveTo(fx, y + 8); ctx.lineTo(fx + 6, y); ctx.lineTo(fx + 6, y + 8); ctx.lineTo(fx, y + 16);
+      ctx.closePath(); ctx.fill();
+    }
+    ctx.restore();
+
+    /* bolt heads down the plate spine */
+    const bx = plateX + (side === 'L' ? 6 : PLATE_W - 6);
+    for (const by of [PLATE_TOP + 16, midY, FLOOR - 22]) {
+      ctx.fillStyle = '#F0D078';
+      ctx.beginPath(); ctx.arc(bx, by, 3.2, 0, 7); ctx.fill();
+      ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.stroke();
+      ctx.fillStyle = 'rgba(255,255,255,0.6)';
+      ctx.beginPath(); ctx.arc(bx - 1, by - 1, 1, 0, 7); ctx.fill();
+    }
+
+    /* pressure gauge riding the top of each plate */
+    if (pressing || press.state === 'release') {
+      const gx = plateX + PLATE_W / 2, gy = PLATE_TOP - 22;
+      const drivePos = 1 - (press.faceR - press.faceL - press.gapTarget) / (WALL_R - WALL_L - press.gapTarget || 1);
+      const p = press.state === 'hold' ? 1 : press.state === 'release' ? Math.max(0, 1 - press.t * 1.4) : Math.max(0, Math.min(1, drivePos));
+      ctx.fillStyle = '#5A3A1A';
+      ctx.beginPath(); ctx.arc(gx, gy, 14, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#C8A84B'; ctx.lineWidth = 2.5; ctx.stroke();
+      ctx.strokeStyle = INK; ctx.lineWidth = 1.6;
+      ctx.beginPath(); ctx.arc(gx, gy, 15.6, 0, Math.PI * 2); ctx.stroke();
+      ctx.fillStyle = '#FFF2D8';
+      ctx.beginPath(); ctx.arc(gx, gy, 10, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.65)';
+      ctx.beginPath(); ctx.ellipse(gx - 4, gy - 5, 3, 1.8, -0.6, 0, Math.PI * 2); ctx.fill();
+      /* red zone */
+      ctx.strokeStyle = '#C0392B'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(gx, gy, 8, -0.9, 0.5); ctx.stroke();
+      /* needle sweeps into the red as pressure builds */
+      const ang = -Math.PI * 0.95 + p * (Math.PI * 1.15) + (press.state === 'hold' && !reduceMotion ? Math.sin(t * 40) * 0.1 : 0);
+      ctx.strokeStyle = '#1A0606'; ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(gx, gy);
+      ctx.lineTo(gx + Math.cos(ang) * 8.5, gy + Math.sin(ang) * 8.5);
+      ctx.stroke();
+    }
+  }
+
+  function drawParticles(dt) {
+    for (const p of particles) {
+      p.vy += 1300 * dt;
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      if (p.y > FLOOR - p.r) { p.y = FLOOR - p.r; p.vy *= -0.4; p.vx *= 0.7; }
+      p.life -= dt * 1.4;
+      if (p.life <= 0) continue;
+      ctx.globalAlpha = Math.min(1, p.life);
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r * (0.5 + p.life * 0.5), 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    particles = particles.filter(p => p.life > 0);
+  }
+
+  function drawGlass() {
+    /* soft vignette so the cave feels deep */
+    const vg = ctx.createRadialGradient(W / 2, H * 0.45, H * 0.35, W / 2, H * 0.5, H * 0.75);
+    vg.addColorStop(0, 'rgba(0,0,0,0)');
+    vg.addColorStop(1, 'rgba(46,24,6,0.22)');
+    ctx.fillStyle = vg;
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  /* ── main loop ── */
+  let last = performance.now();
+  let simTime = 0;
+  function frame(now) {
+    const dt = Math.min((now - last) / 1000, 0.05);
+    last = now;
+    simTime += dt;
+
+    /* feed queue → spit blobs one at a time */
+    feedTimer -= dt;
+    if (feedQueue.length && feedTimer <= 0) {
+      spitBlob(feedQueue.shift());
+      feedTimer = 0.42;
+    }
+    tubeSquish = Math.max(0, tubeSquish - dt * 4);
+
+    if (isPressing()) updatePress(dt);
+
+    /* the user's hand: spring the grabbed blob toward the pointer */
+    if (grab) {
+      const b = grab.blob;
+      if (!blobs.includes(b)) grab = null;
+      else {
+        const c = b.center();
+        let dx = (mouse.x - grab.offx) - c.x;
+        let dy = (mouse.y - grab.offy) - c.y;
+        const mag = Math.hypot(dx, dy);
+        const cap = 60;                     // the goo lags behind a fast hand
+        if (mag > cap) { dx *= cap / mag; dy *= cap / mag; }
+        for (const n of b.nodes) {
+          n.x += dx * 0.4;  n.y += dy * 0.4;
+          n.px += dx * 0.34; n.py += dy * 0.34;   // damp so it doesn't slingshot
+        }
+      }
+    }
+
+    /* physics substeps */
+    const SUB = 3;
+    const sdt = dt / SUB;
+    lastSdt = sdt;
+    for (let s = 0; s < SUB; s++) {
+      for (const b of blobs) b.integrate(sdt);
+      for (let it = 0; it < 3; it++) {
+        for (const b of blobs) b.constrain();
+        collideBlobs();
+      }
+    }
+
+    /* hover pick (topmost = last drawn) */
+    hoverBlob = grab ? grab.blob : null;
+    if (!hoverBlob && mouse.x >= 0) {
+      for (let i = blobs.length - 1; i >= 0; i--) {
+        if (blobs[i].contains(mouse.x, mouse.y)) { hoverBlob = blobs[i]; break; }
+      }
+    }
+    canvas.style.cursor = grab ? 'grabbing' : (hoverBlob ? 'grab' : 'default');
+
+    /* draw */
+    ctx.setTransform(canvas.width / W, 0, 0, canvas.height / H, 0, 0);
+    ctx.save();
+    if (shake > 0.2) {
+      ctx.translate(rnd(-shake, shake) * 0.5, rnd(-shake, shake) * 0.5);
+      shake *= Math.pow(0.001, dt); // fast decay
+    } else shake = 0;
+
+    drawChamber();
+    blobs.forEach(b => {
+      const idx = b.entry ? files.findIndex(f => f.id === b.entry.id) : -1;
+      b.draw(simTime, b === hoverBlob, idx);
+    });
+    drawPiston('L', simTime);
+    drawPiston('R', simTime);
+    drawFeedPipe();
+    drawHopper(simTime);
+    drawParticles(dt);
+    drawGlass();
+
+    if (flash > 0.02) {
+      ctx.globalAlpha = flash;
+      ctx.fillStyle = '#FFF6DC';
+      ctx.fillRect(0, 0, W, H);
+      ctx.globalAlpha = 1;
+      flash *= Math.pow(0.0001, dt);
+    }
+    ctx.restore();
+
+    updateTip();
+    requestAnimationFrame(frame);
+  }
+
+  /* hover tooltip (HTML overlay so long filenames wrap nicely) */
+  function updateTip() {
+    const tip = $('blobTip');
+    if (!hoverBlob) { tip.classList.remove('show'); return; }
+    const rect = canvas.getBoundingClientRect();
+    const sx = rect.width / W, sy = rect.height / H;
+    if (hoverBlob.segments) {
+      const m = hoverBlob.mergedInfo;
+      tip.innerHTML = `<span class="tip-label">Pressed &amp; merged</span>` +
+        `<span class="tip-name">${esc(m.name)}</span>` +
+        `<span class="tip-meta">${m.pages} page${m.pages !== 1 ? 's' : ''} &middot; ${files.length} documents</span>`;
+    } else {
+      const e = hoverBlob.entry;
+      const idx = files.findIndex(f => f.id === e.id);
+      const pages = e.pages == null ? '&hellip;' : (e.pages === '?' ? '? pages' : e.pages + (e.pages === 1 ? ' page' : ' pages'));
+      tip.innerHTML = `<span class="tip-label">Doc ${idx + 1} of ${files.length}</span>` +
+        `<span class="tip-name">${esc(e.name)}</span>` +
+        `<span class="tip-meta">${fmtSize(e.size)} &middot; ${pages}</span>`;
+    }
+    const c = hoverBlob.center();
+    let left = c.x * sx + 18, top = c.y * sy - 14;
+    tip.style.left = Math.min(left, rect.width - 250) + 'px';
+    tip.style.top = Math.max(6, top) + 'px';
+    tip.classList.add('show');
+  }
+
+  /* ── canvas sizing + input ── */
+  function resize() {
+    const rect = canvas.parentElement.getBoundingClientRect();
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.round(rect.width * dpr);
+    canvas.height = Math.round(rect.width * (H / W) * dpr);
+    canvas.style.height = (rect.width * H / W) + 'px';
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  function updateMouse(e) {
+    const rect = canvas.getBoundingClientRect();
+    mouse.x = (e.clientX - rect.left) / rect.width * W;
+    mouse.y = (e.clientY - rect.top) / rect.height * H;
+  }
+
+  function releaseGrab() {
+    if (!grab) return;
+    const b = grab.blob;
+    if (blobs.includes(b)) {
+      /* throw: velocity from the last ~130ms of pointer motion */
+      const now = performance.now();
+      const h = grab.hist.filter(p => now - p.t < 130);
+      if (h.length >= 2) {
+        const a = h[0], z = h[h.length - 1];
+        const span = Math.max((z.t - a.t) / 1000, 0.016);
+        let vx = (z.x - a.x) / span, vy = (z.y - a.y) / span;
+        const sp = Math.hypot(vx, vy), CAP = 1500;
+        if (sp > CAP) { vx *= CAP / sp; vy *= CAP / sp; }
+        for (const n of b.nodes) { n.px = n.x - vx * lastSdt; n.py = n.y - vy * lastSdt; }
+      }
+      /* a quick tap without movement is just a poke */
+      if (now - grab.t0 < 220 && !grab.moved) b.impulse(4);
+    }
+    grab = null;
+  }
+
+  canvas.addEventListener('pointerdown', e => {
+    updateMouse(e);
+    if (isPressing() && press.state !== 'release') return;  // hands off mid-squeeze
+    for (let i = blobs.length - 1; i >= 0; i--) {
+      const b = blobs[i];
+      const c = b.center();
+      if (b.contains(mouse.x, mouse.y) || Math.hypot(mouse.x - c.x, mouse.y - c.y) < b.r * 0.9) {
+        grab = {
+          blob: b,
+          offx: mouse.x - c.x, offy: mouse.y - c.y,
+          hist: [{ x: mouse.x, y: mouse.y, t: performance.now() }],
+          moved: false, t0: performance.now()
+        };
+        try { canvas.setPointerCapture(e.pointerId); } catch {}
+        e.preventDefault();
+        break;
+      }
+    }
+  });
+
+  canvas.addEventListener('pointermove', e => {
+    updateMouse(e);
+    if (grab) {
+      const h = grab.hist;
+      const last = h[h.length - 1];
+      if (Math.hypot(mouse.x - h[0].x, mouse.y - h[0].y) > 6) grab.moved = true;
+      if (performance.now() - last.t > 12) {
+        h.push({ x: mouse.x, y: mouse.y, t: performance.now() });
+        if (h.length > 10) h.shift();
+      }
+    } else if (hoverBlob && !hoverBlob._wobbled) {
+      hoverBlob.impulse(1.4);
+      hoverBlob._wobbled = true;
+      setTimeout(() => { if (hoverBlob) hoverBlob._wobbled = false; }, 400);
+    }
+  });
+
+  canvas.addEventListener('pointerup', releaseGrab);
+  canvas.addEventListener('pointercancel', releaseGrab);
+  canvas.addEventListener('pointerleave', () => { if (!grab) { mouse.x = -1; mouse.y = -1; } });
+
+  requestAnimationFrame(t => { last = t; frame(t); });
+
+  return {
+    feed, pop, clear, fuse, unfuse, isPressing, abortPress,
+    press: pressAction,
+    hasBlobs: () => blobs.length > 0,
+    /* test/debug introspection: blob bounds in canvas coordinates */
+    _debug: () => blobs.map(b => {
+      const bb = b.bbox(), c = b.center();
+      return { ...bb, cx: c.x, cy: c.y, merged: !!b.segments };
+    })
+  };
+})();
+
+/* ═══════════════════════════════════════════════════════════════
+   DOWNLOAD-BUTTON GOO — a glass tank holding one slice of goo per
+   pressed document, in the same colors as their blobs. Calm ripples
+   at rest; hovering turns up the heat and it boils.
+   ═══════════════════════════════════════════════════════════════ */
+const dlGoo = (() => {
+  const btn = $('dlBtn');
+  const cvs = document.createElement('canvas');
+  cvs.id = 'dlGooCvs';
+  btn.prepend(cvs);
+  const g2 = cvs.getContext('2d');
+  let raf = null, W = 0, H = 0, n = 0, tPrev = 0;
+  let h, v, colors = [], bubbles = [], swirls = [], hover = false, churn = 0;
+
+  btn.addEventListener('mouseenter', () => { hover = true; });
+  btn.addEventListener('mouseleave', () => { hover = false; });
+  btn.addEventListener('pointerdown', () => { hover = true; setTimeout(() => hover = false, 900); });
+
+  function build() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const r = btn.getBoundingClientRect();
+    W = r.width; H = r.height;
+    cvs.width = Math.round(W * dpr);
+    cvs.height = Math.round(H * dpr);
+    g2.setTransform(dpr, 0, 0, dpr, 0, 0);
+    n = Math.max(24, Math.round(W / 4));
+    h = new Float32Array(n).fill(H * 0.66);   // a generous pour
+    v = new Float32Array(n);
+    bubbles = [];
+    /* two swirl-blobs of goo per document, anchored near their slice */
+    swirls = [];
+    const m = colors.length || 1;
+    colors.forEach((c, k) => {
+      for (let s = 0; s < 2; s++) {
+        swirls.push({
+          c,
+          ax: W * (k + 0.5) / m + (Math.random() - 0.5) * 30,
+          ay: H * 0.75 + (Math.random() - 0.5) * 14,
+          ampX: 14 + Math.random() * 22,
+          ampY: 5 + Math.random() * 9,
+          sp: 0.4 + Math.random() * 0.5,
+          ph: Math.random() * 6.28,
+          r: H * (0.45 + Math.random() * 0.3)
+        });
+      }
+    });
+  }
+
+  function frame(t) {
+    tPrev = t;
+    /* surface waves: neighbor springs, viscous damping */
+    for (let i = 0; i < n; i++) {
+      const l = i > 0 ? h[i - 1] : h[i], r = i < n - 1 ? h[i + 1] : h[i];
+      v[i] = (v[i] + ((l + r) / 2 - h[i]) * 0.4) * 0.93;
+    }
+    let sum = 0;
+    for (let i = 0; i < n; i++) {
+      h[i] += v[i];
+      if (h[i] > H - 8) { h[i] = H - 8; v[i] *= -0.3; }
+      else if (h[i] < 6) { h[i] = 6; v[i] *= -0.3; }
+      sum += h[i];
+    }
+    /* goo is conserved: clamps must never drain the tank */
+    const topUp = (n * H * 0.66 - sum) / n;
+    for (let i = 0; i < n; i++) h[i] += topUp;
+    /* heat: gentle at rest, rolling boil on hover */
+    if (!reduceMotion && Math.random() < (hover ? 0.9 : 0.05)) {
+      v[(Math.random() * n) | 0] += (Math.random() - 0.5) * (hover ? 4.5 : 1.1);
+    }
+    if (!reduceMotion && Math.random() < (hover ? 0.55 : 0.012)) {
+      bubbles.push({ x: 4 + Math.random() * (W - 8), y: H - 3, r: 1.5 + Math.random() * 2.8, vy: 0.5 + Math.random() });
+    }
+
+    g2.clearRect(0, 0, W, H);
+    const tt = t / 1000;
+    churn += ((hover ? 1 : 0) - churn) * 0.05;   // heat eases in and out
+
+    /* the liquid body: all document colors blended across the width */
+    const grad = g2.createLinearGradient(0, 0, W, 0);
+    const m = colors.length || 1;
+    colors.forEach((c, k) => grad.addColorStop(m === 1 ? 0.5 : k / (m - 1), c));
+    if (!colors.length) grad.addColorStop(0.5, '#6BE675');
+    g2.globalAlpha = 0.95;
+    g2.beginPath();
+    g2.moveTo(0, H);
+    for (let i = 0; i < n; i++) g2.lineTo((i / (n - 1)) * W, H - h[i]);
+    g2.lineTo(W, H);
+    g2.closePath();
+    g2.fillStyle = grad;
+    g2.fill();
+    g2.globalAlpha = 1;
+
+    /* swirling color clouds INSIDE the liquid — hover churns the mix */
+    g2.globalCompositeOperation = 'source-atop';
+    for (const s of swirls) {
+      const speed = s.sp * (1 + churn * 3.5);
+      const x = s.ax + Math.cos(tt * speed * 2 + s.ph) * s.ampX * (1 + churn * 1.6);
+      const y = s.ay + Math.sin(tt * speed * 3.1 + s.ph * 2) * s.ampY * (1 + churn * 1.8);
+      if (churn > 0.05) {           /* stirring makes anchors wander → real mixing */
+        s.ax += (Math.random() - 0.5) * churn * 1.6;
+        s.ax = Math.max(10, Math.min(W - 10, s.ax));
+      }
+      const rg = g2.createRadialGradient(x, y, 0, x, y, s.r);
+      rg.addColorStop(0, s.c);
+      rg.addColorStop(0.65, s.c + '59');
+      rg.addColorStop(1, s.c + '00');
+      g2.fillStyle = rg;
+      g2.beginPath(); g2.arc(x, y, s.r, 0, 7); g2.fill();
+    }
+    /* bubbles rise and pop with a little splash kick */
+    bubbles = bubbles.filter(b => {
+      b.y -= b.vy * (hover ? 1.7 : 1);
+      const i = Math.max(0, Math.min(n - 1, Math.round((b.x / W) * (n - 1))));
+      if (b.y <= H - h[i] + b.r) { v[i] -= 1.7; return false; }
+      g2.fillStyle = 'rgba(255,255,255,0.55)';
+      g2.beginPath(); g2.arc(b.x, b.y, b.r, 0, 7); g2.fill();
+      return true;
+    });
+    g2.globalCompositeOperation = 'source-over';
+    /* meniscus */
+    g2.strokeStyle = 'rgba(255,255,255,0.8)';
+    g2.lineWidth = 2.5;
+    g2.lineCap = 'round';
+    g2.beginPath();
+    for (let i = 0; i < n; i++) {
+      const x = (i / (n - 1)) * W, y = H - h[i];
+      i ? g2.lineTo(x, y) : g2.moveTo(x, y);
+    }
+    g2.stroke();
+    /* glass streak */
+    g2.fillStyle = 'rgba(255,255,255,0.15)';
+    g2.beginPath();
+    g2.moveTo(W * 0.07, 0); g2.lineTo(W * 0.19, 0); g2.lineTo(W * 0.11, H); g2.lineTo(W * -0.01, H);
+    g2.closePath();
+    g2.fill();
+
+    if (!reduceMotion) raf = requestAnimationFrame(frame);
+  }
+
+  return {
+    start(cols) {
+      colors = cols;
+      cancelAnimationFrame(raf);
+      requestAnimationFrame(t0 => { build(); frame(t0); });
+    },
+    stop() { cancelAnimationFrame(raf); }
+  };
+})();
+
+/* ═══════════════════════════════════════════════════════════════
+   CONVEYOR — dropped PDFs travel a pipe from the dropbox straight
+   into the machine's hopper. The story writes itself.
+   ═══════════════════════════════════════════════════════════════ */
+const conveyor = (() => {
+  const svg = $('connector');
+  const NS = 'http://www.w3.org/2000/svg';
+  const mk = (tag, attrs) => {
+    const el = document.createElementNS(NS, tag);
+    for (const k in attrs) el.setAttribute(k, attrs[k]);
+    return el;
+  };
+  /* cylinder illusion: shadow → dark rim → body → lit core → glass shine */
+  const shadow  = mk('path', { fill: 'none', stroke: 'rgba(9,30,74,0.16)', 'stroke-width': 33, 'stroke-linecap': 'round' });
+  const outline = mk('path', { fill: 'none', stroke: '#24382C', 'stroke-width': 30, 'stroke-linecap': 'round' });
+  const body    = mk('path', { fill: 'none', stroke: '#7E9C86', 'stroke-width': 23, 'stroke-linecap': 'round' });
+  const core    = mk('path', { fill: 'none', stroke: '#A9C2AC', 'stroke-width': 12, 'stroke-linecap': 'round' });
+  const shine   = mk('path', { fill: 'none', stroke: 'rgba(255,255,255,0.5)', 'stroke-width': 4.5, 'stroke-linecap': 'round' });
+  const collarA = mk('rect', { fill: '#C8A84B', stroke: '#5A3A1A', 'stroke-width': 2, width: 38, height: 13, rx: 3 });
+  const fittings = mk('g', {});
+  /* the hopper's rim lip, standing proud of the box top for depth */
+  const crown = mk('rect', { fill: '#5E7A66', stroke: '#2E4A38', 'stroke-width': 4, rx: 8, height: 17 });
+  const crownHi = mk('rect', { fill: 'rgba(255,255,255,0.35)', rx: 2, height: 4 });
+  svg.append(shadow, outline, body, core, shine, fittings, collarA, crown, crownHi);
+  let len = 0, ready = false;
+
+  /* ── THE SWAN-NECK LIFT ───────────────────────────────────────────
+     One hand-drawn route, all tangent arcs, no sharp cuts:
+     it drops out of the BOTTOM of the dropbox, U-turns upward, rises
+     through the gutter between the two cards, crests in the band under
+     the title, and plunges straight down into the TOP of the press.  */
+  function layout() {
+    if (window.innerWidth <= 880) { svg.style.display = 'none'; ready = false; return; }
+    svg.style.display = 'block';
+    const wb = $('main').getBoundingClientRect();
+    const dz = $('dz').getBoundingClientRect();
+    const mc = $('machine').getBoundingClientRect();
+    const R = 34;
+    const side = document.querySelector('.side').getBoundingClientRect();
+    const gutterX = ((mc.right - wb.left) + (dz.left - wb.left)) / 2;
+    const sx = dz.left - wb.left + dz.width * 0.5;    // exit at the dropbox floor, center
+    const sy = dz.bottom - wb.top - 2;
+    const ex = mc.left - wb.left + mc.width * 0.5;    // dead-aligned with the funnel below
+    const ey = mc.top - wb.top + 30;
+    const topY = mc.top - wb.top - 26;                // crest, in the band under the title
+    const dip = side.bottom - wb.top + 38;            // hook under the whole right column
+    const d =
+      `M ${sx} ${sy}` +
+      ` L ${sx} ${dip - R}` +
+      ` A ${R} ${R} 0 0 1 ${sx - R} ${dip}` +
+      ` L ${gutterX + R} ${dip}` +
+      ` A ${R} ${R} 0 0 1 ${gutterX} ${dip - R}` +
+      ` L ${gutterX} ${topY + R}` +
+      ` A ${R} ${R} 0 0 0 ${gutterX - R} ${topY}` +
+      ` L ${ex + R} ${topY}` +
+      ` A ${R} ${R} 0 0 0 ${ex} ${topY + R}` +
+      ` L ${ex} ${ey}`;
+    for (const p of [outline, body, core, shine]) p.setAttribute('d', d);
+    shadow.setAttribute('d', d);
+    shadow.setAttribute('transform', 'translate(3 5)');
+    collarA.setAttribute('x', sx - 19);  collarA.setAttribute('y', sy - 7);
+    /* hopper rim lip: pokes ~7px above the box edge, rest hides behind it */
+    const scale = mc.width / 600;
+    const crownW = 166 * scale;
+    const crownY = mc.top - wb.top - 7;
+    crown.setAttribute('x', ex - crownW / 2);   crown.setAttribute('y', crownY);
+    crown.setAttribute('width', crownW);
+    crownHi.setAttribute('x', ex - crownW / 2 + 9); crownHi.setAttribute('y', crownY + 3);
+    crownHi.setAttribute('width', crownW * 0.5);
+    /* one gold union halfway up the gutter rise */
+    fittings.innerHTML = '';
+    fittings.appendChild(mk('rect', {
+      fill: '#C8A84B', stroke: '#5A3A1A', 'stroke-width': 2, rx: 3,
+      x: gutterX - 17, y: (dip + topY) / 2 - 7, width: 34, height: 14
+    }));
+    len = body.getTotalLength();
+    ready = true;
+  }
+
+  const queue = [];
+  let busy = false;
+  function pump() {
+    if (busy || !queue.length) return;
+    const entry = queue.shift();
+    if (!files.some(f => f.id === entry.id)) { pump(); return; }
+    if (!ready) { machine.feed(entry); setTimeout(pump, 60); return; }
+    busy = true;
+    /* a little paper parcel tumbles down the pipe */
+    const pkg = mk('g', {});
+    pkg.append(
+      mk('rect', { x: -8, y: -10, width: 16, height: 20, fill: '#FFFFFF', stroke: '#5A3A1A', 'stroke-width': 2, rx: 2 }),
+      mk('rect', { x: -4.5, y: -5, width: 9, height: 2.5, fill: entry.color }),
+      mk('rect', { x: -4.5, y: -0.5, width: 9, height: 2.5, fill: '#D9CBAA' })
+    );
+    svg.appendChild(pkg);
+    /* travel time is CONSTANT no matter how long tonight's pipe is —
+       the parcel simply moves faster through longer plumbing */
+    const t0 = performance.now(), DUR = 900;
+    (function step(now) {
+      const k = Math.min((now - t0) / DUR, 1);
+      const e = k * k * (3 - 2 * k);
+      const pt = body.getPointAtLength(e * len);
+      pkg.setAttribute('transform', `translate(${pt.x} ${pt.y}) rotate(${e * 300}) scale(${1 - e * 0.3})`);
+      if (k < 1) requestAnimationFrame(step);
+      else {
+        pkg.remove();
+        /* short beat while it travels the in-canvas corner pipe */
+        setTimeout(() => { if (files.some(f => f.id === entry.id)) machine.feed(entry); }, 260);
+        busy = false;
+        setTimeout(pump, 200);
+      }
+    })(performance.now());
+  }
+
+  const ro = new ResizeObserver(layout);
+  ro.observe(document.body);
+  ro.observe(document.querySelector('.side'));   // queue growing/shrinking refits the hook
+  requestAnimationFrame(layout);
+  return {
+    send(entry) { queue.push(entry); pump(); },
+    clear() { queue.length = 0; }
+  };
+})();
+
+/* ═══════════════════════════════════════════════════════════════
+   WIRING
+   ═══════════════════════════════════════════════════════════════ */
+function wireDropTarget(el) {
+  el.addEventListener('dragover', e => { e.preventDefault(); el.classList.add('drag-over'); });
+  el.addEventListener('dragleave', () => el.classList.remove('drag-over'));
+  el.addEventListener('drop', e => {
+    e.preventDefault();
+    el.classList.remove('drag-over');
+    addFiles(e.dataTransfer.files);
+  });
+}
+wireDropTarget($('dropCard'));
+wireDropTarget($('machineCard'));
+
+$('dz').addEventListener('click', () => $('fileInput').click());
+$('dz').addEventListener('keydown', e => {
+  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); $('fileInput').click(); }
+});
+$('fileInput').addEventListener('change', e => { addFiles(e.target.files); e.target.value = ''; });
+$('pressBtn').addEventListener('click', pressIt);
+$('clearBtn').addEventListener('click', clearAll);
+
+renderList();
 </script>
+<script>
+/* ── LIVE USAGE COUNTERS ─────────────────────────────────────────────────
+   Subscribes to the toolbox-wide stats doc (Firestore stats/counters —
+   public read-only; every increment goes through the /api/stats Cloud
+   Function) and bumps the strip when anyone, anywhere, uses a tool.
+   Purely decorative: any failure leaves the strip hidden.
+   Test hooks: localStorage.ggstats_fs_emu = "host:port" points the listener
+   at a Firestore emulator; localStorage.ggstats_ep overrides the report URL. */
+(function () {
+  'use strict';
+  // Report one tool's finished work to the global counters (fire-and-forget).
+  window.ggStatReport = function (tool, n) {
+    try {
+      var ep = localStorage.getItem('ggstats_ep') ||
+        (location.protocol.indexOf('http') === 0 ? location.origin + '/api/stats' : '');
+      if (!ep || !(n > 0)) return;
+      fetch(ep, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tool: tool, n: n }), keepalive: true }).catch(function () {});
+    } catch (e) { /* stats are best-effort */ }
+  };
+
+  var strip = document.getElementById('ggLive');
+  if (!strip) return;
+  var cells = {};
+  strip.querySelectorAll('.gg-live-num').forEach(function (el) {
+    cells[el.getAttribute('data-stat')] = { num: el, item: el.closest('.gg-live-item'), val: null };
+  });
+  var fmt = function (n) { return Number(n || 0).toLocaleString('en-US'); };
+  function tween(c, to) {
+    var from = c.val, t0 = performance.now(), dur = 500;
+    c.val = to;
+    requestAnimationFrame(function step(t) {
+      var k = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - k, 3);
+      c.num.textContent = fmt(Math.round(from + (to - from) * e));
+      if (k < 1) requestAnimationFrame(step);
+    });
+  }
+  function render(data) {
+    Object.keys(cells).forEach(function (f) {
+      var c = cells[f], v = Number(data[f] || 0);
+      if (c.val === null) { c.val = v; c.num.textContent = fmt(v); return; }
+      if (v === c.val) return;
+      if (document.hidden) {   /* background tab: rAF is paused — set it plainly */
+        c.val = v; c.num.textContent = fmt(v);
+        c.item.classList.remove('bump');
+        return;
+      }
+      tween(c, v);
+      c.item.classList.remove('bump');
+      void c.item.offsetWidth;               /* restart the bump animation */
+      c.item.classList.add('bump');
+    });
+    strip.hidden = false;
+  }
+  function init() {
+    var SDK = 'https://www.gstatic.com/firebasejs/12.9.0/';
+    Promise.all([import(SDK + 'firebase-app.js'), import(SDK + 'firebase-firestore.js')])
+      .then(function (mods) {
+        var app = mods[0].initializeApp({
+          apiKey: 'AIzaSyAqwcFPilYLIrVIu1-BprkC08hOAhWQikg',
+          authDomain: 'ggapp-d2bae.firebaseapp.com',
+          projectId: 'ggapp-d2bae',
+          appId: '1:614262062561:web:4def07426bd52832e8a6a0'
+        }, 'gg-live-stats');
+        var fs = mods[1];
+        var db = fs.getFirestore(app);
+        var emu = localStorage.getItem('ggstats_fs_emu');
+        if (emu) fs.connectFirestoreEmulator(db, emu.split(':')[0], Number(emu.split(':')[1]));
+        fs.onSnapshot(fs.doc(db, 'stats', 'counters'),
+          function (snap) { render(snap.data() || {}); },
+          function () { /* stream failed — freeze whatever is shown */ });
+      })
+      .catch(function () { /* offline / CDN blocked — strip stays hidden */ });
+  }
+  if (document.readyState === 'complete') init();
+  else window.addEventListener('load', init, { once: true });
+})();
+</script>
+
 </body>
 </html>

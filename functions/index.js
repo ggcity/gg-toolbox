@@ -5,8 +5,8 @@
  * and 302-redirected to the stored destination.  Each code has a private
  * STATS LINK ( /s/TOKEN ) — a page showing the scan count, with a form to
  * re-point the QR later.  Whoever has the stats link owns the code; there
- * are no accounts or passwords.  A recovery directory lives at
- *   /qradmin?key=QR_ADMIN_KEY   (set in functions/.env).
+ * are no accounts or passwords.  A recovery directory lives at /qradmin,
+ * protected by the city's Keycloak SSO (see the OIDC block below).
  *
  * This is the Firebase port of the old server/q.php.  The flat JSON file is
  * replaced by a Firestore collection ("qrLinks", one doc per code) and the
@@ -18,7 +18,7 @@
 'use strict';
 
 const {onRequest} = require('firebase-functions/v2/https');
-const {defineString} = require('firebase-functions/params');
+const {defineString, defineSecret} = require('firebase-functions/params');
 const admin = require('firebase-admin');
 const QRCode = require('qrcode');
 const fs = require('fs');
@@ -26,14 +26,35 @@ const path = require('path');
 
 admin.initializeApp();
 const db = admin.firestore();
-const {FieldValue} = admin.firestore;
+// Subpath import instead of `admin.firestore.FieldValue`: the functions
+// emulator's admin-SDK proxy drops the statics on the firestore namespace,
+// so the old form crashed every counted scan under `firebase emulators` —
+// identical class in production.
+const {FieldValue} = require('firebase-admin/firestore');
 
 const COLLECTION = 'qrLinks';
+// Global usage counters shown live on the tool pages. One well-known doc,
+// publicly *readable* (see firestore.rules) so the pages can subscribe with
+// onSnapshot; every write still goes through this function (Admin SDK).
+const STATS_DOC = ['stats', 'counters'];
+// POST /api/stats {tool, n} increments one of these — the client-side tools
+// (compress/format/merge happen entirely in the browser) report their wins.
+const STATS_TOOLS = {
+  compressor: 'imagesCompressed',
+  formatter: 'imagesFormatted',
+  merger: 'pdfsMerged',
+  qr: 'qrGenerated',
+};
+// The two dynamic-QR counters are maintained server-side in the scan/create
+// paths below — clients can't inflate those.
+const STATS_FIELDS = Object.values(STATS_TOOLS).concat(['dynamicQrCreated', 'dynamicQrScans']);
+function statsRef() {
+  return db.collection(STATS_DOC[0]).doc(STATS_DOC[1]);
+}
 // Client-side ambient Tetris animation (same one as the QR generator), read
 // once at cold start and injected into the stats/admin pages by pageBottom().
 const TETRIS_JS = fs.readFileSync(path.join(__dirname, 'client-tetris.js'), 'utf8');
 const KEEP_DAYS = 180;                 // per-day counts kept this long (totals kept forever)
-const ADMIN_KEY = defineString('QR_ADMIN_KEY');   // recovery-directory password (functions/.env)
 // Public origin the printed QR short-links (/q/…) and stats links (/s/…) are
 // built on — a neutral domain residents see instead of the internal toolbox
 // host. Empty → fall back to the request's own host (functions/.env).
@@ -189,6 +210,114 @@ async function findByToken(token) {
   return q.empty ? null : q.docs[0];
 }
 
+/* ── OIDC admin sign-on (city Keycloak, internal realm) ──────────────────────
+ * /qradmin is protected by the city SSO instead of a shared ?key= secret.
+ * There is no httpd/mod_auth_openidc in front of Firebase, so this function
+ * runs the standard authorization-code flow (with PKCE) itself:
+ *   GET /qradmin (no session) → 302 to Keycloak → GET /oauth2-callback
+ *   → exchange code for tokens → signed session cookie → back to /qradmin.
+ * Notes:
+ *   - Firebase Hosting forwards ONLY the cookie named "__session" to
+ *     functions, so the in-flight login state and the session both live there
+ *     (one at a time), HMAC-signed with a key derived from the client secret.
+ *   - The ID token comes straight from the token endpoint over TLS, so per
+ *     OIDC Core §3.1.3.7 its claims are validated without a JWKS signature
+ *     check — keeps the function dependency-free.
+ */
+const OIDC_ISSUER = defineString('OIDC_ISSUER', {default: 'https://auth.ggcity.org/realms/internal'});
+const OIDC_CLIENT_ID = defineString('OIDC_CLIENT_ID', {default: ''});
+const OIDC_CLIENT_SECRET = defineSecret('OIDC_CLIENT_SECRET');   // Cloud Secret Manager
+// Optional comma-separated allow-list of AD usernames (preferred_username)
+// admitted to /qradmin. Empty = any signed-in city user ("Require valid-user").
+const OIDC_ADMIN_USERS = defineString('OIDC_ADMIN_USERS', {default: ''});
+
+const SESSION_COOKIE = '__session';        // the only cookie Hosting forwards
+const SESSION_HOURS = 8;
+const CALLBACK_PATH = '/oauth2-callback';
+
+function oidcReady() {
+  return Boolean(OIDC_CLIENT_ID.value() && OIDC_CLIENT_SECRET.value());
+}
+
+// Endpoint metadata from the realm's discovery URL, cached for the instance.
+let oidcMeta = null;
+async function oidcDiscover() {
+  if (!oidcMeta) {
+    const url = OIDC_ISSUER.value().replace(/\/+$/, '') + '/.well-known/openid-configuration';
+    const r = await fetch(url);
+    if (!r.ok) throw new Error('OIDC discovery failed: HTTP ' + r.status);
+    oidcMeta = await r.json();
+  }
+  return oidcMeta;
+}
+
+function sessionCookieOf(req) {
+  for (const part of String(req.headers.cookie || '').split(/;\s*/)) {
+    const i = part.indexOf('=');
+    if (i > 0 && part.slice(0, i) === SESSION_COOKIE) return part.slice(i + 1);
+  }
+  return '';
+}
+function setSessionCookie(res, value, maxAgeSec) {
+  res.set('Set-Cookie', SESSION_COOKIE + '=' + value + '; Max-Age=' + maxAgeSec +
+    '; Path=/; HttpOnly; Secure; SameSite=Lax');
+}
+function sessionHmacKey() {
+  const crypto = require('crypto');
+  return crypto.createHash('sha256').update('gg-qr-session|' + OIDC_CLIENT_SECRET.value()).digest();
+}
+function signSession(obj) {
+  const crypto = require('crypto');
+  const body = Buffer.from(JSON.stringify(obj)).toString('base64url');
+  const mac = crypto.createHmac('sha256', sessionHmacKey()).update(body).digest('base64url');
+  return body + '.' + mac;
+}
+// Returns the verified, unexpired session payload of the given type
+// ('s' = signed-in admin, 'p' = login in flight), or null.
+function readSession(req, typ) {
+  const crypto = require('crypto');
+  const tok = sessionCookieOf(req);
+  const dot = tok.lastIndexOf('.');
+  if (dot < 1) return null;
+  const body = tok.slice(0, dot);
+  const mac = Buffer.from(crypto.createHmac('sha256', sessionHmacKey()).update(body).digest('base64url'));
+  const got = Buffer.from(tok.slice(dot + 1));
+  if (mac.length !== got.length || !crypto.timingSafeEqual(mac, got)) return null;
+  try {
+    const obj = JSON.parse(Buffer.from(body, 'base64url').toString('utf8'));
+    if (obj.t !== typ || !obj.exp || obj.exp * 1000 < Date.now()) return null;
+    return obj;
+  } catch (e) {
+    return null;
+  }
+}
+
+// Kick off the authorization-code flow: stash state/nonce/PKCE verifier in a
+// short-lived signed cookie, then send the browser to Keycloak.
+async function startLogin(req, res) {
+  const crypto = require('crypto');
+  const meta = await oidcDiscover();
+  const state = crypto.randomBytes(16).toString('base64url');
+  const nonce = crypto.randomBytes(16).toString('base64url');
+  const verifier = crypto.randomBytes(32).toString('base64url');
+  const challenge = crypto.createHash('sha256').update(verifier).digest('base64url');
+  setSessionCookie(res, signSession({
+    t: 'p', st: state, no: nonce, cv: verifier,
+    exp: Math.floor(Date.now() / 1000) + 600,
+  }), 600);
+  const u = new URL(meta.authorization_endpoint);
+  u.searchParams.set('response_type', 'code');
+  u.searchParams.set('client_id', OIDC_CLIENT_ID.value());
+  u.searchParams.set('redirect_uri', originOf(req) + CALLBACK_PATH);
+  u.searchParams.set('scope', 'openid profile email');
+  u.searchParams.set('state', state);
+  u.searchParams.set('nonce', nonce);
+  u.searchParams.set('code_challenge', challenge);
+  u.searchParams.set('code_challenge_method', 'S256');
+  res.set('Cache-Control', 'private, no-store');
+  return res.redirect(302, u.toString());
+}
+
 /* Shared chrome for the human pages (stats + admin) — the generator's cream theme. */
 function pageTop(title) {
   return '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">' +
@@ -234,7 +363,10 @@ function pageBottom() {
 }
 
 /* ── the single HTTP entry point (hosting rewrites /q, /s, /api/qr, /qradmin here) ── */
-exports.qr = onRequest({region: 'us-central1', memory: '256MiB', maxInstances: 10}, async (req, res) => {
+exports.qr = onRequest({
+  region: 'us-central1', memory: '256MiB', maxInstances: 10,
+  secrets: [OIDC_CLIENT_SECRET],
+}, async (req, res) => {
   if (req.method === 'OPTIONS') {           // CORS preflight for the JSON API
     res.set('Access-Control-Allow-Origin', '*');
     res.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -261,12 +393,16 @@ exports.qr = onRequest({region: 'us-central1', memory: '256MiB', maxInstances: 1
       const dest = snap.data().dest || (FALLBACK_URL.value() || 'https://www.ggcity.org');
       if (!isPreviewRequest(req, method)) {   // don't count unfurl bots / prefetch / HEAD
         const nowD = new Date();
-        await ref.update({
+        const batch = db.batch();
+        batch.update(ref, {
           hits: FieldValue.increment(1),
           lastScan: FieldValue.serverTimestamp(),
           ['days.' + ggDay(nowD)]: FieldValue.increment(1),      // pruned to 180 days
           ['months.' + ggMonth(nowD)]: FieldValue.increment(1),  // kept forever
         });
+        // global live counter for the toolbox stat widgets
+        batch.set(statsRef(), {dynamicQrScans: FieldValue.increment(1)}, {merge: true});
+        await batch.commit();
       }
       return res.redirect(302, dest);
     }
@@ -374,13 +510,96 @@ exports.qr = onRequest({region: 'us-central1', memory: '256MiB', maxInstances: 1
       return res.redirect(303, statsUrl(req, token) + '?saved=1');
     }
 
-    /* ── admin directory  ( /qradmin?key=… ) ─────────────────────────────── */
-    if (path === '/qradmin') {
-      const key = ADMIN_KEY.value();
-      if (!key || req.query.key !== key) {
-        return res.status(403).type('text/plain').send('Wrong admin key (or key not set yet).');
+    /* ── sign-in problems get a small themed page ────────────────────────── */
+    const authErrorPage = (status, msg) => {
+      res.set('Cache-Control', 'private, no-store');
+      return res.status(status).type('text/html').send(pageTop('Sign-in — GG QR admin') +
+        '<div class="head">GG QR &middot; Admin sign-in</div><div class="body"><p>' + h(msg) +
+        '</p><p><a href="/qradmin">Try again</a></p>' + pageBottom());
+    };
+
+    /* ── OIDC callback  ( GET /oauth2-callback ) ─────────────────────────── */
+    if (path === CALLBACK_PATH && method === 'GET') {
+      if (!oidcReady()) {
+        return authErrorPage(503, 'Admin sign-in is not configured yet (OIDC_CLIENT_ID / OIDC_CLIENT_SECRET missing).');
       }
-      const adminUrl = originOf(req) + '/qradmin?key=' + encodeURIComponent(key);
+      if (req.query.error) {
+        return authErrorPage(403, 'Sign-in was cancelled or failed: ' + req.query.error);
+      }
+      const pending = readSession(req, 'p');
+      if (!pending || !req.query.code || String(req.query.state || '') !== pending.st) {
+        return authErrorPage(400, 'Your sign-in attempt expired or did not match — please try again.');
+      }
+      const meta = await oidcDiscover();
+      const tr = await fetch(meta.token_endpoint, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: new URLSearchParams({
+          grant_type: 'authorization_code',
+          code: String(req.query.code),
+          redirect_uri: originOf(req) + CALLBACK_PATH,
+          client_id: OIDC_CLIENT_ID.value(),
+          client_secret: OIDC_CLIENT_SECRET.value(),
+          code_verifier: pending.cv,
+        }).toString(),
+      });
+      if (!tr.ok) {
+        console.error('OIDC token exchange failed', tr.status, await tr.text());
+        return authErrorPage(502, 'Could not complete sign-in with the city login server.');
+      }
+      const tokens = await tr.json();
+      let claims;
+      try {
+        claims = JSON.parse(Buffer.from(String(tokens.id_token).split('.')[1], 'base64url').toString('utf8'));
+      } catch (e) {
+        return authErrorPage(502, 'The login server returned an unreadable ID token.');
+      }
+      const aud = Array.isArray(claims.aud) ? claims.aud : [claims.aud];
+      const nowS = Math.floor(Date.now() / 1000);
+      if (claims.iss !== meta.issuer || !aud.includes(OIDC_CLIENT_ID.value()) ||
+          !(claims.exp > nowS) || claims.nonce !== pending.no) {
+        return authErrorPage(403, 'The sign-in response failed validation — please try again.');
+      }
+      const username = String(claims.preferred_username || '').toLowerCase();
+      const allowed = OIDC_ADMIN_USERS.value().split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
+      if (allowed.length && !allowed.includes(username)) {
+        setSessionCookie(res, '', 0);
+        return authErrorPage(403, 'You are signed in as ' + (claims.name || username) +
+          ', but this account is not on the QR admin list.');
+      }
+      setSessionCookie(res, signSession({
+        t: 's', sub: claims.sub, u: username, n: claims.name || username,
+        exp: nowS + SESSION_HOURS * 3600,
+      }), SESSION_HOURS * 3600);
+      res.set('Cache-Control', 'private, no-store');
+      return res.redirect(302, '/qradmin');
+    }
+
+    /* ── admin sign-out  ( GET /qradmin/logout ) ─────────────────────────── */
+    if (path === '/qradmin/logout' && method === 'GET') {
+      setSessionCookie(res, '', 0);
+      const meta = await oidcDiscover().catch(() => null);
+      res.set('Cache-Control', 'private, no-store');
+      // End the Keycloak SSO session too (Keycloak shows a confirm page since
+      // we don't keep the id_token around for an id_token_hint).
+      return res.redirect(302, (meta && meta.end_session_endpoint) ?
+        meta.end_session_endpoint + '?client_id=' + encodeURIComponent(OIDC_CLIENT_ID.value()) :
+        '/qradmin');
+    }
+
+    /* ── admin directory  ( /qradmin — city SSO required ) ───────────────── */
+    if (path === '/qradmin') {
+      if (!oidcReady()) {
+        return authErrorPage(503, 'Admin sign-in is not configured yet (OIDC_CLIENT_ID / OIDC_CLIENT_SECRET missing).');
+      }
+      const sess = readSession(req, 's');
+      if (!sess) {
+        if (method !== 'GET') {
+          return res.status(403).type('text/plain').send('Session expired — reload the admin page and sign in again.');
+        }
+        return startLogin(req, res);
+      }
+      const adminUrl = originOf(req) + '/qradmin';
 
       // Remove a code: deletes its Firestore doc (frees that storage) and its
       // tracking — the short link 404s afterward, so any printed copies stop.
@@ -396,9 +615,12 @@ exports.qr = onRequest({region: 'us-central1', memory: '256MiB', maxInstances: 1
       }
 
       const snap = await db.collection(COLLECTION).orderBy('created', 'desc').get();
+      res.set('Cache-Control', 'private, no-store');
       res.type('text/html');
       let html = pageTop('GG QR — all tracked codes') +
         '<div class="head">GG QR &middot; All tracked codes (' + snap.size + ')</div><div class="body">' +
+        '<div class="bl" style="margin-bottom:10px;">Signed in as ' + h(sess.n) +
+        ' &middot; <a href="/qradmin/logout">Sign out</a></div>' +
         '<input type="text" id="qadmin-search" autocomplete="off" autofocus ' +
         'placeholder="Filter by name, code, or destination…" style="margin-bottom:6px;">' +
         '<div class="bl" id="qadmin-count" style="margin-bottom:12px;"></div>' +
@@ -442,6 +664,45 @@ exports.qr = onRequest({region: 'us-central1', memory: '256MiB', maxInstances: 1
       return res.send(html);
     }
 
+    /* ── JSON API: global usage counters  ( /api/stats ) ─────────────────────
+     * GET  → current counters (also lazily seeds the doc from qrLinks the
+     *        first time, so historical scan/code totals aren't lost).
+     * POST {tool: compressor|formatter|merger|qr, n} → increment. The three
+     * browser-side tools do their work entirely client-side, so this is an
+     * honor-system report — same trust level as the open /api/qr create. */
+    if (path === '/api/stats' && method === 'GET') {
+      const seeded = await db.runTransaction(async (tx) => {
+        const s = await tx.get(statsRef());
+        if (s.exists && s.data().seeded) return s.data();
+        // First run: fold the pre-existing dynamic-QR history into the
+        // counters. hits sums are authoritative — they overwrite whatever
+        // few live increments landed between deploy and this first read.
+        const links = await tx.get(db.collection(COLLECTION));
+        let scans = 0;
+        links.forEach((d) => { scans += d.data().hits || 0; });
+        const cur = s.exists ? s.data() : {};
+        const out = {};
+        STATS_FIELDS.forEach((f) => { out[f] = cur[f] || 0; });
+        out.dynamicQrCreated = links.size;
+        out.dynamicQrScans = scans;
+        out.seeded = true;
+        tx.set(statsRef(), out, {merge: true});
+        return out;
+      });
+      const counters = {};
+      STATS_FIELDS.forEach((f) => { counters[f] = seeded[f] || 0; });
+      return sendJson(res, 200, counters);
+    }
+    if (path === '/api/stats' && method === 'POST') {
+      const field = STATS_TOOLS[String((req.body || {}).tool || '')];
+      if (!field) return sendJson(res, 400, {error: 'Unknown tool.'});
+      // clamp: a report is 1..500 events (500 = the biggest real batch; the
+      // compressor caps uploads at 50 files, so anything huge is garbage)
+      const n = Math.min(500, Math.max(1, Math.floor(Number((req.body || {}).n) || 1)));
+      await statsRef().set({[field]: FieldValue.increment(n)}, {merge: true});
+      return sendJson(res, 200, {ok: true});
+    }
+
     /* ── JSON API: create / repoint / setdesign  ( POST /api/qr ) ────────── */
     if (path === '/api/qr' && method === 'POST') {
       const inp = req.body || {};
@@ -465,6 +726,8 @@ exports.qr = onRequest({region: 'us-central1', memory: '256MiB', maxInstances: 1
               created: FieldValue.serverTimestamp(),
               lastScan: null, days: {}, months: {},
             });
+            // same transaction, so a retried allocation can't double-count
+            tx.set(statsRef(), {dynamicQrCreated: FieldValue.increment(1)}, {merge: true});
             return true;
           });
           if (created) {

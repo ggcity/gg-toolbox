@@ -8,6 +8,13 @@ rules_version = '2';
 // not Firestore, so a blanket deny here is safe.
 service cloud.firestore {
   match /databases/{database}/documents {
+    // The one exception: the global usage counters the tool pages subscribe
+    // to with onSnapshot (live stat widgets). Read-only — every increment
+    // still goes through the Cloud Function.
+    match /stats/counters {
+      allow read: if true;
+      allow write: if false;
+    }
     match /{document=**} {
       allow read, write: if false;
     }
