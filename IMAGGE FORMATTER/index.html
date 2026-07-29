@@ -649,6 +649,13 @@ input[type="number"] { width: 74px; }
 .btn-primary:active:not(:disabled) { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--flame-deep); }
 .btn-primary:focus-visible { outline: 2px solid var(--flame-orange); outline-offset: 3px; }
 
+.btn-quiet {
+  background: none;
+  color: var(--text-muted);
+  border-color: transparent;
+}
+.btn-quiet:hover, .btn-quiet:focus-visible { color: var(--thread); border-color: var(--thread); background: none; }
+
 /* status — a woven selvage label */
 #status {
   font-size: 13px; font-weight: 500;
@@ -856,6 +863,7 @@ input[type="number"] { width: 74px; }
     </div>
     <div class="toolbar-spacer"></div>
     <button class="btn btn-primary" id="dlBtn" type="button">Download all</button>
+    <button class="btn btn-quiet" id="clearBtn" type="button">Clear the table</button>
   </section>
 
   <section class="card workspace editor-only" aria-label="Crop workspace">
@@ -955,7 +963,7 @@ const els = {
   frameSel: $('frameSel'), customDims: $('customDims'), customW: $('customW'), customH: $('customH'),
   fmtSel: $('fmtSel'), rail: $('rail'), stage: $('stage'),
   curName: $('curName'), cropInfo: $('cropInfo'), status: $('status'),
-  dlBtn: $('dlBtn'),
+  dlBtn: $('dlBtn'), clearBtn: $('clearBtn'),
   live: $('liveRegion'),
 };
 const QUALITY = 0.92;   // lossy encode quality — fixed, one less dial
@@ -1509,6 +1517,18 @@ els.dz.addEventListener('drop', e => {
   loadFiles(e.dataTransfer.files);
 });
 els.fileInput.addEventListener('change', () => loadFiles(els.fileInput.files));
+
+/* clear the table — back to the upload screen */
+els.clearBtn.addEventListener('click', () => {
+  if (!confirm('Clear all images and start over?')) return;
+  imgs.forEach(im => URL.revokeObjectURL(im.url));
+  imgs = []; cur = 0; drag = null;
+  view = 'upload';
+  document.body.dataset.view = 'upload';
+  els.rail.innerHTML = '';
+  setStatus('', '');
+  els.live.textContent = 'Cleared. Back to upload.';
+});
 </script>
 <script>
 /* ── USAGE REPORTING ─────────────────────────────────────────────────────
