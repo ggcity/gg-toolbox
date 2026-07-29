@@ -387,6 +387,7 @@ body {
   z-index: 200;
 }
 .brand-email-wrap:hover .brand-email-tooltip,
+.brand-email-wrap.open .brand-email-tooltip,
 .brand-email-btn:focus-visible ~ .brand-email-tooltip {
   opacity: 1;
   transform: translateY(0);
@@ -1238,12 +1239,7 @@ ul.file-list {
     </a>
     <div class="brand-block">
       <div class="brand-email-wrap">
-        <a
-          class="brand-email-btn"
-          href="mailto:nikitas@ggcity.org"
-          aria-label="Contact nikitas@ggcity.org for troubleshooting and feedback"
-          tabindex="0"
-        >
+        <button type="button" class="brand-email-btn" aria-label="Help and feedback — contact the IT Department">
           <!-- Pixel envelope icon -->
           <svg viewBox="0 0 16 12" aria-hidden="true">
             <!-- envelope body -->
@@ -1264,13 +1260,13 @@ ul.file-list {
             <!-- bottom-right corner -->
             <rect x="13" y="9" width="2" height="2" fill="currentColor"/>
           </svg>
-        </a>
+        </button>
         <div class="brand-email-tooltip" role="tooltip">
           <div class="brand-email-tooltip-inner">
             <span class="brand-email-tooltip-label">Feedback &amp; Suggestions</span>
             <span class="brand-email-tooltip-body">
-              For troubleshooting and feedback contact
-              <a href="mailto:nikitas@ggcity.org">nikitas@ggcity.org</a>
+              For troubleshooting and feedback,
+            contact the IT Department
             </span>
           </div>
         </div>
@@ -2655,5 +2651,24 @@ document.addEventListener('visibilitychange', () => {
 })();
 </script>
 
+<script>
+/* Envelope button: click/tap shows the contact tooltip (hover covers desktop). */
+(function () {
+  var wrap = document.querySelector('.brand-email-wrap');
+  if (!wrap) return;
+  var btn = wrap.querySelector('.brand-email-btn');
+  var t;
+  btn.addEventListener('click', function () {
+    wrap.classList.toggle('open');
+    clearTimeout(t);
+    if (wrap.classList.contains('open')) {
+      t = setTimeout(function () { wrap.classList.remove('open'); }, 4000);
+    }
+  });
+  document.addEventListener('click', function (e) {
+    if (!wrap.contains(e.target)) wrap.classList.remove('open');
+  });
+})();
+</script>
 </body>
 </html>

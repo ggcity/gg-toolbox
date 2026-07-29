@@ -190,6 +190,7 @@ body {
   z-index: 200; pointer-events: none; width: 240px;
 }
 .brand-email-wrap:hover .brand-email-tooltip,
+.brand-email-wrap.open .brand-email-tooltip,
 .brand-email-btn:focus-visible ~ .brand-email-tooltip {
   opacity: 1; visibility: visible; transform: translateY(0); pointer-events: auto;
 }
@@ -304,6 +305,7 @@ body {
 }
 .hero-label {
   display: inline-block;
+  white-space: nowrap;   /* the patch letters must never wrap mid-word */
   font-family: 'Barlow Condensed', sans-serif;
   font-weight: 800;
   font-size: clamp(34px, 7.2vw, 72px);
@@ -663,9 +665,14 @@ input[type="number"] { width: 74px; }
 
 @media (max-width: 720px) {
   .hero { margin-top: -16px; }
-  .hero-label { font-size: clamp(28px, 8.5vw, 52px); }
-  .hero-title { padding: 12px 26px 11px; }
+  .hero-label { font-size: clamp(18px, 6.6vw, 52px); }
+  .hero-title { padding: 11px 20px 10px; }
   main { padding: 0 12px; }
+  /* finger-sized controls */
+  select, input[type="number"] { padding: 10px 10px; font-size: 15px; }
+  .btn { padding: 11px 16px; }
+  .btn-primary { padding: 11px 20px; }
+  .toolbar { gap: 12px 16px; }
   .workspace { flex-direction: column; height: auto; }
   .stage-wrap { flex: none; height: 52vh; }
   #rail {
@@ -714,11 +721,7 @@ input[type="number"] { width: 74px; }
       </svg>
     </a>
     <div class="brand-email-wrap">
-      <a
-        class="brand-email-btn"
-        href="mailto:nikitas@ggcity.org?subject=IMAGGE%20FORMATTER%20Feedback"
-        aria-label="Contact nikitas@ggcity.org for troubleshooting and feedback"
-      >
+      <button type="button" class="brand-email-btn" aria-label="Help and feedback — contact the IT Department">
         <svg viewBox="0 0 16 12" aria-hidden="true">
           <rect x="0" y="0" width="16" height="12" fill="currentColor"/>
           <rect x="1" y="1" width="14" height="10" fill="var(--navy-deep)"/>
@@ -732,13 +735,13 @@ input[type="number"] { width: 74px; }
           <rect x="1" y="9" width="2" height="2" fill="currentColor"/>
           <rect x="13" y="9" width="2" height="2" fill="currentColor"/>
         </svg>
-      </a>
+      </button>
       <div class="brand-email-tooltip" role="tooltip">
         <div class="brand-email-tooltip-inner">
           <span class="brand-email-tooltip-label">Feedback &amp; Suggestions</span>
           <span class="brand-email-tooltip-body">
-            For troubleshooting and feedback contact
-            <a href="mailto:nikitas@ggcity.org">nikitas@ggcity.org</a>
+            For troubleshooting and feedback,
+            contact the IT Department
           </span>
         </div>
       </div>
@@ -928,7 +931,8 @@ document.fonts.ready.then(() => {
    crop's native resolution, no rescale).
    ═══════════════════════════════════════════════════════════════ */
 const PRESETS = [
-  { id: 'gg-banner', group: 'GG presets',      label: 'GG web banner — 924 × 462', w: 924, h: 462 },
+  { id: 'gg-hero',   group: 'GG presets',      label: 'GG hero banner — 1320 × 580',  w: 1320, h: 580 },
+  { id: 'gg-press',  group: 'GG presets',      label: 'GG press release — 282 × 169', w: 282,  h: 169 },
 
   { id: 'sq',        group: 'Standard ratios', label: '1:1 — square',              r: 1 },
   { id: '4x3',       group: 'Standard ratios', label: '4:3 — standard',            r: 4 / 3 },
@@ -939,7 +943,7 @@ const PRESETS = [
 
   { id: 'custom',    group: 'Custom',          label: 'Custom size (px)…' },
 ];
-const DEFAULT_PRESET = 'gg-banner';
+const DEFAULT_PRESET = 'gg-hero';
 const MIN_CROP = 16; // px, in image space
 
 /* ═══════════════════════════════════════════════════════════════
@@ -1525,5 +1529,24 @@ els.fileInput.addEventListener('change', () => loadFiles(els.fileInput.files));
 })();
 </script>
 
+<script>
+/* Envelope button: click/tap shows the contact tooltip (hover covers desktop). */
+(function () {
+  var wrap = document.querySelector('.brand-email-wrap');
+  if (!wrap) return;
+  var btn = wrap.querySelector('.brand-email-btn');
+  var t;
+  btn.addEventListener('click', function () {
+    wrap.classList.toggle('open');
+    clearTimeout(t);
+    if (wrap.classList.contains('open')) {
+      t = setTimeout(function () { wrap.classList.remove('open'); }, 4000);
+    }
+  });
+  document.addEventListener('click', function (e) {
+    if (!wrap.contains(e.target)) wrap.classList.remove('open');
+  });
+})();
+</script>
 </body>
 </html>

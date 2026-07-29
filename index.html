@@ -108,6 +108,7 @@ svg { image-rendering: pixelated; shape-rendering: crispEdges; }
 .brand-email-btn {
   display: inline-flex; align-items: center; justify-content: center;
   width: 32px; height: 32px;
+  padding: 0; cursor: pointer;
   background: transparent;
   border: 2px solid rgba(255, 210, 63, 0.35);
   color: rgba(255, 210, 63, 0.65);
@@ -973,11 +974,7 @@ svg { image-rendering: pixelated; shape-rendering: crispEdges; }
 <!-- HEADER — family bar: GG brand + email · pixel title · clock -->
 <header class="app-header" role="banner">
   <div class="header-left">
-    <a
-      class="brand-email-btn"
-      href="mailto:nikitas@ggcity.org"
-      aria-label="Contact nikitas@ggcity.org for troubleshooting and feedback"
-    >
+    <button type="button" class="brand-email-btn" aria-label="Help and feedback — contact the IT Department">
       <svg viewBox="0 0 16 12" aria-hidden="true">
         <rect x="0" y="0" width="16" height="12" fill="currentColor"/>
         <rect x="1" y="1" width="14" height="10" fill="var(--navy-deep)"/>
@@ -991,7 +988,7 @@ svg { image-rendering: pixelated; shape-rendering: crispEdges; }
         <rect x="1" y="9" width="2" height="2" fill="currentColor"/>
         <rect x="13" y="9" width="2" height="2" fill="currentColor"/>
       </svg>
-    </a>
+    </button>
   </div>
   <div class="header-center">
     <h1 class="app-title">IT Toolbox</h1>
@@ -1337,7 +1334,7 @@ svg { image-rendering: pixelated; shape-rendering: crispEdges; }
 >
   <div class="modal">
     <div class="modal-header">
-      <span class="modal-title" id="modalTitle">Suggest a Tool</span>
+      <span class="modal-title" id="modalTitle">Contact IT</span>
       <button class="modal-close" id="modalClose" aria-label="Close dialog">X</button>
     </div>
     <div class="modal-body">
@@ -1356,16 +1353,10 @@ svg { image-rendering: pixelated; shape-rendering: crispEdges; }
       </svg>
 
       <p class="modal-msg" id="modalDesc">
-        Have an idea for a tool?<br>Reach out and let us know!
+        Tool idea, bug, or question?<br>Reach out and let us know!
       </p>
 
-      <a
-        class="modal-email"
-        href="mailto:nikitas@ggcity.org"
-        aria-label="Send email to nikitas@ggcity.org"
-      >
-        nikitas@ggcity.org
-      </a>
+      <span class="modal-email">Contact the IT Department</span>
 
       <button class="modal-dismiss" id="modalDismiss">Close</button>
     </div>
@@ -1401,7 +1392,7 @@ function openModal() {
   overlay.classList.add('open');
   document.body.style.overflow = 'hidden';
   setTimeout(() => closeBtn.focus(), 80);
-  liveRegion.textContent = 'Dialog opened: Suggest a tool. Contact nikitas@ggcity.org';
+  liveRegion.textContent = 'Dialog opened: Contact IT.';
 }
 
 function closeModal() {
@@ -1879,6 +1870,10 @@ document.querySelectorAll('.app-icon:not(.placeholder)').forEach(icon => {
   if (document.readyState === 'complete') init();
   else window.addEventListener('load', init, { once: true });
 })();
+</script>
+<script>
+/* Header envelope: open the Contact IT dialog instead of a personal inbox. */
+document.querySelector('.brand-email-btn').addEventListener('click', openModal);
 </script>
 </body>
 </html>

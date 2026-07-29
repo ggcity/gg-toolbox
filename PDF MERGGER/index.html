@@ -189,6 +189,7 @@ body {
   z-index: 200; pointer-events: none; width: 240px;
 }
 .brand-email-wrap:hover .brand-email-tooltip,
+.brand-email-wrap.open .brand-email-tooltip,
 .brand-email-btn:focus-visible ~ .brand-email-tooltip {
   opacity: 1; visibility: visible; transform: translateY(0); pointer-events: auto;
 }
@@ -587,6 +588,10 @@ body {
   #machine { touch-action: pan-y; }
   .press-btn { font-size: 19px; letter-spacing: 3px; }
   .dl-btn { font-size: 19px; letter-spacing: 2px; }
+  /* finger-sized queue controls */
+  .row-btn { width: 34px; height: 34px; font-size: 14px; }
+  .file-row { padding: 8px 9px; }
+  #titleInput { padding: 12px; font-size: 15px; }
 }
 @media (max-width: 480px) {
   .hero { margin-top: -18px; }
@@ -618,11 +623,7 @@ body {
       </svg>
     </a>
     <div class="brand-email-wrap">
-      <a
-        class="brand-email-btn"
-        href="mailto:nikitas@ggcity.org?subject=PDF%20MERGGER%20Feedback"
-        aria-label="Contact nikitas@ggcity.org for troubleshooting and feedback"
-      >
+      <button type="button" class="brand-email-btn" aria-label="Help and feedback — contact the IT Department">
         <svg viewBox="0 0 16 12" aria-hidden="true">
           <rect x="0" y="0" width="16" height="12" fill="currentColor"/>
           <rect x="1" y="1" width="14" height="10" fill="var(--navy-deep)"/>
@@ -636,13 +637,13 @@ body {
           <rect x="1" y="9" width="2" height="2" fill="currentColor"/>
           <rect x="13" y="9" width="2" height="2" fill="currentColor"/>
         </svg>
-      </a>
+      </button>
       <div class="brand-email-tooltip" role="tooltip">
         <div class="brand-email-tooltip-inner">
           <span class="brand-email-tooltip-label">Feedback &amp; Suggestions</span>
           <span class="brand-email-tooltip-body">
-            For troubleshooting and feedback contact
-            <a href="mailto:nikitas@ggcity.org">nikitas@ggcity.org</a>
+            For troubleshooting and feedback,
+            contact the IT Department
           </span>
         </div>
       </div>
@@ -802,7 +803,11 @@ body {
   }
 
   function build() {
-    const avail = cvs.parentElement.clientWidth || 600;
+    // usable width = hero minus its own padding, else the title clips on phones
+    const host = cvs.parentElement;
+    const hostCS = getComputedStyle(host);
+    const avail = Math.max(200,
+      (host.clientWidth - (parseFloat(hostCS.paddingLeft) || 0) - (parseFloat(hostCS.paddingRight) || 0)) || 600);
     fontPx = Math.min(avail, 960) / 6.0;
     dpr = Math.min(window.devicePixelRatio || 1, 2);
     fontStr = `800 ${fontPx}px "Barlow Condensed", sans-serif`;
@@ -2992,5 +2997,24 @@ renderList();
 })();
 </script>
 
+<script>
+/* Envelope button: click/tap shows the contact tooltip (hover covers desktop). */
+(function () {
+  var wrap = document.querySelector('.brand-email-wrap');
+  if (!wrap) return;
+  var btn = wrap.querySelector('.brand-email-btn');
+  var t;
+  btn.addEventListener('click', function () {
+    wrap.classList.toggle('open');
+    clearTimeout(t);
+    if (wrap.classList.contains('open')) {
+      t = setTimeout(function () { wrap.classList.remove('open'); }, 4000);
+    }
+  });
+  document.addEventListener('click', function (e) {
+    if (!wrap.contains(e.target)) wrap.classList.remove('open');
+  });
+})();
+</script>
 </body>
 </html>
