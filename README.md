@@ -1,6 +1,6 @@
 # GG IT Toolbox
 
-Internal web tools for City of Garden Grove staff. Live at **https://gg-toolbox.web.app**.
+Internal web tools for City of Garden Grove staff. Live at **https://ggcity-toolbox.web.app**.
 
 Contact: nikitas@ggcity.org
 
@@ -20,11 +20,12 @@ user's machine. The only server-side pieces are QR scan tracking and the usage c
 
 ## Hosting
 
-Firebase project **`ggapp-d2bae`**, config in `firebase.json`:
+Firebase project **`gg-toolbox`** (its own project — migrated out of `ggapp-d2bae`
+in July 2026), config in `firebase.json`:
 
 - **Two Hosting targets**:
-  - `gg-toolbox` → serves the repo root (staff-facing site, gg-toolbox.web.app)
-  - `ggc-go` → serves `qr-public/` (resident-facing short-link domain, ggc-go.web.app;
+  - `gg-toolbox` → serves the repo root (staff-facing site, ggcity-toolbox.web.app)
+  - `ggc-go` → serves `qr-public/` (resident-facing short-link domain, go-ggcity.web.app;
     `/` redirects to ggcity.org)
 - **One Cloud Function** (`qr`, Node 22, us-central1, codebase `qrtracking` in
   `functions/`). Hosting rewrites route `/q/**`, `/s/**`, `/api/qr`, `/api/stats`,
@@ -45,7 +46,7 @@ Function config lives in `functions/.env` (git-ignored; template in `.env.exampl
 ## QR scan tracking
 
 - "Track this QR" calls `POST /api/qr {action:"create"}` → Firestore doc in `qrLinks`
-  (6-char code, destination, label) → the QR encodes `https://ggc-go.web.app/q/CODE`.
+  (6-char code, destination, label) → the QR encodes `https://go-ggcity.web.app/q/CODE`.
 - Each scan of `/q/CODE` increments `hits` + per-day (pruned after 180 days) and
   per-month (kept forever) rollups, then 302s to the destination. Bots, link-preview
   unfurlers, and prefetches are filtered by User-Agent and never counted.
@@ -77,8 +78,8 @@ Recovery directory listing every tracked code (find lost stats links, delete cod
 `functions/.env`. The wrong/no key → 403.
 
 **Target state: city SSO (Keycloak OIDC).** The full implementation is committed —
-see `git revert 0e5275f` — but needs the Secret Manager API enabled by a project
-owner before it can deploy. The workflow:
+see `git revert 0e5275f` — and the Blaze plan now allows Secret Manager, so it is
+deployable as soon as IT issues the Keycloak client. The workflow:
 
 1. `GET /qradmin` with no session → the function generates `state`, `nonce`, and a
    PKCE verifier, stores them in a short-lived HMAC-signed cookie, and 302s to
@@ -95,10 +96,9 @@ owner before it can deploy. The workflow:
    Firebase Hosting forwards to functions), HMAC-signed with a key derived from the
    client secret. `/qradmin/logout` clears it and ends the Keycloak SSO session.
 
-To switch over: a project owner enables Secret Manager
-(`console.cloud.google.com/apis/library/secretmanager.googleapis.com?project=ggapp-d2bae`),
-IT registers a Keycloak client with redirect URI
-`https://gg-toolbox.web.app/oauth2-callback`, then:
+To switch over: IT registers a Keycloak client with redirect URI
+`https://ggcity-toolbox.web.app/oauth2-callback` (plus any custom-domain variant),
+then:
 
 ```bash
 firebase functions:secrets:set OIDC_CLIENT_SECRET   # the Keycloak client secret
@@ -121,7 +121,7 @@ firebase emulators:start --only functions,firestore,hosting
   `localStorage.ggstats_ep` / `localStorage.ggqr_track_ep` override the report/track
   endpoints.
 - Wipe emulator data:
-  `curl -X DELETE 'http://127.0.0.1:8080/emulator/v1/projects/ggapp-d2bae/databases/(default)/documents'`
+  `curl -X DELETE 'http://127.0.0.1:8080/emulator/v1/projects/gg-toolbox/databases/(default)/documents'`
 
 ## Conventions
 

@@ -1,15 +1,15 @@
 {
   "projects": {
-    "default": "ggapp-d2bae"
+    "default": "gg-toolbox"
   },
   "targets": {
-    "ggapp-d2bae": {
+    "gg-toolbox": {
       "hosting": {
         "gg-toolbox": [
-          "gg-toolbox"
+          "ggcity-toolbox"
         ],
         "ggc-go": [
-          "ggc-go"
+          "go-ggcity"
         ]
       }
     }
