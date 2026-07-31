@@ -29,10 +29,38 @@
     line-height: 1.5; letter-spacing: 0.02em; font-style: italic; padding: 0 1rem;
   }
   .hk-line { display: block; white-space: nowrap; }
+  /* Music note hangs off the top-left corner. No title/tooltip by design --
+     it should read as part of the scene, not as a labelled control. */
+  .note {
+    position: fixed; top: 0.35rem; left: 1rem; z-index: 3;
+    /* 44px floor keeps the touch target reachable on phones -- the glyph itself
+       is only ~17px wide, so the hit area is deliberately larger than the mark. */
+    min-width: 44px; min-height: 44px;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: none; border: 0; padding: 0;
+    font-family: inherit; font-size: clamp(1.7rem, 3vw, 2.5rem); line-height: 1;
+    cursor: pointer; opacity: 0.32; transition: opacity 0.8s ease;
+    transform-origin: 50% 0; animation: sway 7s ease-in-out infinite;
+    -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+  }
+  .note:hover, .note:focus-visible { opacity: 0.8; outline: none; }
+  .note.playing { opacity: 0.72; animation-duration: 3.2s; }
+  @keyframes sway {
+    0%, 100% { transform: rotate(-5deg); }
+    50%      { transform: rotate(5deg); }
+  }
+  @media (prefers-reduced-motion: reduce) { .note { animation: none; } }
 </style>
 </head>
 <body>
 <canvas id="wind"></canvas>
+<button class="note" id="noteBtn" aria-label="Play music">&#9834;</button>
+<audio id="haikuAudio" loop preload="none">
+  <!-- Absolute paths: this page is served through the /haiku rewrite, so
+       relative URLs would resolve against the site root, not this folder. -->
+  <source src="/daily%20haiku/daily%20haiku.mp3" type="audio/mpeg">
+  <source src="/daily%20haiku/daily%20haiku.wav" type="audio/wav">
+</audio>
 <div class="container">
   <div class="haiku" id="haiku"></div>
 </div>
@@ -209,6 +237,22 @@ const palette = palettes[Math.floor(paletteRng() * palettes.length)];
 
 document.body.style.background = palette.bg;
 document.querySelector('.haiku').style.color = palette.fg;
+
+// --- Music note toggle ---
+// preload="none" keeps the .wav off the wire until someone actually clicks it.
+(function() {
+  const btn = document.getElementById('noteBtn');
+  const audio = document.getElementById('haikuAudio');
+  btn.style.color = palette.accent;
+  btn.addEventListener('click', function() {
+    if (audio.paused) {
+      audio.play().then(function() { btn.classList.add('playing'); }).catch(function() {});
+    } else {
+      audio.pause();
+      btn.classList.remove('playing');
+    }
+  });
+})();
 
 // --- Inverse selection highlight (fg <-> bg) ---
 (function() {
