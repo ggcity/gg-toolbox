@@ -939,8 +939,9 @@ document.fonts.ready.then(() => {
    crop's native resolution, no rescale).
    ═══════════════════════════════════════════════════════════════ */
 const PRESETS = [
-  { id: 'gg-hero',   group: 'GG presets',      label: 'GG hero banner — 1320 × 580',  w: 1320, h: 580 },
-  { id: 'gg-press',  group: 'GG presets',      label: 'GG press release — 282 × 169', w: 282,  h: 169 },
+  { id: 'gg-carousel',    group: 'GG presets', label: 'GG carousel — 2:1',                 r: 2 },
+  { id: 'gg-main-banner', group: 'GG presets', label: 'GG main page banner — 2.21:1',      r: 2.21 },
+  { id: 'gg-press-prev',  group: 'GG presets', label: 'GG press release preview — 5:3',    r: 5 / 3 },
 
   { id: 'sq',        group: 'Standard ratios', label: '1:1 — square',              r: 1 },
   { id: '4x3',       group: 'Standard ratios', label: '4:3 — standard',            r: 4 / 3 },
@@ -951,7 +952,7 @@ const PRESETS = [
 
   { id: 'custom',    group: 'Custom',          label: 'Custom size (px)…' },
 ];
-const DEFAULT_PRESET = 'gg-hero';
+const DEFAULT_PRESET = 'gg-main-banner';
 const MIN_CROP = 16; // px, in image space
 
 /* ═══════════════════════════════════════════════════════════════
