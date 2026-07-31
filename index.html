@@ -958,11 +958,6 @@ svg { image-rendering: pixelated; shape-rendering: crispEdges; }
 }
 @media (prefers-reduced-motion: reduce) { .app-stat.bump .app-stat-num { animation: none; } }
 
-/* ── LIVE STATS in the console: highlighted line + dot ping on a bump ── */
-.console-text.stat-flash{color:var(--flame-yellow);}
-.statusbar.stat-ping .status-dot{animation:gg-stat-ping .9s ease-out;}
-@keyframes gg-stat-ping{0%{box-shadow:0 0 0 0 rgba(255,201,60,.85);}100%{box-shadow:0 0 0 10px rgba(255,201,60,0);}}
-@media (prefers-reduced-motion: reduce){.statusbar.stat-ping .status-dot{animation:none;}}
 </style>
 </head>
 <body>
@@ -1454,27 +1449,8 @@ const consoleLine = document.getElementById('consoleLine');
 let msgIndex = 0;
 let charIndex = 0;
 
-/* Live toolbox totals (see the stats module at the end of the page) join the
-   rotation via ggStatsLines; a counter bump jumps the queue via ggStatsInject
-   and is typed highlighted. */
-window.ggStatsLines = [];
-window.ggStatsInject = null;
-let currentMsg = null;
-
 function typeNextChar() {
-  if (currentMsg === null) {
-    if (window.ggStatsInject) {
-      currentMsg = window.ggStatsInject;
-      window.ggStatsInject = null;
-      consoleLine.classList.add('stat-flash');
-    } else {
-      const all = CONSOLE_MESSAGES.concat(window.ggStatsLines);
-      currentMsg = all[msgIndex % all.length];
-      msgIndex++;
-      consoleLine.classList.remove('stat-flash');
-    }
-  }
-  const msg = currentMsg;
+  const msg = CONSOLE_MESSAGES[msgIndex % CONSOLE_MESSAGES.length];
   if (charIndex < msg.length) {
     consoleLine.textContent = '> ' + msg.slice(0, charIndex + 1);
     charIndex++;
@@ -1482,10 +1458,10 @@ function typeNextChar() {
   } else {
     setTimeout(() => {
       charIndex = 0;
-      currentMsg = null;
+      msgIndex++;
       consoleLine.textContent = '';
       setTimeout(typeNextChar, 200);
-    }, window.ggStatsInject ? 1200 : 3200);   // a pending stat line shortens the hold
+    }, 3200);
   }
 }
 
@@ -1774,24 +1750,14 @@ document.querySelectorAll('.app-icon:not(.placeholder)').forEach(icon => {
 </script>
 
 <script>
-/* ── LIVE TOOLBOX STATS — the stats window rows + console ticker ─────────
+/* ── LIVE TOOLBOX STATS — the per-tile counter rows ─────────
    Subscribes to the Firestore stats/counters doc (public read-only; writes
    only via the Cloud Function). Each tool shows its own counters as small
    text under its tile: numbers tween up with a bump highlight the moment
-   anyone uses a tool. Totals also rotate through the console
-   messages, and a live bump jumps that queue as a highlighted "+N …" line.
-   Purely decorative — any failure leaves the window hidden.
+   anyone uses a tool. Purely decorative — any failure leaves the window hidden.
    Test hook: localStorage.ggstats_fs_emu = "host:port" → Firestore emulator. */
 (function () {
   'use strict';
-  var LABELS = {
-    imagesCompressed: 'images compressed',
-    imagesFormatted: 'images formatted',
-    pdfsMerged: 'PDFs merged',
-    qrGenerated: 'QR codes generated',
-    dynamicQrCreated: 'dynamic QRs created',
-    dynamicQrScans: 'dynamic QR scans'
-  };
   var fmt = function (n) { return Number(n || 0).toLocaleString('en-US'); };
 
   var cells = {};
@@ -1825,44 +1791,22 @@ document.querySelectorAll('.app-icon:not(.placeholder)').forEach(icon => {
     document.querySelectorAll('.app-stats').forEach(function (el) { el.hidden = false; });
   }
 
-  var last = null;
-  function onData(d) {
-    renderRows(d);
-    window.ggStatsLines = Object.keys(LABELS).map(function (f) {
-      return fmt(d[f]) + ' ' + LABELS[f] + ' all-time';
-    });
-    if (last) {
-      Object.keys(LABELS).forEach(function (f) {
-        var delta = Number(d[f] || 0) - Number(last[f] || 0);
-        if (delta > 0) {
-          window.ggStatsInject = '+' + delta + ' ' + LABELS[f] + ' — ' + fmt(d[f]) + ' all-time';
-          var bar = document.querySelector('.statusbar');
-          if (bar) {
-            bar.classList.remove('stat-ping');
-            void bar.offsetWidth;               /* restart the ping */
-            bar.classList.add('stat-ping');
-          }
-        }
-      });
-    }
-    last = d;
-  }
   function init() {
     var SDK = 'https://www.gstatic.com/firebasejs/12.9.0/';
     Promise.all([import(SDK + 'firebase-app.js'), import(SDK + 'firebase-firestore.js')])
       .then(function (mods) {
         var app = mods[0].initializeApp({
-          apiKey: 'AIzaSyAqwcFPilYLIrVIu1-BprkC08hOAhWQikg',
-          authDomain: 'ggapp-d2bae.firebaseapp.com',
-          projectId: 'ggapp-d2bae',
-          appId: '1:614262062561:web:4def07426bd52832e8a6a0'
+          apiKey: 'AIzaSyDnrKpvBm9Ax2AlrMcnlqch2eW6N6uGDUw',
+          authDomain: 'gg-toolbox-e2630.firebaseapp.com',
+          projectId: 'gg-toolbox',
+          appId: '1:705611995710:web:65666b5ba694a6305a0f6f'
         }, 'gg-live-stats');
         var fs = mods[1];
         var db = fs.getFirestore(app);
         var emu = localStorage.getItem('ggstats_fs_emu');
         if (emu) fs.connectFirestoreEmulator(db, emu.split(':')[0], Number(emu.split(':')[1]));
         fs.onSnapshot(fs.doc(db, 'stats', 'counters'),
-          function (snap) { onData(snap.data() || {}); },
+          function (snap) { renderRows(snap.data() || {}); },
           function () { /* stream failed — freeze whatever is shown */ });
       })
       .catch(function () { /* offline / CDN blocked — window stays hidden */ });
