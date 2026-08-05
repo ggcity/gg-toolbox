@@ -8,6 +8,28 @@
 <meta name="theme-color" content="#080a15">
 
 <title>GGnator</title>
+<script>
+/* ── STAFF GATE ── probe the SSO session; unauthenticated visitors go to
+   /auth to sign in with their city account (soft gate — the qr function's
+   /api/session + /login routes do the real OIDC work). */
+(function () {
+  var h = location.hostname;
+  if (location.protocol === 'file:' || h === 'localhost' || h === '127.0.0.1') return;
+  var css = document.documentElement.style;
+  css.visibility = 'hidden';
+  // Never leave the page blank for long — reveal after 2.5s no matter what
+  // (cold-start latency, function down): the gate is a courtesy, not a wall.
+  var t = setTimeout(function () { css.visibility = ''; }, 2500);
+  fetch('/api/session', {cache: 'no-store'}).then(function (r) {
+    clearTimeout(t);
+    if (r.status === 401) {
+      location.replace('/auth?next=' + encodeURIComponent(location.pathname + location.search));
+    } else {
+      css.visibility = '';
+    }
+  }).catch(function () { clearTimeout(t); css.visibility = ''; });
+})();
+</script>
 <link rel="icon" type="image/svg+xml" href="/logo.svg?v=3">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -258,6 +280,47 @@ textarea::placeholder { color: var(--dim2); }
   position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
   overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
 }
+/* Music note hangs off the top-left corner (same idea as the haiku page),
+   but neon like the rest of the rig. No tooltip by design — it reads as part
+   of the scene, not a labelled control. */
+.note {
+  position: fixed; top: 0.3rem; left: 0.9rem; z-index: 21;
+  /* 44px floor keeps the touch target reachable on phones — the glyph itself
+     is far narrower, so the hit area is deliberately larger than the mark. */
+  min-width: 44px; min-height: 44px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: none; border: 0; padding: 0;
+  font-family: var(--mono); font-size: 3.2rem; line-height: 1;
+  color: var(--dim2); cursor: pointer; opacity: 0.5;
+  transition: opacity 0.6s ease, color 0.6s ease, text-shadow 0.6s ease, filter 0.6s ease;
+  transform-origin: 50% 0; animation: note-sway 7s ease-in-out infinite;
+  -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+}
+.note:hover, .note:focus-visible {
+  opacity: 1; color: var(--cyan); outline: none;
+  text-shadow: 0 0 10px rgba(91, 230, 255, 0.75);
+  filter: drop-shadow(0 0 6px rgba(91, 230, 255, 0.6));
+}
+.note.playing {
+  opacity: 0.95; color: var(--cyan);
+  text-shadow: 0 0 6px rgba(91, 230, 255, 0.9), 0 0 18px rgba(91, 230, 255, 0.45);
+  filter: drop-shadow(0 0 5px rgba(91, 230, 255, 0.7)) drop-shadow(0 0 14px rgba(91, 230, 255, 0.35));
+  animation-duration: 3.2s;
+}
+/* Default mark: a blackletter eighth note drawn by hand — no Google
+   blackletter face carries U+266A, so the gothic look lives in this SVG
+   (mensural notation style: diamond head, angular pennant). During the
+   hover font-shuffle the button flips to the text glyph so real fonts
+   can take over. */
+.note-glyph { height: 1em; width: auto; display: block; }
+.note-alt   { display: none; }
+.note.shuffling .note-glyph { display: none; }
+.note.shuffling .note-alt   { display: block; }
+@keyframes note-sway {
+  0%, 100% { transform: rotate(-5deg); }
+  50%      { transform: rotate(5deg); }
+}
+@media (prefers-reduced-motion: reduce) { .note { animation: none; } }
 </style>
 </head>
 <body>
@@ -265,6 +328,18 @@ textarea::placeholder { color: var(--dim2); }
 <canvas id="stage" aria-hidden="true"></canvas>
 <div id="scan" aria-hidden="true"></div>
 <div id="veil" aria-hidden="true"></div>
+
+<button class="note" id="noteBtn" aria-label="Play music" aria-pressed="false">
+  <svg class="note-glyph" viewBox="0 0 22 32" aria-hidden="true">
+    <path fill="currentColor" d="M13 26 L13 3 L15.6 1.5 L15.6 24.6 Z
+      M15.6 1.5 L22 6.5 L18.5 8 L21.5 12.5 L15.6 9 Z
+      M8 20.5 L14 26 L8 31.5 L2 26 Z"/>
+  </svg>
+  <span class="note-alt" aria-hidden="true">&#9834;</span>
+</button>
+<audio id="noteAudio" loop preload="none">
+  <source src="/ggnator/GGNATOR.mp3" type="audio/mpeg">
+</audio>
 
 <main>
   <h1 class="sr-only">GGnator</h1>
@@ -761,5 +836,113 @@ document.getElementById('copy').addEventListener('click', async () => {
 });
 </script>
 
+<script>
+/* ── Music note toggle ──
+   preload="none" keeps the track off the wire until someone actually clicks.
+
+   The glyph joins the page's font zoo: while hovered (or focused) it redraws
+   itself in a random punk face every ~0.3s, ransom-note style. Faces are
+   lazy-loaded on first hover as single-glyph (♪) subsets and filtered to the
+   ones that actually contain the glyph — an unsupported face would silently
+   fall back and the shuffle would look stuck. Generic CSS families seed the
+   pool so the shuffle is visible even before (or without) any zoo face. */
+(function () {
+  const btn = document.getElementById('noteBtn');
+  const audio = document.getElementById('noteAudio');
+
+  // The wilder half of the stage's ANIM_FONTS (that list lives inside the
+  // renderer's scope): display, gothic, horror, western, glitch. Few (if any)
+  // decorative faces carry ♪ — the filter below keeps whichever do.
+  const ZOO = [
+    "Bungee", "Monoton", "Rubik Mono One", "Faster One", "Abril Fatface",
+    "Pacifico", "Permanent Marker", "UnifrakturMaguntia", "Pirata One",
+    "MedievalSharp", "Grenze Gotisch", "Metal Mania", "Nosifer", "Creepster",
+    "Eater", "Butcherman", "Jolly Lodger", "Lacquer", "Rye", "Sancreek",
+    "Smokum", "Vast Shadow", "Bungee Shade", "Fascinate", "Frijole",
+    "Piedra", "Rubik Glitch", "Rubik Wet Paint", "Rubik Vinyl"
+  ];
+  // ♪ (U+266A) is a WGL4 character, so the classic system faces all carry it —
+  // on the city's Windows machines these give the shuffle its ransom-note mix.
+  const SYSTEM = [
+    "Impact", "Arial Black", "Comic Sans MS", "Courier New", "Georgia",
+    "Times New Roman", "Trebuchet MS", "Verdana", "Segoe Script",
+    "Segoe UI Symbol", "Papyrus", "Chalkboard SE", "Marker Felt",
+    "Brush Script MT"
+  ];
+  // Ready-to-use font-family values; generic keywords are never quoted.
+  const pool = ["cursive", "fantasy", "serif", "system-ui", "monospace"];
+  let zooLoaded = false;
+
+  function rendersNote(ctx, base, family) {
+    ctx.font = "40px " + family + ", monospace";
+    return ctx.measureText("♪").width !== base;
+  }
+  function loadZoo() {
+    if (zooLoaded) return;
+    zooLoaded = true;
+    const ctx = document.createElement("canvas").getContext("2d");
+    ctx.font = "40px monospace";
+    const base = ctx.measureText("♪").width;
+    // System faces need no loading — filter synchronously.
+    SYSTEM.forEach(f => {
+      if (rendersNote(ctx, base, "'" + f + "'")) pool.push("'" + f + "'");
+    });
+    // Web zoo: single-glyph (♪) subsets, filtered once each face lands.
+    for (let i = 0; i < ZOO.length; i += 24) {   // chunk keeps the URL short
+      const fam = ZOO.slice(i, i + 24).map(f => "family=" + f.replace(/ /g, "+")).join("&");
+      const link = document.createElement("link");
+      link.rel = "stylesheet";
+      link.href = "https://fonts.googleapis.com/css2?" + fam + "&text=%E2%99%AA&display=swap";
+      document.head.appendChild(link);
+    }
+    if (!(document.fonts && document.fonts.load)) return;
+    ZOO.forEach(f => {
+      document.fonts.load("40px '" + f + "'", "♪").then(() => {
+        if (rendersNote(ctx, base, "'" + f + "'")) pool.push("'" + f + "', var(--mono)");
+      }).catch(() => {});
+    });
+  }
+
+  let shuffle = null;
+  function startShuffle() {
+    loadZoo();
+    if (shuffle) return;
+    btn.classList.add("shuffling");   // swap the gothic SVG for the text glyph
+    shuffle = setInterval(() => {
+      btn.style.fontFamily = pool[Math.floor(Math.random() * pool.length)];
+      // abstract-punk jitter: the glyph never sits at quite the same size or
+      // slant twice (the sway animation owns transform, so jitter lives in
+      // font properties instead)
+      btn.style.fontSize = (2.8 + Math.random() * 0.9).toFixed(2) + "rem";
+      btn.style.fontStyle = Math.random() < 0.3 ? "italic" : "normal";
+    }, 300);
+  }
+  function stopShuffle() {
+    clearInterval(shuffle);
+    shuffle = null;
+    btn.classList.remove("shuffling");
+    btn.style.fontFamily = "";
+    btn.style.fontSize = "";
+    btn.style.fontStyle = "";
+  }
+  btn.addEventListener("pointerenter", startShuffle);
+  btn.addEventListener("focus", startShuffle);
+  btn.addEventListener("pointerleave", stopShuffle);
+  btn.addEventListener("blur", stopShuffle);
+
+  btn.addEventListener('click', function () {
+    if (audio.paused) {
+      audio.play().then(function () {
+        btn.classList.add('playing');
+        btn.setAttribute('aria-pressed', 'true');
+      }).catch(function () {});
+    } else {
+      audio.pause();
+      btn.classList.remove('playing');
+      btn.setAttribute('aria-pressed', 'false');
+    }
+  });
+})();
+</script>
 </body>
 </html>
