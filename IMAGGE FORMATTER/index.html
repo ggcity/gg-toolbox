@@ -9,6 +9,28 @@
 <meta name="theme-color" content="#2A1C10">
 
 <title>IMAGGE FORMATTER · GG IT Toolbox</title>
+<script>
+/* ── STAFF GATE ── probe the SSO session; unauthenticated visitors go to
+   /auth to sign in with their city account (soft gate — the qr function's
+   /api/session + /login routes do the real OIDC work). */
+(function () {
+  var h = location.hostname;
+  if (location.protocol === 'file:' || h === 'localhost' || h === '127.0.0.1') return;
+  var css = document.documentElement.style;
+  css.visibility = 'hidden';
+  // Never leave the page blank for long — reveal after 2.5s no matter what
+  // (cold-start latency, function down): the gate is a courtesy, not a wall.
+  var t = setTimeout(function () { css.visibility = ''; }, 2500);
+  fetch('/api/session', {cache: 'no-store'}).then(function (r) {
+    clearTimeout(t);
+    if (r.status === 401) {
+      location.replace('/auth?next=' + encodeURIComponent(location.pathname + location.search));
+    } else {
+      css.visibility = '';
+    }
+  }).catch(function () { clearTimeout(t); css.visibility = ''; });
+})();
+</script>
 <link rel="icon" type="image/svg+xml" href="/logo.svg?v=3">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">

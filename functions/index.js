@@ -6,9 +6,13 @@
  * STATS LINK ( /s/TOKEN ) — a page showing the scan count, with a form to
  * re-point the QR later.  Whoever has the stats link owns the code; there
  * are no accounts or passwords.  A recovery directory lives at /qradmin,
- * protected by a shared admin key (?key=…, QR_ADMIN_KEY in functions/.env).
- * The city-SSO (Keycloak OIDC) gate is written — see git history — but needs
- * the Secret Manager API enabled on the project before it can deploy.
+ * protected by the city's Keycloak SSO (see the OIDC block below) plus the
+ * OIDC_ADMIN_USERS allow-list.
+ *
+ * The same SSO session also soft-gates the staff toolbox site: /login starts
+ * the flow for any city account, /api/session lets the static pages probe the
+ * cookie, and the writing APIs (POST /api/qr create, POST /api/stats) require
+ * a session.  Resident-facing scan/stats routes stay public.
  *
  * This is the Firebase port of the old server/q.php.  The flat JSON file is
  * replaced by a Firestore collection ("qrLinks", one doc per code) and the
@@ -20,7 +24,7 @@
 'use strict';
 
 const {onRequest} = require('firebase-functions/v2/https');
-const {defineString} = require('firebase-functions/params');
+const {defineString, defineSecret} = require('firebase-functions/params');
 const admin = require('firebase-admin');
 const QRCode = require('qrcode');
 const fs = require('fs');
@@ -212,12 +216,121 @@ async function findByToken(token) {
   return q.empty ? null : q.docs[0];
 }
 
-/* ── /qradmin access: shared admin key (?key=…) ──────────────────────────────
- * The Keycloak-SSO gate (see git history) deploys once a project owner
- * enables the Secret Manager API; until then the admin directory keeps the
- * previous shared-key gate.  Empty key = directory locked.
+/* ── OIDC admin sign-on (city Keycloak, internal realm) ──────────────────────
+ * /qradmin is protected by the city SSO instead of a shared ?key= secret.
+ * There is no httpd/mod_auth_openidc in front of Firebase, so this function
+ * runs the standard authorization-code flow (with PKCE) itself:
+ *   GET /qradmin (no session) → 302 to Keycloak → GET /oauth2-callback
+ *   → exchange code for tokens → signed session cookie → back to /qradmin.
+ * Notes:
+ *   - Firebase Hosting forwards ONLY the cookie named "__session" to
+ *     functions, so the in-flight login state and the session both live there
+ *     (one at a time), HMAC-signed with a key derived from the client secret.
+ *   - The ID token comes straight from the token endpoint over TLS, so per
+ *     OIDC Core §3.1.3.7 its claims are validated without a JWKS signature
+ *     check — keeps the function dependency-free.
  */
-const ADMIN_KEY = defineString('QR_ADMIN_KEY', {default: ''});
+const OIDC_ISSUER = defineString('OIDC_ISSUER', {default: 'https://auth.ggcity.org/realms/internal'});
+const OIDC_CLIENT_ID = defineString('OIDC_CLIENT_ID', {default: ''});
+const OIDC_CLIENT_SECRET = defineSecret('OIDC_CLIENT_SECRET');   // Cloud Secret Manager
+// Optional comma-separated allow-list of AD usernames (preferred_username)
+// admitted to /qradmin. Empty = any signed-in city user ("Require valid-user").
+const OIDC_ADMIN_USERS = defineString('OIDC_ADMIN_USERS', {default: ''});
+
+const SESSION_COOKIE = '__session';        // the only cookie Hosting forwards
+const SESSION_HOURS = 8;
+const CALLBACK_PATH = '/oauth2-callback';
+
+function oidcReady() {
+  return Boolean(OIDC_CLIENT_ID.value() && OIDC_CLIENT_SECRET.value());
+}
+
+// Endpoint metadata from the realm's discovery URL, cached for the instance.
+let oidcMeta = null;
+async function oidcDiscover() {
+  if (!oidcMeta) {
+    const url = OIDC_ISSUER.value().replace(/\/+$/, '') + '/.well-known/openid-configuration';
+    const r = await fetch(url);
+    if (!r.ok) throw new Error('OIDC discovery failed: HTTP ' + r.status);
+    oidcMeta = await r.json();
+  }
+  return oidcMeta;
+}
+
+function sessionCookieOf(req) {
+  for (const part of String(req.headers.cookie || '').split(/;\s*/)) {
+    const i = part.indexOf('=');
+    if (i > 0 && part.slice(0, i) === SESSION_COOKIE) return part.slice(i + 1);
+  }
+  return '';
+}
+function setSessionCookie(res, value, maxAgeSec) {
+  res.set('Set-Cookie', SESSION_COOKIE + '=' + value + '; Max-Age=' + maxAgeSec +
+    '; Path=/; HttpOnly; Secure; SameSite=Lax');
+}
+function sessionHmacKey() {
+  const crypto = require('crypto');
+  return crypto.createHash('sha256').update('gg-qr-session|' + OIDC_CLIENT_SECRET.value()).digest();
+}
+function signSession(obj) {
+  const crypto = require('crypto');
+  const body = Buffer.from(JSON.stringify(obj)).toString('base64url');
+  const mac = crypto.createHmac('sha256', sessionHmacKey()).update(body).digest('base64url');
+  return body + '.' + mac;
+}
+// Returns the verified, unexpired session payload of the given type
+// ('s' = signed-in admin, 'p' = login in flight), or null.
+function readSession(req, typ) {
+  const crypto = require('crypto');
+  const tok = sessionCookieOf(req);
+  const dot = tok.lastIndexOf('.');
+  if (dot < 1) return null;
+  const body = tok.slice(0, dot);
+  const mac = Buffer.from(crypto.createHmac('sha256', sessionHmacKey()).update(body).digest('base64url'));
+  const got = Buffer.from(tok.slice(dot + 1));
+  if (mac.length !== got.length || !crypto.timingSafeEqual(mac, got)) return null;
+  try {
+    const obj = JSON.parse(Buffer.from(body, 'base64url').toString('utf8'));
+    if (obj.t !== typ || !obj.exp || obj.exp * 1000 < Date.now()) return null;
+    return obj;
+  } catch (e) {
+    return null;
+  }
+}
+
+// Only ever bounce back to a local path — never an absolute or
+// protocol-relative URL smuggled into ?next= (open-redirect guard).
+function safeNext(v) {
+  const s = String(v || '');
+  return (s.startsWith('/') && !s.startsWith('//') && !s.includes('\\')) ? s : '/';
+}
+
+// Kick off the authorization-code flow: stash state/nonce/PKCE verifier (and
+// where to land afterwards) in a short-lived signed cookie, then send the
+// browser to Keycloak.
+async function startLogin(req, res, next) {
+  const crypto = require('crypto');
+  const meta = await oidcDiscover();
+  const state = crypto.randomBytes(16).toString('base64url');
+  const nonce = crypto.randomBytes(16).toString('base64url');
+  const verifier = crypto.randomBytes(32).toString('base64url');
+  const challenge = crypto.createHash('sha256').update(verifier).digest('base64url');
+  setSessionCookie(res, signSession({
+    t: 'p', st: state, no: nonce, cv: verifier, nx: safeNext(next),
+    exp: Math.floor(Date.now() / 1000) + 600,
+  }), 600);
+  const u = new URL(meta.authorization_endpoint);
+  u.searchParams.set('response_type', 'code');
+  u.searchParams.set('client_id', OIDC_CLIENT_ID.value());
+  u.searchParams.set('redirect_uri', originOf(req) + CALLBACK_PATH);
+  u.searchParams.set('scope', 'openid profile email');
+  u.searchParams.set('state', state);
+  u.searchParams.set('nonce', nonce);
+  u.searchParams.set('code_challenge', challenge);
+  u.searchParams.set('code_challenge_method', 'S256');
+  res.set('Cache-Control', 'private, no-store');
+  return res.redirect(302, u.toString());
+}
 
 /* Shared chrome for the human pages (stats + admin) — the generator's cream theme. */
 function pageTop(title) {
@@ -266,6 +379,7 @@ function pageBottom() {
 /* ── the single HTTP entry point (hosting rewrites /q, /s, /api/qr, /qradmin here) ── */
 exports.qr = onRequest({
   region: 'us-central1', memory: '256MiB', maxInstances: 10,
+  secrets: [OIDC_CLIENT_SECRET],
 }, async (req, res) => {
   if (req.method === 'OPTIONS') {           // CORS preflight for the JSON API
     res.set('Access-Control-Allow-Origin', '*');
@@ -410,13 +524,119 @@ exports.qr = onRequest({
       return res.redirect(303, statsUrl(req, token) + '?saved=1');
     }
 
-    /* ── admin directory  ( /qradmin?key=… ) ─────────────────────────────── */
-    if (path === '/qradmin') {
-      const key = ADMIN_KEY.value();
-      if (!key || req.query.key !== key) {
-        return res.status(403).type('text/plain').send('Wrong admin key (or key not set yet).');
+    /* ── sign-in problems get a small themed page ────────────────────────── */
+    const authErrorPage = (status, msg) => {
+      res.set('Cache-Control', 'private, no-store');
+      return res.status(status).type('text/html').send(pageTop('Sign-in — GG QR admin') +
+        '<div class="head">GG QR &middot; Admin sign-in</div><div class="body"><p>' + h(msg) +
+        '</p><p><a href="/qradmin">Try again</a></p>' + pageBottom());
+    };
+
+    /* ── OIDC callback  ( GET /oauth2-callback ) ─────────────────────────── */
+    if (path === CALLBACK_PATH && method === 'GET') {
+      if (!oidcReady()) {
+        return authErrorPage(503, 'Admin sign-in is not configured yet (OIDC_CLIENT_ID / OIDC_CLIENT_SECRET missing).');
       }
-      const adminUrl = originOf(req) + '/qradmin?key=' + encodeURIComponent(key);
+      if (req.query.error) {
+        return authErrorPage(403, 'Sign-in was cancelled or failed: ' + req.query.error);
+      }
+      const pending = readSession(req, 'p');
+      if (!pending || !req.query.code || String(req.query.state || '') !== pending.st) {
+        return authErrorPage(400, 'Your sign-in attempt expired or did not match — please try again.');
+      }
+      const meta = await oidcDiscover();
+      const tr = await fetch(meta.token_endpoint, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: new URLSearchParams({
+          grant_type: 'authorization_code',
+          code: String(req.query.code),
+          redirect_uri: originOf(req) + CALLBACK_PATH,
+          client_id: OIDC_CLIENT_ID.value(),
+          client_secret: OIDC_CLIENT_SECRET.value(),
+          code_verifier: pending.cv,
+        }).toString(),
+      });
+      if (!tr.ok) {
+        console.error('OIDC token exchange failed', tr.status, await tr.text());
+        return authErrorPage(502, 'Could not complete sign-in with the city login server.');
+      }
+      const tokens = await tr.json();
+      let claims;
+      try {
+        claims = JSON.parse(Buffer.from(String(tokens.id_token).split('.')[1], 'base64url').toString('utf8'));
+      } catch (e) {
+        return authErrorPage(502, 'The login server returned an unreadable ID token.');
+      }
+      const aud = Array.isArray(claims.aud) ? claims.aud : [claims.aud];
+      const nowS = Math.floor(Date.now() / 1000);
+      if (claims.iss !== meta.issuer || !aud.includes(OIDC_CLIENT_ID.value()) ||
+          !(claims.exp > nowS) || claims.nonce !== pending.no) {
+        return authErrorPage(403, 'The sign-in response failed validation — please try again.');
+      }
+      // Any authenticated city account gets a site session; the QR-admin
+      // allow-list is enforced where it applies — on the /qradmin route.
+      const username = String(claims.preferred_username || '').toLowerCase();
+      setSessionCookie(res, signSession({
+        t: 's', sub: claims.sub, u: username, n: claims.name || username,
+        exp: nowS + SESSION_HOURS * 3600,
+      }), SESSION_HOURS * 3600);
+      res.set('Cache-Control', 'private, no-store');
+      return res.redirect(302, safeNext(pending.nx));
+    }
+
+    /* ── site sign-in  ( GET /login?next=/path ) — any city account ──────── */
+    if (path === '/login' && method === 'GET') {
+      if (!oidcReady()) {
+        return authErrorPage(503, 'Sign-in is not configured yet (OIDC_CLIENT_ID / OIDC_CLIENT_SECRET missing).');
+      }
+      const next = safeNext(req.query.next);
+      if (readSession(req, 's')) {
+        res.set('Cache-Control', 'private, no-store');
+        return res.redirect(302, next);
+      }
+      return startLogin(req, res, next);
+    }
+
+    /* ── session probe for the static pages  ( GET /api/session ) ────────── */
+    if (path === '/api/session' && method === 'GET') {
+      res.set('Cache-Control', 'private, no-store');
+      const sess = readSession(req, 's');
+      if (!sess) return sendJson(res, 401, {ok: false});
+      return sendJson(res, 200, {ok: true, user: sess.u, name: sess.n});
+    }
+
+    /* ── admin sign-out  ( GET /qradmin/logout ) ─────────────────────────── */
+    if (path === '/qradmin/logout' && method === 'GET') {
+      setSessionCookie(res, '', 0);
+      const meta = await oidcDiscover().catch(() => null);
+      res.set('Cache-Control', 'private, no-store');
+      // End the Keycloak SSO session too (Keycloak shows a confirm page since
+      // we don't keep the id_token around for an id_token_hint).
+      return res.redirect(302, (meta && meta.end_session_endpoint) ?
+        meta.end_session_endpoint + '?client_id=' + encodeURIComponent(OIDC_CLIENT_ID.value()) :
+        '/qradmin');
+    }
+
+    /* ── admin directory  ( /qradmin — city SSO required ) ───────────────── */
+    if (path === '/qradmin') {
+      if (!oidcReady()) {
+        return authErrorPage(503, 'Admin sign-in is not configured yet (OIDC_CLIENT_ID / OIDC_CLIENT_SECRET missing).');
+      }
+      const sess = readSession(req, 's');
+      if (!sess) {
+        if (method !== 'GET') {
+          return res.status(403).type('text/plain').send('Session expired — reload the admin page and sign in again.');
+        }
+        return startLogin(req, res, '/qradmin');
+      }
+      // The allow-list guards this directory only; empty list = any city user.
+      const allowed = OIDC_ADMIN_USERS.value().split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
+      if (allowed.length && !allowed.includes(sess.u)) {
+        return authErrorPage(403, 'You are signed in as ' + (sess.n || sess.u) +
+          ', but this account is not on the QR admin list.');
+      }
+      const adminUrl = originOf(req) + '/qradmin';
 
       // Remove a code: deletes its Firestore doc (frees that storage) and its
       // tracking — the short link 404s afterward, so any printed copies stop.
@@ -436,6 +656,8 @@ exports.qr = onRequest({
       res.type('text/html');
       let html = pageTop('GG QR — all tracked codes') +
         '<div class="head">GG QR &middot; All tracked codes (' + snap.size + ')</div><div class="body">' +
+        '<div class="bl" style="margin-bottom:10px;">Signed in as ' + h(sess.n) +
+        ' &middot; <a href="/qradmin/logout">Sign out</a></div>' +
         '<input type="text" id="qadmin-search" autocomplete="off" autofocus ' +
         'placeholder="Filter by name, code, or destination…" style="margin-bottom:6px;">' +
         '<div class="bl" id="qadmin-count" style="margin-bottom:12px;"></div>' +
@@ -509,6 +731,7 @@ exports.qr = onRequest({
       return sendJson(res, 200, counters);
     }
     if (path === '/api/stats' && method === 'POST') {
+      if (!readSession(req, 's')) return sendJson(res, 401, {error: 'Sign-in required.'});
       const field = STATS_TOOLS[String((req.body || {}).tool || '')];
       if (!field) return sendJson(res, 400, {error: 'Unknown tool.'});
       // clamp: a report is 1..500 events (500 = the biggest real batch; the
@@ -524,6 +747,11 @@ exports.qr = onRequest({
       const action = inp.action || '';
 
       if (action === 'create') {
+        // Creating tracked codes is a staff action; repoint/setdesign below
+        // stay open — possession of the per-code stats token is their auth.
+        if (!readSession(req, 's')) {
+          return sendJson(res, 401, {error: 'Your sign-in expired — reload the page and sign in again.'});
+        }
         const dest = String(inp.dest || '').trim();
         if (!isHttpUrl(dest)) return sendJson(res, 400, {error: 'Destination must start with http:// or https://'});
         const label = String(inp.label || '').trim().slice(0, 120);

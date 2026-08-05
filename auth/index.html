@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; script-src 'self' 'unsafe-inline'; connect-src 'self'; base-uri 'self'; form-action 'self'; object-src 'none';">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta http-equiv="X-Content-Type-Options" content="nosniff">
+<meta name="robots" content="noindex, nofollow">
+<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#091E4A">
+
+<title>GG Toolbox — Sign in</title>
+<link rel="icon" type="image/svg+xml" href="/logo.svg?v=3">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@400;500;700&display=swap" rel="stylesheet">
+
+<style>
+/* ────────────────────────────────────────────────────────────────
+   GG TOOLBOX · staff sign-in gate
+   Same family design as the launcher: plain light page, navy-deep
+   header bar, condensed uppercase labels, hard offset shadows.
+   ──────────────────────────────────────────────────────────────── */
+
+:root {
+  --navy:        #0D2F6E;
+  --navy-deep:   #091E4A;
+  --chalk:       #E4EDF7;
+  --chalk-dark:  #C0D2E8;
+  --gold:        #C8A84B;
+  --text-body:   #1A3A6A;
+  --text-muted:  #5070A0;
+  --text-navy:   #E8F0FB;
+  --flame-yellow:#FFD23F;
+  --radius:      2px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Barlow', sans-serif;
+  font-size: 15px;
+  background: var(--chalk);
+  color: var(--text-body);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── HEADER — same bar as the launcher ── */
+.app-header {
+  background: var(--navy-deep);
+  background-image:
+    linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(0,0,0,0) 30%, rgba(0,0,0,0.4) 100%);
+  border-bottom: 1px solid rgba(0,0,0,0.55);
+  box-shadow:
+    inset 0 -1px 0 rgba(255,210,63,0.08),
+    inset 0 -4px 12px rgba(0,0,0,0.55);
+  padding: 12px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 64px;
+}
+.app-title {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 21px;
+  font-weight: 700;
+  letter-spacing: 7px;
+  text-transform: uppercase;
+  color: var(--text-navy);
+  white-space: nowrap;
+  padding-left: 7px;   /* optically recentre: offsets the trailing letter-space */
+}
+
+/* ── CENTER CARD ── */
+main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px;
+}
+.gate-card {
+  background: #FFFFFF;
+  border: 1px solid var(--chalk-dark);
+  border-radius: var(--radius);
+  box-shadow: 6px 6px 0 rgba(13, 47, 110, 0.12);
+  padding: 44px 40px 40px;
+  max-width: 420px;
+  width: 100%;
+  text-align: center;
+}
+.gate-kicker {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 10px;
+}
+.gate-title {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--navy);
+  margin-bottom: 26px;
+}
+.gate-btn {
+  display: inline-block;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: var(--flame-yellow);
+  background: var(--navy-deep);
+  border: 2px solid var(--flame-yellow);
+  border-radius: var(--radius);
+  box-shadow: 4px 4px 0 rgba(13, 47, 110, 0.25);
+  padding: 14px 34px;
+  cursor: pointer;
+  transition: transform 0.08s, box-shadow 0.08s, background 0.12s;
+}
+.gate-btn:hover, .gate-btn:focus-visible {
+  background: var(--navy);
+  transform: translate(1px, 1px);
+  box-shadow: 3px 3px 0 rgba(13, 47, 110, 0.25);
+}
+.gate-btn:active {
+  transform: translate(4px, 4px);
+  box-shadow: none;
+}
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <h1 class="app-title">GG Toolbox</h1>
+</header>
+
+<main>
+  <div class="gate-card">
+    <div class="gate-kicker">Authentication required</div>
+    <div class="gate-title">City staff only</div>
+    <a class="gate-btn" id="signin" href="/login">Sign in</a>
+  </div>
+</main>
+
+<script>
+(function () {
+  // Carry the page the visitor wanted through the login flow. Local paths
+  // only — same open-redirect guard as the server side.
+  var next = new URLSearchParams(location.search).get('next') || '/';
+  if (next.charAt(0) !== '/' || next.charAt(1) === '/' || next.indexOf('\\') !== -1) next = '/';
+  document.getElementById('signin').href = '/login?next=' + encodeURIComponent(next);
+
+  // Already signed in (e.g. landed here from a stale tab)? Skip the button.
+  fetch('/api/session', {cache: 'no-store'}).then(function (r) {
+    if (r.ok) location.replace(next);
+  }).catch(function () {});
+})();
+</script>
+</body>
+</html>
