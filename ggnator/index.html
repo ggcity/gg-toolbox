@@ -290,7 +290,7 @@ textarea::placeholder { color: var(--dim2); }
   min-width: 44px; min-height: 44px;
   display: inline-flex; align-items: center; justify-content: center;
   background: none; border: 0; padding: 0;
-  font-family: var(--mono); font-size: 3.2rem; line-height: 1;
+  font-family: var(--mono); font-size: 2.9rem; line-height: 1;
   color: var(--dim2); cursor: pointer; opacity: 0.5;
   transition: opacity 0.6s ease, color 0.6s ease, text-shadow 0.6s ease, filter 0.6s ease;
   transform-origin: 50% 0; animation: note-sway 7s ease-in-out infinite;
@@ -903,44 +903,51 @@ document.getElementById('copy').addEventListener('click', async () => {
     });
   }
 
+  // The shuffle runs whenever the note is hovered/focused OR the track is
+  // playing — the glyph dances through the zoo for as long as there's music.
   let shuffle = null;
-  function startShuffle() {
-    loadZoo();
-    if (shuffle) return;
-    btn.classList.add("shuffling");   // swap the gothic SVG for the text glyph
-    shuffle = setInterval(() => {
-      btn.style.fontFamily = pool[Math.floor(Math.random() * pool.length)];
-      // abstract-punk jitter: the glyph never sits at quite the same size or
-      // slant twice (the sway animation owns transform, so jitter lives in
-      // font properties instead)
-      btn.style.fontSize = (2.8 + Math.random() * 0.9).toFixed(2) + "rem";
-      btn.style.fontStyle = Math.random() < 0.3 ? "italic" : "normal";
-    }, 300);
+  let hovered = false;
+  function syncShuffle() {
+    const want = hovered || !audio.paused;
+    if (want && !shuffle) {
+      loadZoo();
+      btn.classList.add("shuffling");   // swap the gothic SVG for the text glyph
+      shuffle = setInterval(() => {
+        btn.style.fontFamily = pool[Math.floor(Math.random() * pool.length)];
+        // abstract-punk jitter: the glyph never sits at quite the same size or
+        // slant twice (the sway animation owns transform, so jitter lives in
+        // font properties instead)
+        btn.style.fontSize = (2.5 + Math.random() * 0.9).toFixed(2) + "rem";
+        btn.style.fontStyle = Math.random() < 0.3 ? "italic" : "normal";
+      }, 300);
+    } else if (!want && shuffle) {
+      clearInterval(shuffle);
+      shuffle = null;
+      btn.classList.remove("shuffling");
+      btn.style.fontFamily = "";
+      btn.style.fontSize = "";
+      btn.style.fontStyle = "";
+    }
   }
-  function stopShuffle() {
-    clearInterval(shuffle);
-    shuffle = null;
-    btn.classList.remove("shuffling");
-    btn.style.fontFamily = "";
-    btn.style.fontSize = "";
-    btn.style.fontStyle = "";
-  }
-  btn.addEventListener("pointerenter", startShuffle);
-  btn.addEventListener("focus", startShuffle);
-  btn.addEventListener("pointerleave", stopShuffle);
-  btn.addEventListener("blur", stopShuffle);
+  btn.addEventListener("pointerenter", () => { hovered = true;  syncShuffle(); });
+  btn.addEventListener("focus",        () => { hovered = true;  syncShuffle(); });
+  btn.addEventListener("pointerleave", () => { hovered = false; syncShuffle(); });
+  btn.addEventListener("blur",         () => { hovered = false; syncShuffle(); });
+
+  audio.addEventListener('play', function () {
+    btn.classList.add('playing');
+    btn.setAttribute('aria-pressed', 'true');
+    syncShuffle();
+  });
+  audio.addEventListener('pause', function () {
+    btn.classList.remove('playing');
+    btn.setAttribute('aria-pressed', 'false');
+    syncShuffle();
+  });
 
   btn.addEventListener('click', function () {
-    if (audio.paused) {
-      audio.play().then(function () {
-        btn.classList.add('playing');
-        btn.setAttribute('aria-pressed', 'true');
-      }).catch(function () {});
-    } else {
-      audio.pause();
-      btn.classList.remove('playing');
-      btn.setAttribute('aria-pressed', 'false');
-    }
+    if (audio.paused) audio.play().catch(function () {});
+    else audio.pause();
   });
 })();
 </script>
